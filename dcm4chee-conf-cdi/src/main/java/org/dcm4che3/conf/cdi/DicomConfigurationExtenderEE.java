@@ -39,23 +39,33 @@
  */
 package org.dcm4che3.conf.cdi;
 
+import org.dcm4che3.conf.api.DicomConfiguration;
+import org.dcm4che3.conf.api.DicomConfigurationCustomizer;
+import org.dcm4che3.conf.core.api.ConfigurationException;
+import org.dcm4che3.conf.dicom.DicomConfigurationBuilder;
+import org.dcm4che3.net.AEExtension;
+import org.dcm4che3.net.DeviceExtension;
+import org.dcm4che3.net.hl7.HL7ApplicationExtension;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Disposes;
 import javax.enterprise.inject.Instance;
 import javax.enterprise.inject.Produces;
 import javax.inject.Inject;
 
-import org.dcm4che3.conf.core.api.ConfigurationException;
-import org.dcm4che3.conf.api.DicomConfiguration;
-import org.dcm4che3.conf.dicom.DicomConfigurationBuilder;
-import org.dcm4che3.net.AEExtension;
-import org.dcm4che3.net.DeviceExtension;
-import org.dcm4che3.net.hl7.HL7ApplicationExtension;
-
 /**
+ * Centralized handling for all Java EE - based enhancements,
+ * like device/ae/hl7app extensions collected with CDI,
+ * EE-based configuration storage/decorators like DB storage, Infinispan cache, etc
+ *
  * @author Roman K
  */
-public class CDIDicomConfigurationFactory {
+public class DicomConfigurationExtenderEE {
+
+    private static Logger log = LoggerFactory
+            .getLogger(DicomConfigurationExtenderEE.class);
 
     @Inject
     Instance<DeviceExtension> deviceExtensions;
@@ -66,22 +76,28 @@ public class CDIDicomConfigurationFactory {
     @Inject
     Instance<HL7ApplicationExtension> hl7ApplicationExtensions;
 
+
     @Produces
     @ApplicationScoped
-    public DicomConfiguration getCDIDicomConfiguration()
+    public DicomConfigurationCustomizer getConfigurationEECustomizer()
             throws ConfigurationException {
-        DicomConfigurationBuilder builder = DicomConfigurationBuilder
-                .newConfigurationBuilder(System.getProperties());
-        for (DeviceExtension ext : deviceExtensions)
-            builder.registerDeviceExtension(ext.getClass());
-        for (AEExtension ext : aeExtensions)
-            builder.registerAEExtension(ext.getClass());
-        for (HL7ApplicationExtension ext : hl7ApplicationExtensions)
-            builder.registerHL7ApplicationExtension(ext.getClass());
-        return builder.build();
+
+        return new DicomConfigurationCustomizer() {
+            @Override
+            public void customize(DicomConfigurationBuilder builder) {
+
+                for (DeviceExtension ext : deviceExtensions) builder.registerDeviceExtension(ext.getClass());
+                for (AEExtension ext : aeExtensions) builder.registerAEExtension(ext.getClass());
+                for (HL7ApplicationExtension ext : hl7ApplicationExtensions)
+                    builder.registerHL7ApplicationExtension(ext.getClass());
+
+
+                // TODO register DB storage if corresponding CDI bean is available
+                // TODO wrap the storage bean in Infinispan decorator when configured
+                // builder.registerCustomConfigurationStorage();
+
+            }
+        };
     }
 
-    public void dispose(@Disposes DicomConfiguration conf) {
-
-    }
 }
