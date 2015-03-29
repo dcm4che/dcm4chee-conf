@@ -27,12 +27,11 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
     <modelVersion>4.0.0</modelVersion>
-    <groupId>org.dcm4chee</groupId>
     <artifactId>dcm4chee-conf-web</artifactId>
     <packaging>war</packaging>
     <name>Web admin for dcm4chee (configuration manager)</name>
   <parent>
-    <groupId>org.dcm4chee</groupId>
+    <groupId>org.dcm4che.dcm4chee-conf</groupId>
     <artifactId>dcm4chee-conf-parent</artifactId>
     <version>1.0.0-SNAPSHOT</version>	
   </parent>
@@ -42,8 +41,10 @@
         <browser.security.enabled.l/>
         <browser.security.enabled.r/>
         <config.classifier/>
-        <classifier/>
         <security.classifier/>
+
+	<!-- default is usage with dcm4che archive -->
+        <classifier>arc</classifier>
 
         <!-- Only for standalone mode when the actual configuration classes are not available -->
         <standalone.dcm4chee-arc-conf.version>4.4.0-SNAPSHOT</standalone.dcm4chee-arc-conf.version>
@@ -61,13 +62,6 @@
         </profile>
 
         <profile>
-            <id>arc</id>
-            <properties>
-                <classifier>arc</classifier>
-            </properties>
-        </profile>
-
-        <profile>
             <id>xds</id>
             <properties>
                 <config.classifier>-xds</config.classifier>
@@ -77,9 +71,9 @@
 
         <profile>
             <id>standalone</id>
-            <activation>
-                <activeByDefault>true</activeByDefault>
-            </activation>
+            <properties>
+                <classifier/>
+            </properties>
             <dependencies>
                 <dependency>
                     <groupId>org.dcm4che.dcm4chee-arc</groupId>
