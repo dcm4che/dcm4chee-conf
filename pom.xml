@@ -94,5 +94,18 @@
             <url>sftp://www.dcm4che.org:443/home/maven2</url>
         </repository>
     </distributionManagement>
-
+    <profiles>
+        <profile>
+            <id>csp</id>
+            <properties>
+                <hap-repository.url/>
+            </properties>
+            <distributionManagement>
+                <repository>
+                    <id>hap-repository</id>
+                    <url>${hap-repository.url}</url>
+                </repository>
+            </distributionManagement>
+        </profile>
+    </profiles>
 </project>
