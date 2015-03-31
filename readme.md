@@ -23,3 +23,7 @@ The valid direct use-case of `Configuration` is issuing custom queries (i.e. tha
 
 Migration allows to use both high-level type-safe API ([DicomConfiguration](https://github.com/dcm4che/dcm4che/blob/master/dcm4che-conf/dcm4che-conf-api/src/main/java/org/dcm4che3/conf/api/DicomConfiguration.java)) and low-level unsafe API ([Configuration](https://github.com/dcm4che/dcm4che/blob/master/dcm4che-conf/dcm4che-conf-core-api/src/main/java/org/dcm4che3/conf/core/api/Configuration.java)).
 Migration runner (to be introduced) will call all the migration scripts in proper order and provide the instances of `DicomConfiguration` and `Configuration` for them.
+
+# Examples
+
+- [How to create a custom AE extension and use it in a StoreService decorator ](https://github.com/dcm4che/dcm4chee-integration-examples/tree/master/config-extensions-example)
