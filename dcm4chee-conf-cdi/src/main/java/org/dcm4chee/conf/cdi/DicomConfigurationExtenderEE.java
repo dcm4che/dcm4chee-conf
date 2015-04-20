@@ -37,9 +37,8 @@
  *
  *  ***** END LICENSE BLOCK *****
  */
-package org.dcm4che3.conf.cdi;
+package org.dcm4chee.conf.cdi;
 
-import org.dcm4che3.conf.api.DicomConfiguration;
 import org.dcm4che3.conf.api.DicomConfigurationCustomizer;
 import org.dcm4che3.conf.core.api.ConfigurationException;
 import org.dcm4che3.conf.dicom.DicomConfigurationBuilder;
@@ -50,7 +49,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.inject.Disposes;
 import javax.enterprise.inject.Instance;
 import javax.enterprise.inject.Produces;
 import javax.inject.Inject;
