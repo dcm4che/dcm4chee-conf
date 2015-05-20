@@ -74,7 +74,8 @@ appCommon.factory('appHttp', function(appNotifications, appLoadingIndicator, $ht
     }
 
     appHttp.post = makeMethod("POST");
-    appHttp.get =  makeMethod("GET");
+	appHttp.get =  makeMethod("GET");
+	appHttp.delete =  makeMethod("DELETE");
 
 	return appHttp;
 

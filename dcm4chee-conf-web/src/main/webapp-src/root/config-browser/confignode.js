@@ -30,20 +30,11 @@ angular.module('dcm4che.config.core', [])
                 };
 
 
+
                 $scope.$watch('confignode', function () {
-                    // normalize a bit if this is an object
-                    // initialize the properties of this object which are arrays,maps, and objects with empty values
-                    //if ($scope.schema && $scope.schema.type == 'object' && $scope.schema.class != 'Map' && $scope.confignode) {
-                    //
-                    //    angular.forEach($scope.schema.properties, function (value, key) {
-                    //        if (!_.has($scope.confignode, key))
-                    //            if (value.type === 'object' ||
-                    //                value.type === 'array') {
-                    //
-                    //                $scope.confignode[key] = ConfigEditorService.createNewItem(value);
-                    //            }
-                    //    });
-                    //}
+
+                    $scope.addAEExtDropdown = ConfigEditorService.makeAddExtensionDropDown('confignode', 'aeExtensions');
+                    $scope.addHL7ExtDropdown = ConfigEditorService.makeAddExtensionDropDown('confignode','hl7AppExtensions');
 
 
                 });

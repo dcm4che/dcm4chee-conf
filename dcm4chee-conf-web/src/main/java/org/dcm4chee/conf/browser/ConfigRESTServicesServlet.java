@@ -180,6 +180,7 @@ public class ConfigRESTServicesServlet {
     @Consumes(MediaType.APPLICATION_JSON)
     public Response modifyDeviceConfig(@Context UriInfo ctx, @PathParam(value = "deviceName") String deviceName, Map<String, Object> config) throws ConfigurationException {
 
+        if (deviceName.isEmpty()) throw new ConfigurationException("Device name cannot be empty");
 
         // quick validation
         Configuration storage = configurationManager.getConfigurationStorage();
@@ -225,7 +226,7 @@ public class ConfigRESTServicesServlet {
 
         schemas.hl7AppExtensions = new HashMap<>();
         for (Class<? extends HL7ApplicationExtension> hl7Ext : configurationManager.getDicomConfigurationExtension(HL7Configuration.class).getRegisteredHL7ApplicationExtensions())
-            schemas.aeExtensions.put(hl7Ext.getSimpleName(), getSchemaForConfigurableClass(hl7Ext));
+            schemas.hl7AppExtensions.put(hl7Ext.getSimpleName(), getSchemaForConfigurableClass(hl7Ext));
 
         return schemas;
     }

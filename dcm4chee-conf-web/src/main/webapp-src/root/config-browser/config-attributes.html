@@ -4,7 +4,7 @@
 
     <div ng-controller="CompositeNodeController">
         <div class="form-horizontal" ng-if="confignode">
-            <div ng-repeat="group in groups | groupSorter:options">
+            <div ng-repeat="group in groups | groupSorter:options" style="border-bottom: 1px dotted darkgrey;margin-bottom: 5px">
                 <fieldset>
                     <legend ng-show="options.legend">{{options.legend}}</legend>
                     <legend ng-show="groups.length>1 && !options.legend">{{group}}</legend>
@@ -18,6 +18,56 @@
                              editor="editor">
                         </div>
                     </div>
+
+                    <!-- AE extensions -->
+                    <div ng-if="schema.class=='ApplicationEntity'">
+                        <div ng-repeat="(extensionName,extensionConfig) in confignode.aeExtensions | primaryPropsOnly:doShowAllProps ">
+
+                            <a href="" class="btn btn-danger" ng-click="ConfigEditorService.removeExtension(confignode, extensionName, 'aeExtensions')">
+                                Delete this {{extensionName}}
+                            </a>
+
+                            <div confignode="extensionConfig"
+                                 schema="ConfigEditorService.schemas.aeExtensions[extensionName]"
+                                 parentnode="confignode.aeExtensions"
+                                 index="extensionName"
+                                 editor="editor">
+                            </div>
+                        </div>
+                        <button ng-show="doShowAllProps"
+                                type="button"
+                                class="btn btn-lg btn-primary"
+                                bs-dropdown="addAEExtDropdown"
+                                aria-haspopup="true"
+                                aria-expanded="false">
+                            Add AE extension
+                        </button>
+                    </div>
+
+                    <!-- HL7 extensions -->
+                    <div ng-if="schema.class=='HL7Application'">
+                        <div ng-repeat="(extensionName,extensionConfig) in confignode.hl7AppExtensions ">
+
+                            <a href="" class="btn btn-danger" ng-click="ConfigEditorService.removeExtension(confignode, extensionName, 'hl7AppExtensions')">
+                                Delete this {{extensionName}}
+                            </a>
+
+                            <div confignode="extensionConfig"
+                                 schema="ConfigEditorService.schemas.hl7AppExtensions[extensionName]"
+                                 parentnode="confignode.hl7AppExtensions"
+                                 index="extensionName"
+                                 editor="editor">
+                            </div>
+                        </div>
+                        <button type="button"
+                                class="btn btn-lg btn-primary"
+                                bs-dropdown="addHL7ExtDropdown"
+                                aria-haspopup="true"
+                                aria-expanded="false">
+                            Add HL7 extension
+                        </button>
+                    </div>
+
                 </fieldset>
             </div>
 
