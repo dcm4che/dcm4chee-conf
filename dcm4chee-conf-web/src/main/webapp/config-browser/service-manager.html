@@ -34,6 +34,7 @@
                     bs-select>
                 Device <span class="caret"></span>
             </button>
+            <a href="" class="btn btn-default" ng-click="deviceManagerSpan = !deviceManagerSpan">Device add/delete...</a>
             <span>
                 <a href=""
                    ng-click="reconfigureDevice()"
@@ -47,6 +48,11 @@
                    class="btn btn-danger ">Cancel</a>
             </span>
         </h2>
+        <div ng-show="deviceManagerSpan">
+            Create device with name: <input type="text" ng-model="deviceNameToAdd">
+            <a href="" class="btn btn-info" ng-click="createDevice(deviceNameToAdd)">Create device</a>
+            <a href="" class="btn btn-danger" ng-click="deleteThisDevice()">Delete this device</a>
+        </div>
 
         <!--hide/expand device panel-->
         <a href="" class="badge" ng-click="isDeviceNavCollapsed = !isDeviceNavCollapsed">
@@ -103,25 +109,38 @@
                                     </li>
                                 </ul>
                             </li>
-                            <li><h3>Extensions</h3></li>
+                            <li>
+                                <h3>Device Extensions
+                                    <a bs-dropdown="addDeviceExtDropdown"
+                                       aria-haspopup="true"
+                                       aria-expanded="false"
+                                       href="">
+                                        <span class="badge">+</span>
+                                    </a>
+                                </h3>
+                            </li>
                             <li>
                                 <ul class="nav nav-pills nav-stacked">
                                     <li
                                             ng-repeat="(extensionName,extensionConfig) in selectedDevice.config.deviceExtensions | orderBy:'extensionName'"
                                             ng-class="(selectedConfigNode.node == extensionConfig ? 'active' : '')">
                                         <a href=""
-                                           ng-click="selectConfigNode(extensionConfig,ConfigEditorService.schemas.deviceExtensions[extensionName],selectedDevice.config.deviceExtensions,{class:'Map',type:'object'})">{{extensionName}}</a>
+                                           ng-click="selectConfigNode(extensionConfig,
+                                           ConfigEditorService.schemas.deviceExtensions[extensionName],
+                                           selectedDevice.config.deviceExtensions,
+                                           {class:'Map',type:'object'},
+                                           extensionName)">{{extensionName}}</a>
                                     </li>
                                 </ul>
                             </li>
                         </ul>
-
                     </div>
                 </div>
             </div>
             <div ng-class="isDeviceNavCollapsed ? 'col-sm-12' : 'col-sm-9'">
 
-                <div class="pull-right" ng-show="selectedConfigNode.parentSchema.type == 'array'"
+                <div class="pull-right"
+                     ng-show="selectedConfigNode.parentSchema.type == 'array' || selectedConfigNode.parentSchema.class == 'Map'"
                      ng-controller="DeleteTopLevelElementController">
                     <a href="" class="btn btn-danger" ng-click="deleteCurrentElement()">
                         Delete this {{selectedConfigNode.schema.class}}

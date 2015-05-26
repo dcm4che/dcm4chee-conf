@@ -1,5 +1,5 @@
 angular.module('dcm4che.config.manager', ['dcm4che.appCommon', 'dcm4che.config.core']
-).controller('ServiceManagerCtrl', function ($scope, $timeout, appHttp, appNotifications, ConfigEditorService) {
+).controller('ServiceManagerCtrl', function ($scope, $timeout, $confirm, appHttp, appNotifications, ConfigEditorService) {
 
         // modification tracking
         var modifiedChecksTriggered = 0;
@@ -22,6 +22,7 @@ angular.module('dcm4che.config.manager', ['dcm4che.appCommon', 'dcm4che.config.c
                 modifiedChecksTriggered--;
             }, delay);
         });
+
 
         $scope.configuration = {};
 
@@ -91,6 +92,57 @@ angular.module('dcm4che.config.manager', ['dcm4che.appCommon', 'dcm4che.config.c
 
         };
 
+        $scope.createDevice = function (deviceName) {
+            if (_.contains($scope.deviceNames, deviceName)) {
+                appNotifications.showNotification({
+                    level: "danger",
+                    text: "Device " + deviceName + " already exists",
+                    details: ['', '']
+                });
+            } else {
+                var deviceConfig = ConfigEditorService.createNewItem(ConfigEditorService.schemas.device);
+                deviceConfig.dicomDeviceName = deviceName;
+
+                appHttp.post("data/config/device/" + deviceName, deviceConfig, function (data, status) {
+
+                    // refresh
+                    window.location.reload();
+
+                }, function (data, status) {
+                    appNotifications.showNotification({
+                        level: "danger",
+                        text: "Could not create device",
+                        details: [data, status]
+                    })
+                });
+            }
+        };
+
+        $scope.deleteThisDevice = function () {
+            $confirm("Do you really want to delete this device (" + $scope.selectedDeviceName + ")?").then(
+                function () {
+
+                    appHttp.delete("data/config/device/" + $scope.selectedDeviceName, null, function (data, status) {
+
+                        // refresh
+                        window.location.reload();
+
+                    }, function (data, status) {
+                        appNotifications.showNotification({
+                            level: "danger",
+                            text: "Could not delete device",
+                            details: [data, status]
+                        })
+                    });
+
+                },
+                function () {
+                    console.log('cancelled');
+
+                }
+            );
+        };
+
         // load devicelist
         ConfigEditorService.load(function () {
             $scope.devices = ConfigEditorService.devices;
@@ -98,6 +150,8 @@ angular.module('dcm4che.config.manager', ['dcm4che.appCommon', 'dcm4che.config.c
 
             if ($scope.devices.length > 0)
                 $scope.selectedDeviceName = $scope.devices[0].deviceName;
+
+            $scope.addDeviceExtDropdown = ConfigEditorService.makeAddExtensionDropDown('selectedDevice.config', 'deviceExtensions');
         });
 
 
@@ -207,6 +261,35 @@ angular.module('dcm4che.config.manager', ['dcm4che.appCommon', 'dcm4che.config.c
 
             schemas: {},
 
+            makeAddExtensionDropDown: function (nodestr, extType) {
+                var map = _.map(conf.schemas[extType], function (value, key) {
+                    return {
+                        "text": key,
+                        "click": "ConfigEditorService.addExtension(" + nodestr + ",'" + key + "','" + extType + "')"
+                    };
+                });
+                return map;
+            },
+
+            /**
+             *
+             * @param extName
+             * @param extType
+             *          aeExtensions
+             *          hl7AppExtensions
+             *          deviceExtensions
+             */
+            addExtension: function (node, extName, extType) {
+                if (!node[extType])
+                    node[extType] = {};
+                node[extType][extName] = conf.createNewItem(conf.schemas[extType][extName]);
+                conf.checkModified();
+            },
+            removeExtension: function (node, extName, extType) {
+                delete node[extType][extName];
+                conf.checkModified();
+            },
+
 
             // initializes things
             load: function (callback) {
@@ -252,10 +335,12 @@ angular.module('dcm4che.config.manager', ['dcm4che.appCommon', 'dcm4che.config.c
                     if (schema.default != null)
                         return schema.default;
 
-                    if (schema.type == "string") return "";
+                    if (schema.type == "boolean") return false;
+                    if (schema.type == "string") return null;
                     if (schema.type == "integer") return 0;
                     if (hasType(schema, "enum")) return null;
                     if (schema.type == "array") return [];
+                    if (schema.class == "Map") return {};
                 };
 
                 if (schema.type != "object")

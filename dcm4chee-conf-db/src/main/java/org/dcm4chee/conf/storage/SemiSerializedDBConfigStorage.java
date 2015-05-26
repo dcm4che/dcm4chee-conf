@@ -39,19 +39,17 @@
  */
 package org.dcm4chee.conf.storage;
 
-import org.dcm4che3.conf.core.api.ConfigurationException;
 import org.dcm4che3.conf.core.api.Configuration;
+import org.dcm4che3.conf.core.api.ConfigurationException;
 import org.dcm4che3.conf.core.util.ConfigNodeUtil;
+import org.dcm4che3.conf.core.util.SplittedPath;
 import org.dcm4che3.conf.dicom.DicomPath;
 
 import javax.ejb.EJB;
 import javax.enterprise.context.ApplicationScoped;
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-
-import static org.dcm4che3.conf.core.util.SimpleConfigNodeUtil.getPathItems;
 
 /**
  * @author Roman K
@@ -95,22 +93,22 @@ public class SemiSerializedDBConfigStorage implements Configuration {
         if (path.equals(DicomPath.ConfigRoot.path()))
             return !db.isEmpty();
 
-        SplittedPath splittedPath = new SplittedPath(path).invoke();
+        SplittedPath splittedPath = new SplittedPath(path, level).calc();
 
         // no need to store those
         if (splittedPath.getTotalDepth() <= level) throw new RuntimeException("Unexpected path "+path);
 
-        return db.nodeExists(splittedPath.getPathItemsForDB(), splittedPath.getRestPathItems());
+        return db.nodeExists(splittedPath.getOuterPathItems(), splittedPath.getInnerPathitems());
 
     }
 
     @Override
     public void persistNode(String path, Map<String, Object> configNode, Class configurableClass) throws ConfigurationException {
 
-        SplittedPath splittedPath = new SplittedPath(path).invoke();
+        SplittedPath splittedPath = new SplittedPath(path, level).calc();
         int i = splittedPath.getTotalDepth();
-        List<String> pathItemsForDB = splittedPath.getPathItemsForDB();
-        List<String> restPathItems = splittedPath.getRestPathItems();
+        List<String> pathItemsForDB = splittedPath.getOuterPathItems();
+        List<String> restPathItems = splittedPath.getInnerPathitems();
 
         // no need to store those
         if (i <= level) return;
@@ -126,11 +124,11 @@ public class SemiSerializedDBConfigStorage implements Configuration {
 
     @Override
     public void removeNode(String path) throws ConfigurationException {
-        SplittedPath splittedPath = new SplittedPath(path).invoke();
+        SplittedPath splittedPath = new SplittedPath(path, level).calc();
 
         if (splittedPath.getTotalDepth() <= level) throw new RuntimeException("Unable to delete node "+path);
 
-        db.removeNode(splittedPath.pathItemsForDB, splittedPath.restPathItems);
+        db.removeNode(splittedPath.getOuterPathItems(), splittedPath.getInnerPathitems());
     }
 
     @Override
@@ -138,39 +136,4 @@ public class SemiSerializedDBConfigStorage implements Configuration {
         throw new RuntimeException("Not implemented");
     }
 
-    private class SplittedPath {
-        private String path;
-        private List<String> pathItemsForDB;
-        private List<String> restPathItems;
-        private int i;
-
-        public SplittedPath(String path) {
-            this.path = path;
-        }
-
-        public List<String> getPathItemsForDB() {
-            return pathItemsForDB;
-        }
-
-        public List<String> getRestPathItems() {
-            return restPathItems;
-        }
-
-        public int getTotalDepth() {
-            return i;
-        }
-
-        public SplittedPath invoke() {
-            pathItemsForDB = new ArrayList<String>();
-            restPathItems = new ArrayList<String>();
-            i = 1;
-            for (String name : getPathItems(path)) {
-                if (i++ <= level)
-                    pathItemsForDB.add(name);
-                else
-                    restPathItems.add(name);
-            }
-            return this;
-        }
-    }
 }
