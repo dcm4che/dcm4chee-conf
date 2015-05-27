@@ -45,6 +45,7 @@
     <version>1.0.0-SNAPSHOT</version>
     <properties>
         <dcm4che.version>3.3.7-SNAPSHOT</dcm4che.version>
+        <dcm4chee-arc.version>4.4.0-SNAPSHOT</dcm4chee-arc.version>
     </properties>
     <scm>
         <connection>scm:git:ssh://git@ssh.github.com/dcm4che/dcm4chee-conf.git</connection>
@@ -55,6 +56,7 @@
         <module>dcm4chee-conf-cdi</module>
         <module>dcm4chee-conf-db</module>
         <module>dcm4chee-conf-web</module>
+        <module>dcm4chee-conf-decorators</module>
     </modules>
     <dependencyManagement>
         <dependencies>
