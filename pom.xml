@@ -56,6 +56,7 @@
         <module>dcm4chee-conf-db</module>
         <module>dcm4chee-conf-web</module>
         <module>dcm4chee-conf-decorators</module>
+        <module>dcm4chee-conf-infinispan</module>
     </modules>
     <dependencyManagement>
         <dependencies>

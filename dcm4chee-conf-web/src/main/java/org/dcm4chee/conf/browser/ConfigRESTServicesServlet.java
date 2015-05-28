@@ -170,6 +170,8 @@ public class ConfigRESTServicesServlet {
     @Path("/device/{deviceName}")
     @Produces(MediaType.APPLICATION_JSON)
     public void deleteDevice(@PathParam(value = "deviceName") String deviceName) throws ConfigurationException {
+        if (deviceName.isEmpty()) throw new ConfigurationException("Device name cannot be empty");
+
         configurationManager.getConfigurationStorage().removeNode(DicomPath.DeviceByName.set("deviceName",deviceName).path());
     }
 
