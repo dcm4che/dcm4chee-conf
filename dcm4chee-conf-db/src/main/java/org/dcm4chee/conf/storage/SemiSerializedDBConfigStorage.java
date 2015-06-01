@@ -136,4 +136,9 @@ public class SemiSerializedDBConfigStorage implements Configuration {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
+    public void lock() {
+        //TODO
+    }
+
 }
