@@ -80,7 +80,7 @@ public class SemiSerializedDBConfigStorage implements Configuration {
 
     @Override
     public Object getConfigurationNode(String path, Class configurableClass) throws ConfigurationException {
-        return ConfigNodeUtil.getNode(db.getFullTree(), path);
+        return ConfigNodeUtil.getNode(getConfigurationRoot(), path);
     }
 
     @Override
@@ -134,6 +134,11 @@ public class SemiSerializedDBConfigStorage implements Configuration {
     @Override
     public Iterator search(String liteXPathExpression) throws IllegalArgumentException, ConfigurationException {
         throw new RuntimeException("Not implemented");
+    }
+
+    @Override
+    public void lock() {
+        //TODO
     }
 
 }

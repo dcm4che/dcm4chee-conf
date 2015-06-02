@@ -42,14 +42,35 @@
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <artifactId>dcm4chee-conf-decorators</artifactId>
-    <name>dcm4chee-conf-decorators</name>
+    <groupId>org.dcm4chee</groupId>
+    <artifactId>dcm4chee-conf-infinispan</artifactId>
     <packaging>jar</packaging>
     <parent>
         <groupId>org.dcm4che.dcm4chee-conf</groupId>
         <artifactId>dcm4chee-conf-parent</artifactId>
         <version>1.0.0-SNAPSHOT</version>
     </parent>
+    <dependencies>
+
+        <dependency>
+            <groupId>org.dcm4che</groupId>
+            <artifactId>dcm4che-conf-core</artifactId>
+            <version>${dcm4che.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>javax</groupId>
+            <artifactId>javaee-api</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.infinispan</groupId>
+            <artifactId>infinispan-core</artifactId>
+            <version>5.1.2.FINAL</version>
+        </dependency>
+    </dependencies>
+
     <build>
         <resources>
             <resource>
@@ -57,17 +78,20 @@
                 <filtering>true</filtering>
             </resource>
         </resources>
+        <plugins>
+            <plugin>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>2.5</version>
+                <configuration>
+                    <archive>
+                        <manifestEntries>
+                            <Dependencies>org.dcm4che.conf.core, org.infinispan </Dependencies>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+            </plugin>
+        </plugins>
     </build>
-    <dependencies>
-        <dependency>
-            <groupId>org.dcm4che</groupId>
-            <artifactId>dcm4che-conf-core</artifactId>
-            <version>${dcm4che.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>javax</groupId>
-            <artifactId>javaee-api</artifactId>
-        </dependency>
-    </dependencies>
+
+
 </project>

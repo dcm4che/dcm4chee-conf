@@ -39,9 +39,13 @@
  */
 package org.dcm4chee.conf.cdi;
 
-import org.dcm4che3.conf.api.DicomConfigurationCustomizer;
+import org.dcm4che3.conf.api.DicomConfigurationBuilderAddon;
+import org.dcm4che3.conf.api.internal.DicomConfigurationManager;
+import org.dcm4che3.conf.api.migration.MigrationScript;
+import org.dcm4che3.conf.core.api.Configuration;
 import org.dcm4che3.conf.core.api.ConfigurationException;
 import org.dcm4che3.conf.dicom.DicomConfigurationBuilder;
+import org.dcm4che3.conf.migration.MigrationRunner;
 import org.dcm4che3.net.AEExtension;
 import org.dcm4che3.net.DeviceExtension;
 import org.dcm4che3.net.hl7.HL7ApplicationExtension;
@@ -52,6 +56,9 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Instance;
 import javax.enterprise.inject.Produces;
 import javax.inject.Inject;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 
 /**
  * Centralized handling for all Java EE - based enhancements,
@@ -60,10 +67,11 @@ import javax.inject.Inject;
  *
  * @author Roman K
  */
-public class DicomConfigurationExtenderEE {
+@ApplicationScoped
+public class DicomConfigurationEEAddon implements DicomConfigurationBuilderAddon {
 
     private static Logger log = LoggerFactory
-            .getLogger(DicomConfigurationExtenderEE.class);
+            .getLogger(DicomConfigurationEEAddon.class);
 
     @Inject
     Instance<DeviceExtension> deviceExtensions;
@@ -74,28 +82,33 @@ public class DicomConfigurationExtenderEE {
     @Inject
     Instance<HL7ApplicationExtension> hl7ApplicationExtensions;
 
+    @Inject
+    Instance<Configuration> customConfigStorage;
 
-    @Produces
-    @ApplicationScoped
-    public DicomConfigurationCustomizer getConfigurationEECustomizer()
-            throws ConfigurationException {
+    @Inject
+    Instance<MigrationScript> migrationScripts;
 
-        return new DicomConfigurationCustomizer() {
-            @Override
-            public void customize(DicomConfigurationBuilder builder) {
+    @Override
+    public void beforeBuild(DicomConfigurationBuilder builder) {
+        for (DeviceExtension ext : deviceExtensions) builder.registerDeviceExtension(ext.getClass());
+        for (AEExtension ext : aeExtensions) builder.registerAEExtension(ext.getClass());
+        for (HL7ApplicationExtension ext : hl7ApplicationExtensions)
+            builder.registerHL7ApplicationExtension(ext.getClass());
 
-                for (DeviceExtension ext : deviceExtensions) builder.registerDeviceExtension(ext.getClass());
-                for (AEExtension ext : aeExtensions) builder.registerAEExtension(ext.getClass());
-                for (HL7ApplicationExtension ext : hl7ApplicationExtensions)
-                    builder.registerHL7ApplicationExtension(ext.getClass());
+        if (!customConfigStorage.isUnsatisfied()) {
+            builder.registerCustomConfigurationStorage(customConfigStorage.get());
+        }
 
-
-                // TODO register DB storage if corresponding CDI bean is available
-                // TODO wrap the storage bean in Infinispan decorator when configured
-                // builder.registerCustomConfigurationStorage();
-
-            }
-        };
     }
 
+    @Override
+    public void afterBuild(DicomConfigurationManager manager) throws ConfigurationException {
+
+        // trigger migration
+        List<MigrationScript> scripts = new ArrayList<>();
+        for (MigrationScript migrationScript : migrationScripts) scripts.add(migrationScript);
+
+        new MigrationRunner(manager.getConfigurationStorage(), scripts, manager).migrate();
+
+    }
 }

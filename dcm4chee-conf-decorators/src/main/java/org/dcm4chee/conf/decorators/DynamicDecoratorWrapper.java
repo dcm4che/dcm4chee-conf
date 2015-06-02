@@ -1,13 +1,11 @@
 package org.dcm4chee.conf.decorators;
 
-import java.util.Collection;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
-
-import org.dcm4chee.conf.decorators.impl.DelegatingServiceImpl;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.Collection;
 
 public class DynamicDecoratorWrapper<T> {
 	

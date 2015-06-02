@@ -51,7 +51,7 @@
     <version>1.0.0-SNAPSHOT</version>	
   </parent>
     <properties>
-        <ds>java:/ConfigDS</ds>
+        <ds>java:/PacsDS</ds>
         <hbm2ddl.auto>validate</hbm2ddl.auto>
         <show_sql>false</show_sql>
         <project.classifier></project.classifier>
@@ -111,6 +111,12 @@
         <dependency>
             <groupId>org.dcm4che</groupId>
             <artifactId>dcm4che-conf-core</artifactId>
+            <version>${dcm4che.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.dcm4che</groupId>
+            <artifactId>dcm4che-conf-dicom</artifactId>
             <version>${dcm4che.version}</version>
             <scope>provided</scope>
         </dependency>
