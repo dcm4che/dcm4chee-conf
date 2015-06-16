@@ -52,9 +52,12 @@ public class DynamicDecoratorsConfig {
 
         public void setDecorators(List<DynamicDecoratorConfig> decorators) {
             this.decorators = decorators;
+            
+            double priority = decorators.size();
 
             for (DynamicDecoratorConfig decoratorConfig : decorators) {
-                prioritiesMap.put(decoratorConfig.getDecoratorClassName(), decoratorConfig.getPriority());
+                prioritiesMap.put(decoratorConfig.getDecoratorClassName(), priority);
+                priority--;
             }
         }
 
@@ -69,9 +72,6 @@ public class DynamicDecoratorsConfig {
         @ConfigurableProperty
         String decoratorClassName;
 
-        @ConfigurableProperty(defaultValue = "1.0")
-        Double priority = 1.0;
-
         public DynamicDecoratorConfig() {
         }
 
@@ -81,14 +81,6 @@ public class DynamicDecoratorsConfig {
 
         public void setDecoratorClassName(String decoratorClassName) {
             this.decoratorClassName = decoratorClassName;
-        }
-
-        public Double getPriority() {
-            return priority;
-        }
-
-        public void setPriority(Double priority) {
-            this.priority = priority;
         }
     }
 }

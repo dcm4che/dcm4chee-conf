@@ -12,10 +12,6 @@ import java.util.TreeMap;
 
 public class ServiceDecorator<T> {
 
-//	@Inject
-//	@ConfiguredDynamicDecorators
-//	Map<String, Double> dynamicDecoratorConfiguration;
-
     @Inject
     @ConfiguredDynamicDecorators
     DynamicDecoratorsConfig decoratorsConfig;

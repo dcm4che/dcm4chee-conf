@@ -13,8 +13,6 @@ import java.util.Map;
 
 public class DynamicDecoratorConfigurationProducer {
 
-    // TODO: make sure deterministic ordering if priority is the same
-
     private static final Logger LOG = LoggerFactory
             .getLogger(DynamicDecoratorConfigurationProducer.class);
 
@@ -28,10 +26,12 @@ public class DynamicDecoratorConfigurationProducer {
         DynamicDecoratorsConfig dynamicDecorators = new DefaultBeanVitalizer().newConfiguredInstance((Map<String, Object>) storage
                 .getConfigurationNode("/", null), DynamicDecoratorsConfig.class);
 
-        for (Map.Entry<String, DynamicDecoratorsConfig.DynamicDecoratoredServiceConfig> entry : dynamicDecorators.getDecoratedServices().entrySet()) {
-            LOG.debug("Dynamic decorators for service {}:",entry.getKey());
-            for (DynamicDecoratorsConfig.DynamicDecoratorConfig dynamicDecoratorConfig : entry.getValue().getDecorators())
-                LOG.debug("Found dynamic decorator {} in configuration with priority {}.", dynamicDecoratorConfig.getDecoratorClassName(), dynamicDecoratorConfig.getPriority());
+        if (LOG.isDebugEnabled()) {
+	        for (Map.Entry<String, DynamicDecoratorsConfig.DynamicDecoratoredServiceConfig> entry : dynamicDecorators.getDecoratedServices().entrySet()) {
+	            LOG.debug("Dynamic decorators for service {}:",entry.getKey());
+	            for (DynamicDecoratorsConfig.DynamicDecoratorConfig dynamicDecoratorConfig : entry.getValue().getDecorators())
+	                LOG.debug("Found dynamic decorator {} in configuration.", dynamicDecoratorConfig.getDecoratorClassName());
+	        }
         }
 
         return dynamicDecorators;
