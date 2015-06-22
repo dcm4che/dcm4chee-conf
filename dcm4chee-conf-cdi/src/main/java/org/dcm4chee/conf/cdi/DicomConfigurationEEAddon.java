@@ -41,23 +41,25 @@ package org.dcm4chee.conf.cdi;
 
 import org.dcm4che3.conf.api.DicomConfigurationBuilderAddon;
 import org.dcm4che3.conf.api.internal.DicomConfigurationManager;
-import org.dcm4che3.conf.api.migration.MigrationScript;
+import org.dcm4che3.conf.api.upgrade.UpgradeScript;
+import org.dcm4che3.conf.core.DefaultBeanVitalizer;
 import org.dcm4che3.conf.core.api.Configuration;
 import org.dcm4che3.conf.core.api.ConfigurationException;
+import org.dcm4che3.conf.core.storage.SingleJsonFileConfigurationStorage;
 import org.dcm4che3.conf.dicom.DicomConfigurationBuilder;
-import org.dcm4che3.conf.migration.MigrationRunner;
+import org.dcm4che3.conf.upgrade.UpgradeRunner;
+import org.dcm4che3.conf.upgrade.UpgradeSettings;
 import org.dcm4che3.net.AEExtension;
 import org.dcm4che3.net.DeviceExtension;
 import org.dcm4che3.net.hl7.HL7ApplicationExtension;
+import org.dcm4che3.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Instance;
-import javax.enterprise.inject.Produces;
 import javax.inject.Inject;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -73,6 +75,8 @@ public class DicomConfigurationEEAddon implements DicomConfigurationBuilderAddon
     private static Logger log = LoggerFactory
             .getLogger(DicomConfigurationEEAddon.class);
 
+    public static final String UPGRADE_SETTINGS_PROP = "org.dcm4che.conf.upgrade.settingsFile";
+
     @Inject
     Instance<DeviceExtension> deviceExtensions;
 
@@ -86,7 +90,7 @@ public class DicomConfigurationEEAddon implements DicomConfigurationBuilderAddon
     Instance<Configuration> customConfigStorage;
 
     @Inject
-    Instance<MigrationScript> migrationScripts;
+    Instance<UpgradeScript> upgradeScripts;
 
     @Override
     public void beforeBuild(DicomConfigurationBuilder builder) {
@@ -104,11 +108,25 @@ public class DicomConfigurationEEAddon implements DicomConfigurationBuilderAddon
     @Override
     public void afterBuild(DicomConfigurationManager manager) throws ConfigurationException {
 
-        // trigger migration
-        List<MigrationScript> scripts = new ArrayList<>();
-        for (MigrationScript migrationScript : migrationScripts) scripts.add(migrationScript);
+        // collect available upgrade scripts
+        List<UpgradeScript> scripts = new ArrayList<>();
+        for (UpgradeScript upgradeScript : upgradeScripts) scripts.add(upgradeScript);
 
-        new MigrationRunner(manager.getConfigurationStorage(), scripts, manager).migrate();
+        // perform upgrade
+        String property = System.getProperty(UPGRADE_SETTINGS_PROP);
+        if (property != null) {
+            // load upgrade settings
+            String filename = StringUtils.replaceSystemProperties(property);
+            SingleJsonFileConfigurationStorage singleJsonFileConfigurationStorage = new SingleJsonFileConfigurationStorage(filename);
+            UpgradeSettings upgradeSettings = new DefaultBeanVitalizer().newConfiguredInstance(singleJsonFileConfigurationStorage.getConfigurationRoot(), UpgradeSettings.class);
+
+            UpgradeRunner upgradeRunner = new UpgradeRunner(manager.getConfigurationStorage(), scripts, manager, upgradeSettings);
+            upgradeRunner.upgrade();
+
+        } else {
+            log.info("Dcm4che configuration init: {} property not set, no config upgrade will be performed", UPGRADE_SETTINGS_PROP);
+        }
+
 
     }
 }

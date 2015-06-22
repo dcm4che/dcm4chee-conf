@@ -19,10 +19,15 @@ This will allow a not-so-safe low-level access to the configuration. Although th
 
 The valid direct use-case of `Configuration` is issuing custom queries (i.e. that rely on some AE/Device/HL7 extensions)
 
-### How to perform migration
+### How to perform upgrade/migration
 
-Migration allows to use both high-level type-safe API ([DicomConfiguration](https://github.com/dcm4che/dcm4che/blob/master/dcm4che-conf/dcm4che-conf-api/src/main/java/org/dcm4che3/conf/api/DicomConfiguration.java)) and low-level unsafe API ([Configuration](https://github.com/dcm4che/dcm4che/blob/master/dcm4che-conf/dcm4che-conf-core-api/src/main/java/org/dcm4che3/conf/core/api/Configuration.java)).
-Migration runner (to be introduced) will call all the migration scripts in proper order and provide the instances of `DicomConfiguration` and `Configuration` for them.
+Upgrade mechanism allows to use both high-level type-safe API ([DicomConfiguration](https://github.com/dcm4che/dcm4che/blob/master/dcm4che-conf/dcm4che-conf-api/src/main/java/org/dcm4che3/conf/api/DicomConfiguration.java)) and low-level unsafe API ([Configuration](https://github.com/dcm4che/dcm4che/blob/master/dcm4che-conf/dcm4che-conf-core-api/src/main/java/org/dcm4che3/conf/core/api/Configuration.java)).
+To create an upgrade routine one needs to
+1) crate a class that implements `org.dcm4che3.conf.api.upgrade.UpgradeScript` interface,
+2) make sure this class is contained in the deployment and is visible by CDI,
+3) specify the full class name in the upgrade setting file.
+
+Upgrade runner will call all the specified scripts in a consistent manner on startup.
 
 # Examples
 
