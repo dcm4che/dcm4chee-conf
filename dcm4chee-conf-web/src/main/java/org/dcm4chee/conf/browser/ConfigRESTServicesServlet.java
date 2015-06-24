@@ -1,5 +1,6 @@
 package org.dcm4chee.conf.browser;
 
+import org.dcm4che3.conf.api.TCConfiguration;
 import org.dcm4che3.conf.core.api.ConfigurationException;
 import org.dcm4che3.conf.api.hl7.HL7Configuration;
 import org.dcm4che3.conf.core.api.internal.AnnotatedConfigurableProperty;
@@ -164,6 +165,13 @@ public class ConfigRESTServicesServlet {
     @Produces(MediaType.APPLICATION_JSON)
     public Map<String,Object> getDeviceConfig(@PathParam(value = "deviceName") String deviceName) throws ConfigurationException {
         return (Map<String, Object>) configurationManager.getConfigurationStorage().getConfigurationNode(DicomPath.DeviceByName.set("deviceName", deviceName).path(), Device.class);
+    }
+
+    @GET
+    @Path("/transferCapabilities")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Map<String,Object> getTransferCapabilitiesConfig() throws ConfigurationException {
+        return (Map<String, Object>) configurationManager.getConfigurationStorage().getConfigurationNode(DicomPath.TCGroups.path(), TCConfiguration.class);
     }
 
     @DELETE
