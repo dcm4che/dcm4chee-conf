@@ -39,18 +39,28 @@
  */
 package org.dcm4chee.conf.storage;
 
-import org.codehaus.jackson.map.ObjectMapper;
-import org.dcm4che3.conf.core.util.SimpleConfigNodeUtil;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
+import javax.annotation.Resource;
 import javax.ejb.Stateless;
+import javax.inject.Inject;
 import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import javax.transaction.Status;
+import javax.transaction.Synchronization;
+import javax.transaction.SystemException;
+import javax.transaction.Transaction;
+import javax.transaction.TransactionManager;
+
+import org.codehaus.jackson.map.ObjectMapper;
+import org.dcm4che3.conf.core.util.SimpleConfigNodeUtil;
+import org.dcm4chee.conf.storage.ConfigNotificationService.ConfigChangeNotification;
 
 /**
  * @author Roman K
@@ -59,7 +69,13 @@ import java.util.Map;
 public class DBStorageBean {
 
     private static final ObjectMapper OM = new ObjectMapper();
+    private static final Map<Integer,DbConfigChangeNotification> changeMap = new HashMap<>();
 
+    @Inject
+    private ConfigNotificationService configNotifService;
+    
+    @Resource(lookup="java:jboss/TransactionManager")
+    private TransactionManager tmManager;
 
     @PersistenceContext(unitName = "dcm4chee-conf")
     private EntityManager em;
@@ -104,7 +120,8 @@ public class DBStorageBean {
     }
 
     public void modifyNode(List<String> pathItemsForDB, List<String> restPathItems, Map<String, Object> configNode) {
-
+        recordConfigChange(pathItemsForDB);
+        
         String dbPath = SimpleConfigNodeUtil.toSimpleEscapedPath(pathItemsForDB);
 
         ConfigNodeEntity node;
@@ -163,6 +180,69 @@ public class DBStorageBean {
         query.setParameter(1, dbPath);
 
         return (ConfigNodeEntity) query.getSingleResult();
+    }
+    
+    
+    private void recordConfigChange(List<String> paths) {
+        DbConfigChangeNotification changes = getNotificationForActiveTransaction();
+        if(changes != null) {
+            changes.addChangedPaths(paths);
+        }
+    }
+    
+    private DbConfigChangeNotification getNotificationForActiveTransaction() {
+        Transaction tx = null;
+        try {
+            tx = tmManager.getTransaction();
+            if (Status.STATUS_ACTIVE != tx.getStatus()) {
+                return null;
+            }
+        } catch (SystemException e) {
+            return null;
+        }
+        
+        int transactionId = tx.hashCode();
+        DbConfigChangeNotification changes = changeMap.get(transactionId);
+        if(changes == null) {
+            changes = new DbConfigChangeNotification(transactionId);
+            try {
+                tx.registerSynchronization(changes);
+            } catch (Exception e) {
+                
+            } 
+            changeMap.put(transactionId, changes);
+        }
+        
+        return changes;
+    }
+    
+    private class DbConfigChangeNotification implements ConfigChangeNotification, Synchronization {
+        private int transactionId;
+        private List<String> changedPaths = new ArrayList<>();
+        
+        private DbConfigChangeNotification(int transactionId) {
+            this.transactionId = transactionId;
+        }
+        
+        public void addChangedPaths(List<String> paths) {
+            changedPaths.addAll(paths);
+        }
+        
+        @Override
+        public List<String> getChangedPaths() {
+            return changedPaths;
+        }
+        
+        @Override
+        public void afterCompletion(int status) {
+            changeMap.remove(transactionId);
+            configNotifService.sendConfigChangeNotification(this);
+        }
+
+        @Override
+        public void beforeCompletion() {
+            // NOOP
+        }
     }
 
 
