@@ -60,7 +60,7 @@ public class SemiSerializedDBConfigStorage implements Configuration {
     /**
      * The level from which on all the nodes are serialized
      */
-    private static final int level = 3;
+    public static final int level = 3;
 
     @EJB
     DBStorageBean db;
@@ -80,6 +80,8 @@ public class SemiSerializedDBConfigStorage implements Configuration {
 
     @Override
     public Object getConfigurationNode(String path, Class configurableClass) throws ConfigurationException {
+
+        // since some paths are not trivial, e.g. references, just use the root because it will be cached
         return ConfigNodeUtil.getNode(getConfigurationRoot(), path);
     }
 

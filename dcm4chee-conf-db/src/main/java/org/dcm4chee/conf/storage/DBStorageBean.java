@@ -144,12 +144,32 @@ public class DBStorageBean {
     }
 
 
+    public Object getNode(List<String> pathItemsForDB) {
+        ConfigNodeEntity node = getConfigNodeEntityForDBPath(pathItemsForDB);
+        Object loadedNode = node.getContent() == null ?
+                new HashMap() :
+                fromBytes(node.getContent());
+
+        return loadedNode;
+    }
+
 
     public void removeNode(List<String> pathItemsForDB, List<String> restPathItems) {
 
         if (restPathItems.size() == 0) {
-            Query query = em.createQuery("DELETE FROM ConfigNodeEntity n WHERE n.path like ?1");
-            query.setParameter(1, SimpleConfigNodeUtil.toSimpleEscapedPath(pathItemsForDB)+"%");
+
+            Query query;
+
+            // if less than level, allow bulk delete of x/y/*
+            if (pathItemsForDB.size() < SemiSerializedDBConfigStorage.level) {
+                query = em.createQuery("DELETE FROM ConfigNodeEntity n WHERE n.path like ?1");
+                query.setParameter(1, SimpleConfigNodeUtil.toSimpleEscapedPath(pathItemsForDB) + "%" );
+            }
+            // otherwise must be equals
+            else {
+                query = em.createQuery("DELETE FROM ConfigNodeEntity n WHERE n.path=?1");
+                query.setParameter(1, SimpleConfigNodeUtil.toSimpleEscapedPath(pathItemsForDB));
+            }
             query.executeUpdate();
         } else
             try {
@@ -259,7 +279,6 @@ public class DBStorageBean {
 
         return changes;
     }
-
 
     private class DbConfigChangeNotification implements ConfigChangeNotification, Synchronization {
         private int transactionId;
