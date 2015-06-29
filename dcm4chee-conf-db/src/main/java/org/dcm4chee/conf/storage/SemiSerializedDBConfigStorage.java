@@ -125,9 +125,6 @@ public class SemiSerializedDBConfigStorage implements Configuration {
     @Override
     public void removeNode(String path) throws ConfigurationException {
         SplittedPath splittedPath = new SplittedPath(path, level).calc();
-
-        if (splittedPath.getTotalDepth() <= level) throw new RuntimeException("Unable to delete node "+path);
-
         db.removeNode(splittedPath.getOuterPathItems(), splittedPath.getInnerPathitems());
     }
 
@@ -139,6 +136,7 @@ public class SemiSerializedDBConfigStorage implements Configuration {
     @Override
     public void lock() {
         //TODO
+        db.lock();
     }
 
 }
