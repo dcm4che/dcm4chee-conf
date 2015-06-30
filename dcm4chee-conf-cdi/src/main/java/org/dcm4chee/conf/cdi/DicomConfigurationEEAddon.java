@@ -39,11 +39,17 @@
  */
 package org.dcm4chee.conf.cdi;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.inject.Instance;
+import javax.inject.Inject;
+
 import org.dcm4che3.conf.api.DicomConfigurationBuilderAddon;
 import org.dcm4che3.conf.api.internal.DicomConfigurationManager;
 import org.dcm4che3.conf.api.upgrade.UpgradeScript;
 import org.dcm4che3.conf.core.DefaultBeanVitalizer;
-import org.dcm4che3.conf.core.api.Configuration;
 import org.dcm4che3.conf.core.api.ConfigurationException;
 import org.dcm4che3.conf.core.storage.SingleJsonFileConfigurationStorage;
 import org.dcm4che3.conf.dicom.DicomConfigurationBuilder;
@@ -56,12 +62,6 @@ import org.dcm4che3.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.inject.Instance;
-import javax.inject.Inject;
-import java.util.ArrayList;
-import java.util.List;
-
 /**
  * Centralized handling for all Java EE - based enhancements,
  * like device/ae/hl7app extensions collected with CDI,
@@ -71,43 +71,34 @@ import java.util.List;
  */
 @ApplicationScoped
 public class DicomConfigurationEEAddon implements DicomConfigurationBuilderAddon {
-
-    private static Logger log = LoggerFactory
-            .getLogger(DicomConfigurationEEAddon.class);
+    private static Logger LOG = LoggerFactory.getLogger(DicomConfigurationEEAddon.class);
 
     public static final String UPGRADE_SETTINGS_PROP = "org.dcm4che.conf.upgrade.settingsFile";
 
     @Inject
-    Instance<DeviceExtension> deviceExtensions;
+    private Instance<DeviceExtension> deviceExtensions;
 
     @Inject
-    Instance<AEExtension> aeExtensions;
+    private Instance<AEExtension> aeExtensions;
 
     @Inject
-    Instance<HL7ApplicationExtension> hl7ApplicationExtensions;
+    private Instance<HL7ApplicationExtension> hl7ApplicationExtensions;
 
     @Inject
-    Instance<Configuration> customConfigStorage;
-
-    @Inject
-    Instance<UpgradeScript> upgradeScripts;
+    private Instance<UpgradeScript> upgradeScripts;
 
     @Override
     public void beforeBuild(DicomConfigurationBuilder builder) {
         for (DeviceExtension ext : deviceExtensions) builder.registerDeviceExtension(ext.getClass());
         for (AEExtension ext : aeExtensions) builder.registerAEExtension(ext.getClass());
         for (HL7ApplicationExtension ext : hl7ApplicationExtensions)
+        {
             builder.registerHL7ApplicationExtension(ext.getClass());
-
-        if (!customConfigStorage.isUnsatisfied()) {
-            builder.registerCustomConfigurationStorage(customConfigStorage.get());
         }
-
     }
 
     @Override
     public void afterBuild(DicomConfigurationManager manager) throws ConfigurationException {
-
         // collect available upgrade scripts
         List<UpgradeScript> scripts = new ArrayList<>();
         for (UpgradeScript upgradeScript : upgradeScripts) scripts.add(upgradeScript);
@@ -124,9 +115,7 @@ public class DicomConfigurationEEAddon implements DicomConfigurationBuilderAddon
             upgradeRunner.upgrade();
 
         } else {
-            log.info("Dcm4che configuration init: {} property not set, no config upgrade will be performed", UPGRADE_SETTINGS_PROP);
+            LOG.info("Dcm4che configuration init: {} property not set, no config upgrade will be performed", UPGRADE_SETTINGS_PROP);
         }
-
-
     }
 }

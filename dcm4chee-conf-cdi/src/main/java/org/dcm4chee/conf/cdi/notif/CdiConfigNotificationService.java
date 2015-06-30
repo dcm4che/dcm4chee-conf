@@ -37,12 +37,13 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-package org.dcm4chee.conf.storage;
+package org.dcm4chee.conf.cdi.notif;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.event.Event;
 import javax.inject.Inject;
 
+import org.dcm4che3.conf.api.ConfigChangeEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,13 +56,13 @@ public class CdiConfigNotificationService implements ConfigNotificationService {
     private static final Logger LOGGER = LoggerFactory.getLogger(CdiConfigNotificationService.class);
     
     @Inject
-    private Event<ConfigChangeNotification> event;
+    private Event<ConfigChangeEvent> event;
     
     
     @Override
-    public void sendConfigChangeNotification(ConfigChangeNotification notif) {
+    public void sendConfigChangeNotification(ConfigChangeEvent changeEvent) {
         LOGGER.info("Sending config changed notification CDI event");
-        event.fire(notif);
+        event.fire(changeEvent);
     }
 
 }

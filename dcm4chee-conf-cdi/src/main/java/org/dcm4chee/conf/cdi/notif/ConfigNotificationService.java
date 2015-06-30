@@ -37,9 +37,9 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-package org.dcm4chee.conf.storage;
+package org.dcm4chee.conf.cdi.notif;
 
-import java.util.List;
+import org.dcm4che3.conf.api.ConfigChangeEvent;
 
 /**
  * @author Alexander Hoermandinger <alexander.hoermandinger@agfa.com>
@@ -47,10 +47,6 @@ import java.util.List;
  */
 public interface ConfigNotificationService {
     
-    void sendConfigChangeNotification(ConfigChangeNotification notif);
-    
-    public interface ConfigChangeNotification {
-        List<String> getChangedPaths();
-    }
+    void sendConfigChangeNotification(ConfigChangeEvent changeEvent);
     
 }
