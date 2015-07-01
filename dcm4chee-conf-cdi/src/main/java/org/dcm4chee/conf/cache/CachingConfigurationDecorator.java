@@ -50,6 +50,8 @@ import org.slf4j.LoggerFactory;
 import javax.decorator.Decorator;
 import javax.decorator.Delegate;
 import javax.enterprise.event.Observes;
+import javax.enterprise.event.Reception;
+import javax.enterprise.inject.Any;
 import javax.inject.Inject;
 import java.io.IOException;
 import java.util.Iterator;
@@ -66,18 +68,9 @@ public abstract class CachingConfigurationDecorator implements Configuration {
     private Map<String, Object> cachedConfigurationRoot = null;
 
     @Inject
+    @Any
     @Delegate
     private Configuration delegate;
-
-    public synchronized void onExternalConfigChange(@Observes ConfigChangeEvent changeEvent) {
-        try {
-            cachedConfigurationRoot = delegate.getConfigurationRoot();
-            log.info("Configuration cache updated");
-        } catch (ConfigurationException e) {
-            log.error("Error while re-loading the configuration from the backend into the cache",e);
-        }
-
-    }
 
     @Override
     public synchronized Map<String, Object> getConfigurationRoot() throws ConfigurationException {
@@ -116,7 +109,7 @@ public abstract class CachingConfigurationDecorator implements Configuration {
         // clone
         ObjectMapper objectMapper = new ObjectMapper();
         try {
-            return objectMapper.treeToValue(objectMapper.valueToTree(node), Map.class);
+            return objectMapper.treeToValue(objectMapper.valueToTree(node), node.getClass());
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

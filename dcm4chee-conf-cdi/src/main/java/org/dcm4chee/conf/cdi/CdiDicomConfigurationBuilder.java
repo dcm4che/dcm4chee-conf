@@ -39,19 +39,10 @@
 
 package org.dcm4chee.conf.cdi;
 
-import java.util.Set;
-
-import javax.annotation.PostConstruct;
-import javax.enterprise.context.spi.CreationalContext;
-import javax.enterprise.inject.Any;
 import javax.enterprise.inject.Instance;
 import javax.enterprise.inject.Produces;
-import javax.enterprise.inject.spi.Bean;
-import javax.enterprise.inject.spi.BeanManager;
-import javax.enterprise.util.AnnotationLiteral;
 import javax.inject.Inject;
 
-import org.dcm4che3.conf.api.DicomConfigurationBuilderAddon;
 import org.dcm4che3.conf.core.api.Configuration;
 import org.dcm4che3.conf.core.api.ConfigurationException;
 import org.dcm4che3.conf.core.storage.SingleJsonFileConfigurationStorage;
@@ -68,7 +59,7 @@ public class CdiDicomConfigurationBuilder extends DicomConfigurationBuilder {
     private static final Logger LOG = LoggerFactory.getLogger(CdiDicomConfigurationBuilder.class);
     
     @Inject
-    @CustomConfigurationStorage
+    @ConfigurationStorage
     private Instance<Configuration> customConfigStorage;
 
     @Inject

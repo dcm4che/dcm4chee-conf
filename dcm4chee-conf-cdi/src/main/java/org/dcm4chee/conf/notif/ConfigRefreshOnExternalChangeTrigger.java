@@ -38,13 +38,36 @@
  *  ***** END LICENSE BLOCK *****
  */
 
-package org.dcm4chee.conf.cdi;
+package org.dcm4chee.conf.notif;
 
-import javax.inject.Qualifier;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
+import org.dcm4che3.conf.core.api.ConfigChangeEvent;
+import org.dcm4che3.conf.core.api.Configuration;
+import org.dcm4che3.conf.core.api.ConfigurationException;
+import org.dcm4che3.conf.core.api.internal.ConfigurationManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-@Retention(RetentionPolicy.RUNTIME)
-@Qualifier
-public @interface CustomConfigurationStorage {
+import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.event.Observes;
+import javax.inject.Inject;
+
+@ApplicationScoped
+public class ConfigRefreshOnExternalChangeTrigger {
+
+    public static final Logger log = LoggerFactory.getLogger(ConfigRefreshOnExternalChangeTrigger.class);
+
+    @Inject
+    ConfigurationManager configurationManager;
+
+    public void onExternalConfigChange(@Observes ConfigChangeEvent changeEvent) {
+        try {
+            // TODO: can optimize by refreshing only the changed paths
+            configurationManager.getConfigurationStorage().refreshNode("/");
+            log.info("Configuration cache updated");
+        } catch (ConfigurationException e) {
+            log.error("Error while re-loading the configuration from the backend into the cache",e);
+        }
+
+    }
+
 }

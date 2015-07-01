@@ -4,7 +4,7 @@
       http://java.sun.com/xml/ns/javaee 
       http://java.sun.com/xml/ns/javaee/beans_1_0.xsd">
     <decorators>
-        <class>org.dcm4chee.conf.cache.CachingConfigurationDecorator</class>
+        <!--<class>org.dcm4chee.conf.cache.CachingConfigurationDecorator</class>-->
         <class>org.dcm4chee.conf.notif.ConfigNotificationDecorator</class>
     </decorators>
 </beans>
