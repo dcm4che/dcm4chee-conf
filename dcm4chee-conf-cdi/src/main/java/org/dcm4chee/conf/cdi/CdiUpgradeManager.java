@@ -1,5 +1,5 @@
 /*
- * **** BEGIN LICENSE BLOCK *****
+ * *** BEGIN LICENSE BLOCK *****
  *  Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
  *  The contents of this file are subject to the Mozilla Public License Version
@@ -17,7 +17,7 @@
  *
  *  The Initial Developer of the Original Code is
  *  Agfa Healthcare.
- *  Portions created by the Initial Developer are Copyright (C) 2014
+ *  Portions created by the Initial Developer are Copyright (C) 2015
  *  the Initial Developer. All Rights Reserved.
  *
  *  Contributor(s):
@@ -37,68 +37,40 @@
  *
  *  ***** END LICENSE BLOCK *****
  */
+
 package org.dcm4chee.conf.cdi;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.inject.Instance;
-import javax.inject.Inject;
-
-import org.dcm4che3.conf.api.DicomConfigurationBuilderAddon;
 import org.dcm4che3.conf.api.internal.DicomConfigurationManager;
 import org.dcm4che3.conf.api.upgrade.UpgradeScript;
 import org.dcm4che3.conf.core.DefaultBeanVitalizer;
 import org.dcm4che3.conf.core.api.ConfigurationException;
 import org.dcm4che3.conf.core.storage.SingleJsonFileConfigurationStorage;
-import org.dcm4che3.conf.dicom.DicomConfigurationBuilder;
 import org.dcm4che3.conf.upgrade.UpgradeRunner;
 import org.dcm4che3.conf.upgrade.UpgradeSettings;
-import org.dcm4che3.net.AEExtension;
-import org.dcm4che3.net.DeviceExtension;
-import org.dcm4che3.net.hl7.HL7ApplicationExtension;
 import org.dcm4che3.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.inject.Instance;
+import javax.inject.Inject;
+import java.util.ArrayList;
+import java.util.List;
+
 /**
- * Centralized handling for all Java EE - based enhancements,
- * like device/ae/hl7app extensions collected with CDI,
- * EE-based configuration storage/decorators like DB storage, Infinispan cache, etc
- *
- * @author Roman K
+ * Matches configuration from a json file with upgrade scripts available as CDI beans and launches the upgrade runner
  */
 @ApplicationScoped
-public class DicomConfigurationEEAddon implements DicomConfigurationBuilderAddon {
-    private static Logger LOG = LoggerFactory.getLogger(DicomConfigurationEEAddon.class);
+public class CdiUpgradeManager {
+
+    private static Logger LOG = LoggerFactory.getLogger(CdiUpgradeManager.class);
 
     public static final String UPGRADE_SETTINGS_PROP = "org.dcm4che.conf.upgrade.settingsFile";
 
     @Inject
-    private Instance<DeviceExtension> deviceExtensions;
-
-    @Inject
-    private Instance<AEExtension> aeExtensions;
-
-    @Inject
-    private Instance<HL7ApplicationExtension> hl7ApplicationExtensions;
-
-    @Inject
     private Instance<UpgradeScript> upgradeScripts;
 
-    @Override
-    public void beforeBuild(DicomConfigurationBuilder builder) {
-        for (DeviceExtension ext : deviceExtensions) builder.registerDeviceExtension(ext.getClass());
-        for (AEExtension ext : aeExtensions) builder.registerAEExtension(ext.getClass());
-        for (HL7ApplicationExtension ext : hl7ApplicationExtensions)
-        {
-            builder.registerHL7ApplicationExtension(ext.getClass());
-        }
-    }
-
-    @Override
-    public void afterBuild(DicomConfigurationManager manager) throws ConfigurationException {
+    public void performUpgrade(DicomConfigurationManager manager) throws ConfigurationException {
         // collect available upgrade scripts
         List<UpgradeScript> scripts = new ArrayList<>();
         for (UpgradeScript upgradeScript : upgradeScripts) scripts.add(upgradeScript);

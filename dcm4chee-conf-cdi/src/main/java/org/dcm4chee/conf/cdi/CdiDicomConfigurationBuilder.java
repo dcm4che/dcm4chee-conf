@@ -45,6 +45,7 @@ import javax.annotation.PostConstruct;
 import javax.enterprise.context.spi.CreationalContext;
 import javax.enterprise.inject.Any;
 import javax.enterprise.inject.Instance;
+import javax.enterprise.inject.Produces;
 import javax.enterprise.inject.spi.Bean;
 import javax.enterprise.inject.spi.BeanManager;
 import javax.enterprise.util.AnnotationLiteral;
@@ -52,7 +53,9 @@ import javax.inject.Inject;
 
 import org.dcm4che3.conf.api.DicomConfigurationBuilderAddon;
 import org.dcm4che3.conf.core.api.Configuration;
+import org.dcm4che3.conf.core.api.ConfigurationException;
 import org.dcm4che3.conf.core.storage.SingleJsonFileConfigurationStorage;
+import org.dcm4che3.conf.dicom.CommonDicomConfigurationWithHL7;
 import org.dcm4che3.conf.dicom.DicomConfigurationBuilder;
 import org.dcm4che3.conf.dicom.ldap.LdapConfigurationStorage;
 import org.slf4j.Logger;
@@ -64,83 +67,67 @@ import org.slf4j.LoggerFactory;
 public class CdiDicomConfigurationBuilder extends DicomConfigurationBuilder {
     private static final Logger LOG = LoggerFactory.getLogger(CdiDicomConfigurationBuilder.class);
     
-    @Inject 
-    private BeanManager beanManager;
-    
     @Inject
+    @CustomConfigurationStorage
     private Instance<Configuration> customConfigStorage;
-    
+
     @Inject
-    private Instance<DicomConfigurationBuilderAddon> builderAddons;
-    
+    private CdiConfigExtensionsManager configExtensionsManager;
+
+    @Inject
+    private CdiUpgradeManager upgradeManager;
+
+    @Inject
+    private Instance<SingleJsonFileConfigurationStorage> jsonFileConfigurationStorageInstance;
+
+    @Inject
+    private Instance<LdapConfigurationStorage> ldapConfigurationStorageInstance;
+
     public CdiDicomConfigurationBuilder() {
         super(System.getProperties());
     }
-    
-    @PostConstruct
-    private void init() {
-        Configuration customStorage = checkForCustomStorage();
-        if(customStorage != null) {
-            LOG.info("Registering custom dicom configuration storage: " + customStorage.getClass().getName());
-            registerCustomConfigurationStorage(customStorage);
+
+    @Override
+    public CommonDicomConfigurationWithHL7 build() throws ConfigurationException {
+
+        // Set custom storage
+        if(!customConfigStorage.isUnsatisfied()) {
+            Configuration storage = customConfigStorage.get();
+            LOG.info("Registering custom dicom configuration storage: " + storage.getClass().getName());
+            registerCustomConfigurationStorage(storage);
         }
-        
-        // Allow configuration bootstrap extensibility through CDI
-        for (DicomConfigurationBuilderAddon addon : builderAddons) {
-            LOG.info("Registering dicom configuration add-on: " + addon.getClass().getName());
-            registerAddon(addon);
-        }
+
+        // Add cdi-based config extensions
+        configExtensionsManager.registerCdiConfigExtensions(this);
+
+        // Build the config
+        CommonDicomConfigurationWithHL7 commonConfig = super.build();
+
+        // Perform upgrade
+        upgradeManager.performUpgrade(commonConfig);
+
+        return commonConfig;
     }
-    
+
     @Override
     protected SingleJsonFileConfigurationStorage createJsonFileConfigurationStorage() {
-        return createBeanInstance(CdiSingleJsonFileConfigurationStorage.class);
+        return jsonFileConfigurationStorageInstance.get();
     }
-    
-    private Configuration checkForCustomStorage() {
-        for (Configuration configStorage : customConfigStorage) {
-            if (!(configStorage instanceof CdiSingleJsonFileConfigurationStorage)
-                    && !(configStorage instanceof CdiLdapConfigurationStorage)) {
-                return configStorage;
-            }
-        }
 
-        return null;
-    }
-    
     @Override
     protected LdapConfigurationStorage createLdapConfigurationStorage() {
-        return createBeanInstance(CdiLdapConfigurationStorage.class);
+        return ldapConfigurationStorageInstance.get();
     }
-    
-    /*
-     * Creates CDI bean instance for the given type.
-     */
-    private <T> T createBeanInstance(Class<T> beanType) {
-        Set<Bean<?>> beans = beanManager.getBeans(beanType,
-                new AnnotationLiteral<Any>() {
-                    private static final long serialVersionUID = 89732984L;
-                });
-        if (beans == null || beans.isEmpty()) {
-            throw new RuntimeException("No CDI implementation found for bean type " + beanType.getName());
-        }
 
-        @SuppressWarnings("unchecked")
-        Bean<Object> bean = (Bean<Object>) beans.iterator().next();
-        CreationalContext<Object> creationalCxt = beanManager.createCreationalContext(null);
+    @Produces
+    public static SingleJsonFileConfigurationStorage SingleJsonFileConfigurationStorageProducer() {
+        return new SingleJsonFileConfigurationStorage();
+    }
 
-        Object beanInstance = bean.create(creationalCxt);
-        @SuppressWarnings("unchecked")
-        T t = (T)beanInstance;
-        return t;
+    @Produces
+    public static LdapConfigurationStorage LdapConfigurationStorage() {
+        return new LdapConfigurationStorage();
     }
-    
-    protected static class CdiSingleJsonFileConfigurationStorage extends SingleJsonFileConfigurationStorage {
-        // Only override to bring it into CDI scope
-    }
-    
-    protected static class CdiLdapConfigurationStorage extends LdapConfigurationStorage {
-        // Only override to bring it into CDI scope
-    }
-       
+
+
 }

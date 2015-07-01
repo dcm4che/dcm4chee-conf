@@ -44,6 +44,7 @@ import org.dcm4che3.conf.core.api.ConfigurationException;
 import org.dcm4che3.conf.core.util.ConfigNodeUtil;
 import org.dcm4che3.conf.core.util.SplittedPath;
 import org.dcm4che3.conf.dicom.DicomPath;
+import org.dcm4chee.conf.cdi.CustomConfigurationStorage;
 
 import javax.ejb.EJB;
 import javax.enterprise.context.ApplicationScoped;
@@ -55,6 +56,7 @@ import java.util.Map;
  * @author Roman K
  */
 @ApplicationScoped
+@CustomConfigurationStorage
 public class SemiSerializedDBConfigStorage implements Configuration {
 
     /**
@@ -137,7 +139,6 @@ public class SemiSerializedDBConfigStorage implements Configuration {
 
     @Override
     public void lock() {
-        //TODO
         db.lock();
     }
 
