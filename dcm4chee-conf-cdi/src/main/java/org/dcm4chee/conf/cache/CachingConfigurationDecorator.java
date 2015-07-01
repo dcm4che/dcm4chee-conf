@@ -37,49 +37,58 @@
  *
  *  ***** END LICENSE BLOCK *****
  */
-package infinispan;
+package org.dcm4chee.conf.cache;
 
 import org.codehaus.jackson.map.ObjectMapper;
-import org.dcm4che3.conf.core.DelegatingConfiguration;
+import org.dcm4che3.conf.core.api.ConfigChangeEvent;
 import org.dcm4che3.conf.core.api.Configuration;
 import org.dcm4che3.conf.core.api.ConfigurationException;
 import org.dcm4che3.conf.core.util.ConfigNodeUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.decorator.Decorator;
+import javax.decorator.Delegate;
+import javax.enterprise.event.Observes;
+import javax.inject.Inject;
 import java.io.IOException;
-import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.Map;
 
 /**
  * @author Roman K
  */
-public class CachedConfiguration extends DelegatingConfiguration {
+@Decorator
+public abstract class CachingConfigurationDecorator implements Configuration {
 
-    public static final Logger log = LoggerFactory.getLogger(CachedConfiguration.class);
+    public static final Logger log = LoggerFactory.getLogger(CachingConfigurationDecorator.class);
 
+    private Map<String, Object> cachedConfigurationRoot = null;
 
-    protected Map<String, Object> configurationRoot = null;
+    @Inject
+    @Delegate
+    private Configuration delegate;
 
-    long staleTimeout;
-    long fetchTime;
+    public synchronized void onExternalConfigChange(@Observes ConfigChangeEvent changeEvent) {
+        try {
+            cachedConfigurationRoot = delegate.getConfigurationRoot();
+            log.info("Configuration cache updated");
+        } catch (ConfigurationException e) {
+            log.error("Error while re-loading the configuration from the backend into the cache",e);
+        }
 
-    public CachedConfiguration(Configuration delegate) {
-        super(delegate);
     }
 
     @Override
     public synchronized Map<String, Object> getConfigurationRoot() throws ConfigurationException {
-        long now = System.currentTimeMillis();
 
-        if (configurationRoot == null)
+        if (cachedConfigurationRoot == null)
         {
-            configurationRoot = delegate.getConfigurationRoot();
-            log.debug("Configuration root fetched from the backend");
+            cachedConfigurationRoot = delegate.getConfigurationRoot();
+            log.info("Configuration cache initialized");
         }
 
-        return configurationRoot;
+        return cachedConfigurationRoot;
     }
 
     /**
@@ -96,12 +105,20 @@ public class CachedConfiguration extends DelegatingConfiguration {
 
         if (node == null) return null;
 
+        try {
+            return deepCloneNode(node);
+        } catch (Exception e) {
+            throw new ConfigurationException(e);
+        }
+    }
+
+    private Object deepCloneNode(Object node) {
         // clone
         ObjectMapper objectMapper = new ObjectMapper();
         try {
             return objectMapper.treeToValue(objectMapper.valueToTree(node), Map.class);
         } catch (IOException e) {
-            throw new ConfigurationException(e);
+            throw new RuntimeException(e);
         }
     }
 
@@ -110,7 +127,7 @@ public class CachedConfiguration extends DelegatingConfiguration {
         if (!path.equals("/"))
             ConfigNodeUtil.replaceNode(getConfigurationRoot(), path, configNode);
         else
-            configurationRoot = configNode;
+            cachedConfigurationRoot = configNode;
         delegate.persistNode(path, configNode, configurableClass);
     }
 
@@ -118,7 +135,7 @@ public class CachedConfiguration extends DelegatingConfiguration {
     public synchronized void refreshNode(String path) throws ConfigurationException {
         Map<String, Object> newConfigurationNode = (Map<String, Object>) delegate.getConfigurationNode(path, null);
         if (path.equals("/"))
-            configurationRoot = newConfigurationNode;
+            cachedConfigurationRoot = newConfigurationNode;
         else
             ConfigNodeUtil.replaceNode(getConfigurationRoot(), path, newConfigurationNode);
 
@@ -137,7 +154,26 @@ public class CachedConfiguration extends DelegatingConfiguration {
 
     @Override
     public synchronized Iterator search(String liteXPathExpression) throws IllegalArgumentException, ConfigurationException {
-        return ConfigNodeUtil.search(getConfigurationRoot(), liteXPathExpression);
+
+        // TODO: get all results within this synchronized block and return iterator to the list to ensure consistency
+
+        final Iterator origIterator = ConfigNodeUtil.search(getConfigurationRoot(), liteXPathExpression);
+        return new Iterator() {
+            @Override
+            public boolean hasNext() {
+                return origIterator.hasNext();
+            }
+
+            @Override
+            public Object next() {
+                return deepCloneNode(origIterator.next());
+            }
+
+            @Override
+            public void remove() {
+                origIterator.remove();
+            }
+        };
     }
 
 }
