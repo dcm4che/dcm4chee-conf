@@ -40,6 +40,7 @@
 package org.dcm4chee.conf.cdi.notif;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -67,7 +68,7 @@ import org.dcm4che3.conf.core.api.ConfigurationException;
  */
 @Decorator
 public abstract class ConfigNotificationDecorator implements Configuration {
-    private final Map<Integer,JtaTransactionConfigChangeEvent> transactionMap = new ConcurrentHashMap<>();
+    private final Map<Integer,JtaTransactionConfigChangeContainer> transactionMap = new ConcurrentHashMap<>();
 
     @Inject @Delegate @Any
     private Configuration delegate;
@@ -89,23 +90,23 @@ public abstract class ConfigNotificationDecorator implements Configuration {
     }
     
     private void recordConfigChange(String path) {
-        JtaTransactionConfigChangeEvent event = getEventForActiveTransaction();
-        if(event != null) {
-            event.addChangedPath(path);
+        JtaTransactionConfigChangeContainer container = getEventForActiveTransaction();
+        if(container != null) {
+            container.addChangedPath(path);
         } else {
-            event = new JtaTransactionConfigChangeEvent(path);
-            configNotifService.sendConfigChangeNotification(event);
+            configNotifService.sendClusterScopedConfigChangeNotification(
+                    new ConfigChangeEventImpl(path, CONTEXT.CONFIG_CHANGE));
         }
     }
     
     private void setConfigInitContext() {
-        JtaTransactionConfigChangeEvent event = getEventForActiveTransaction();
-        if(event != null) {
-            event.setContext(CONTEXT.CONFIG_INIT);
+        JtaTransactionConfigChangeContainer container = getEventForActiveTransaction();
+        if(container != null) {
+            container.setContext(CONTEXT.CONFIG_INIT);
         }
     }
     
-    private JtaTransactionConfigChangeEvent getEventForActiveTransaction() {
+    private JtaTransactionConfigChangeContainer getEventForActiveTransaction() {
         Transaction tx = null;
         try {
             tx = tmManager.getTransaction();
@@ -117,30 +118,30 @@ public abstract class ConfigNotificationDecorator implements Configuration {
         }
         
         int transactionId = tx.hashCode();
-        JtaTransactionConfigChangeEvent event = transactionMap.get(transactionId);
-        if(event == null) {
-            event = new JtaTransactionConfigChangeEvent(transactionId);
+        JtaTransactionConfigChangeContainer container = transactionMap.get(transactionId);
+        if(container == null) {
+            container = new JtaTransactionConfigChangeContainer(transactionId);
             try {
-                tx.registerSynchronization(event);
+                tx.registerSynchronization(container);
             } catch (Exception e) {
                 
             } 
-            transactionMap.put(transactionId, event);
+            transactionMap.put(transactionId, container);
         }
         
-        return event;
+        return container;
     }
     
-    private class JtaTransactionConfigChangeEvent implements ConfigChangeEvent, Synchronization {
+    private class JtaTransactionConfigChangeContainer implements Synchronization {
         private final int transactionId;
         private List<String> changedPaths = new ArrayList<>();
         private CONTEXT context = CONTEXT.CONFIG_CHANGE;
         
-        private JtaTransactionConfigChangeEvent(int transactionId) {
+        private JtaTransactionConfigChangeContainer(int transactionId) {
             this.transactionId = transactionId;
         }
         
-        private JtaTransactionConfigChangeEvent(String path) {
+        private JtaTransactionConfigChangeContainer(String path) {
             transactionId = -1;
             changedPaths.add(path);
         }
@@ -154,16 +155,6 @@ public abstract class ConfigNotificationDecorator implements Configuration {
         }
         
         @Override
-        public CONTEXT getContext() {
-            return context;
-        }
-        
-        @Override
-        public List<String> getChangedPaths() {
-            return changedPaths;
-        }
-        
-        @Override
         public void afterCompletion(int status) {
             transactionMap.remove(transactionId);
             
@@ -172,7 +163,8 @@ public abstract class ConfigNotificationDecorator implements Configuration {
                 return;
             }
             
-            configNotifService.sendConfigChangeNotification(this);
+            configNotifService.sendClusterScopedConfigChangeNotification(
+                    new ConfigChangeEventImpl(changedPaths, context));
         }
 
         @Override
@@ -181,5 +173,33 @@ public abstract class ConfigNotificationDecorator implements Configuration {
         }
 
     }
+    
+    private static class ConfigChangeEventImpl implements ConfigChangeEvent {
+        private static final long serialVersionUID = 4454659631189062807L;
+        
+        private final List<String> changedPaths;
+        private final CONTEXT context;
+      
+        private ConfigChangeEventImpl(String path, CONTEXT context) {
+            this(Arrays.asList(path), context);
+        }
+        
+        private ConfigChangeEventImpl(List<String> changedPaths, CONTEXT context) {
+            this.changedPaths = changedPaths;
+            this.context = context;
+        }
+
+        @Override
+        public CONTEXT getContext() {
+            return context;
+        }
+
+        @Override
+        public List<String> getChangedPaths() {
+            return changedPaths;
+        }
+    }
+    
+    
    
 }

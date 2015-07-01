@@ -39,14 +39,43 @@
 
 package org.dcm4chee.conf.cdi.notif;
 
+import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.event.Event;
+import javax.inject.Inject;
+
 import org.dcm4che3.conf.api.ConfigChangeEvent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author Alexander Hoermandinger <alexander.hoermandinger@agfa.com>
- *
  */
-public interface ConfigNotificationService {
+@ApplicationScoped
+public class ConfigNotificationService {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ConfigNotificationService.class);
     
-    void sendConfigChangeNotification(ConfigChangeEvent changeEvent);
+    @Inject
+    private Event<ConfigChangeEvent> event;
     
+    @Inject
+    private ConfigChangeTopicBroker clusterBroker;
+    
+    /**
+     * Send config change event to all listeners registered within the cluster
+     * @param changeEvent
+     */
+    public void sendClusterScopedConfigChangeNotification(ConfigChangeEvent changeEvent) {
+        sendLocalScopedConfigChangeNotification(changeEvent);
+        clusterBroker.forwardToClusterNodes(changeEvent);
+    }
+    
+    /**
+     * Send config change event to all listeners registered within the node
+     * @param changeEvent
+     */
+    public void sendLocalScopedConfigChangeNotification(ConfigChangeEvent changeEvent) {
+        LOGGER.debug("Sending config changed notification CDI event");
+        event.fire(changeEvent);
+    }
+
 }

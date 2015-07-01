@@ -39,30 +39,55 @@
 
 package org.dcm4chee.conf.cdi.notif;
 
-import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.event.Event;
-import javax.inject.Inject;
+import javax.annotation.Resource;
+import javax.jms.Connection;
+import javax.jms.ConnectionFactory;
+import javax.jms.JMSException;
+import javax.jms.MessageProducer;
+import javax.jms.ObjectMessage;
+import javax.jms.Session;
+import javax.jms.Topic;
 
 import org.dcm4che3.conf.api.ConfigChangeEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+ * Forwards configuration change events to all cluster nodes via JMS.
+ * 
  * @author Alexander Hoermandinger <alexander.hoermandinger@agfa.com>
- *
  */
-@ApplicationScoped
-public class CdiConfigNotificationService implements ConfigNotificationService {
-    private static final Logger LOGGER = LoggerFactory.getLogger(CdiConfigNotificationService.class);
+public class ConfigChangeTopicBroker {
+	private static final Logger LOGGER = LoggerFactory.getLogger(ConfigChangeTopicBroker.class);
+	
+	@Resource(mappedName = "java:/ConnectionFactory")
+    private ConnectionFactory connectionFactory;
+
+    @Resource(mappedName = ConfigChangeTopicMDB.QUALIFIED_CONFIG_CHANGE_JMS_TOPIC)
+    private Topic topic;
     
-    @Inject
-    private Event<ConfigChangeEvent> event;
-    
-    
-    @Override
-    public void sendConfigChangeNotification(ConfigChangeEvent changeEvent) {
-        LOGGER.info("Sending config changed notification CDI event");
-        event.fire(changeEvent);
+    public void forwardToClusterNodes(ConfigChangeEvent event) {
+        try {
+            Connection connection = null;
+            try {
+                connection = connectionFactory.createConnection();
+                Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+                MessageProducer messageProducer = session.createProducer(topic);
+                connection.start();
+
+                ObjectMessage msg = session.createObjectMessage(event);
+                
+                // attach name of sending node -> allows to filter on receiver side
+                msg.setStringProperty(ConfigChangeTopicMDB.SENDING_NODE_MSG_PROP,
+                        ConfigChangeTopicMDB.getNodeName());
+
+                messageProducer.send(msg);
+            } finally {
+                connection.close();
+            }
+        } catch (JMSException e) {
+            LOGGER.error("Error while sending JMS message", e);
+        }
     }
 
 }
