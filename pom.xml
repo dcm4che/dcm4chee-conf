@@ -56,7 +56,6 @@
         <module>dcm4chee-conf-db</module>
         <module>dcm4chee-conf-web</module>
         <module>dcm4chee-conf-decorators</module>
-        <module>dcm4chee-conf-cache</module>
         <module>dcm4chee-conf-test</module>
     </modules>
     <dependencyManagement>

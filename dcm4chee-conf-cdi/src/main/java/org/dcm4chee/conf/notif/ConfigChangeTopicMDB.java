@@ -37,7 +37,7 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-package org.dcm4chee.conf.cdi.notif;
+package org.dcm4chee.conf.notif;
 
 import javax.ejb.ActivationConfigProperty;
 import javax.ejb.MessageDriven;
@@ -46,7 +46,7 @@ import javax.jms.Message;
 import javax.jms.MessageListener;
 import javax.jms.ObjectMessage;
 
-import org.dcm4che3.conf.api.ConfigChangeEvent;
+import org.dcm4che3.conf.core.api.ConfigChangeEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
