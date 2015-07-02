@@ -88,7 +88,6 @@ public class ConfigEETestsIT {
         war.addClass(MyConfigProducer.class);
 
         war.addAsManifestResource(new FileAsset(new File("src/test/resources/META-INF/MANIFEST.MF")), "MANIFEST.MF");
-        war.addAsManifestResource(new FileAsset(new File("src/test/resources/META-INF/beans.xml")), "beans.xml");
 
         JavaArchive[] archs = Maven.resolver()
                 .loadPomFromFile("testpom.xml")

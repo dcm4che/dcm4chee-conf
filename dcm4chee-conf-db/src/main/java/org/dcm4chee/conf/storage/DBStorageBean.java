@@ -63,7 +63,7 @@ import org.dcm4che3.conf.core.util.SimpleConfigNodeUtil;
 @Stateless
 public class DBStorageBean {
 
-    private static final ObjectMapper OM = new ObjectMapper();
+    private final ObjectMapper OM = new ObjectMapper();
 
     @PersistenceContext(unitName = "dcm4chee-conf")
     private EntityManager em;
@@ -100,13 +100,9 @@ public class DBStorageBean {
     @TransactionAttribute(TransactionAttributeType.MANDATORY)
     public void lock() {
 
-        Query query = em.createQuery("SELECT count (n) FROM ConfigNodeEntity n WHERE n.path=?1");
-        query.setParameter(1, LOCK_PATH);
-        Long count = (Long) query.getSingleResult();
-
         // create locking row in a separate transaction to make sure constraint violations don't rollback the current one
-        if (count == 0) try {
-            self.createLockingRow();
+        try {
+            self.createLockingRowIfnotExists();
         } catch (Exception e) {
             // noop
         }
@@ -128,10 +124,16 @@ public class DBStorageBean {
     }
 
     @TransactionAttribute(TransactionAttributeType.REQUIRES_NEW)
-    public void createLockingRow() {
-        ConfigNodeEntity entity = new ConfigNodeEntity();
-        entity.setPath(LOCK_PATH);
-        em.persist(entity);
+    public void createLockingRowIfnotExists() {
+        Query query = em.createQuery("SELECT count (n) FROM ConfigNodeEntity n WHERE n.path=?1");
+        query.setParameter(1, LOCK_PATH);
+        Long count = (Long) query.getSingleResult();
+
+        if (count == 0) {
+            ConfigNodeEntity entity = new ConfigNodeEntity();
+            entity.setPath(LOCK_PATH);
+            em.persist(entity);
+        }
     }
 
 
@@ -154,7 +156,7 @@ public class DBStorageBean {
             // if less than level, allow bulk delete of x/y/*
             if (pathItemsForDB.size() < SemiSerializedDBConfigStorage.level) {
                 query = em.createQuery("DELETE FROM ConfigNodeEntity n WHERE n.path like ?1");
-                query.setParameter(1, SimpleConfigNodeUtil.toSimpleEscapedPath(pathItemsForDB) + "%" );
+                query.setParameter(1, SimpleConfigNodeUtil.toSimpleEscapedPath(pathItemsForDB) + "%");
             }
             // otherwise must be equals
             else {

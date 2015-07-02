@@ -53,6 +53,7 @@ public class ConfigNodeEntity {
     private long pk;
 
     @Basic
+    @Column(unique = true)
     private String path;
 
     @Basic
