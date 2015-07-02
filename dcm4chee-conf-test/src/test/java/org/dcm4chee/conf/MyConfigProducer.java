@@ -44,18 +44,12 @@ import org.dcm4che3.conf.api.internal.DicomConfigurationManager;
 import org.dcm4che3.conf.core.api.Configuration;
 import org.dcm4che3.conf.core.api.ConfigurationException;
 import org.dcm4che3.conf.dicom.DicomConfigurationBuilder;
-import org.dcm4chee.conf.cdi.ConfigurationStorage;
-
-import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.inject.Produces;
 
 /**
  * Created by aprvf on 02.07.2015.
  */
-@ApplicationScoped
 public class MyConfigProducer {
-    @Produces
-    public static DicomConfigurationManager produceConfig(@ConfigurationStorage Configuration dbConfigStorage) throws ConfigurationException {
+    public static DicomConfigurationManager produceConfig(Configuration dbConfigStorage) throws ConfigurationException {
         DicomConfigurationBuilder builder = new DicomConfigurationBuilder();
 
         builder.registerCustomConfigurationStorage(dbConfigStorage);
