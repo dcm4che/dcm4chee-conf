@@ -206,14 +206,6 @@ public class ConfigRESTServicesServlet {
             throw new ConfigurationException("The device "+deviceName+" cannot be persisted because it violates the configuration integrity", e);
         }
 
-        // reload
-        try {
-            reloadAllExtensionsOfDevice(ctx, deviceName);
-            log.info("Configuration for device {} stored successfully",deviceName);
-        } catch (ConfigurationException e) {
-            log.warn("Error while reloading the configuration for device "+deviceName,e);
-        }
-
         return Response.ok().build();
     }
 

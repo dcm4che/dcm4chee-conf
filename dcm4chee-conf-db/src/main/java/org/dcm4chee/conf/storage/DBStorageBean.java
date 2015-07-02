@@ -39,29 +39,25 @@
  */
 package org.dcm4chee.conf.storage;
 
+import org.codehaus.jackson.map.ObjectMapper;
+import org.dcm4che3.conf.core.util.SimpleConfigNodeUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.ejb.*;
+import javax.persistence.*;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import javax.ejb.EJB;
-import javax.ejb.Stateless;
-import javax.ejb.TransactionAttribute;
-import javax.ejb.TransactionAttributeType;
-import javax.persistence.EntityManager;
-import javax.persistence.LockModeType;
-import javax.persistence.NoResultException;
-import javax.persistence.PersistenceContext;
-import javax.persistence.Query;
-
-import org.codehaus.jackson.map.ObjectMapper;
-import org.dcm4che3.conf.core.util.SimpleConfigNodeUtil;
 
 /**
  * @author Roman K
  */
 @Stateless
 public class DBStorageBean {
+
+    private static final Logger log = LoggerFactory.getLogger(DBStorageBean.class);
 
     private final ObjectMapper OM = new ObjectMapper();
 
@@ -72,7 +68,6 @@ public class DBStorageBean {
 
     @EJB
     DBStorageBean self;
-
 
     public Map<String, Object> getFullTree() {
         Query query = em.createQuery("SELECT n FROM ConfigNodeEntity n");
@@ -99,14 +94,6 @@ public class DBStorageBean {
 
     @TransactionAttribute(TransactionAttributeType.MANDATORY)
     public void lock() {
-
-        // create locking row in a separate transaction to make sure constraint violations don't rollback the current one
-        try {
-            self.createLockingRowIfnotExists();
-        } catch (Exception e) {
-            // noop
-        }
-
         getLockOnExistingLockEntity();
     }
 
@@ -115,16 +102,10 @@ public class DBStorageBean {
         query.setParameter(1, LOCK_PATH);
         ConfigNodeEntity singleResult = (ConfigNodeEntity) query.getSingleResult();
         em.lock(singleResult, LockModeType.PESSIMISTIC_WRITE);
-
-        // write
-        /*byte[] bytes = new byte[10];
-        new Random().nextBytes(bytes);
-        singleResult.setContent(bytes);
-        em.merge(singleResult);*/
     }
 
     @TransactionAttribute(TransactionAttributeType.REQUIRES_NEW)
-    public void createLockingRowIfnotExists() {
+    public void createLockingRowIfnotExists() throws UnableToPersistLockingRowException {
         Query query = em.createQuery("SELECT count (n) FROM ConfigNodeEntity n WHERE n.path=?1");
         query.setParameter(1, LOCK_PATH);
         Long count = (Long) query.getSingleResult();
@@ -132,7 +113,26 @@ public class DBStorageBean {
         if (count == 0) {
             ConfigNodeEntity entity = new ConfigNodeEntity();
             entity.setPath(LOCK_PATH);
-            em.persist(entity);
+            try {
+                em.persist(entity);
+            } catch (Exception e) {
+                throw new UnableToPersistLockingRowException(e);
+            }
+        }
+    }
+
+    @TransactionAttribute(TransactionAttributeType.REQUIRES_NEW)
+    public boolean isLockingRowExists() {
+        Query query = em.createQuery("SELECT count (n) FROM ConfigNodeEntity n WHERE n.path=?1");
+        query.setParameter(1, LOCK_PATH);
+        Long count = (Long) query.getSingleResult();
+        return count == 1;
+    }
+
+    public static class UnableToPersistLockingRowException extends Exception {
+
+        public UnableToPersistLockingRowException(Exception e) {
+            super(e);
         }
     }
 

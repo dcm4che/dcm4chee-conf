@@ -48,6 +48,7 @@ import org.dcm4chee.conf.cdi.ConfigurationStorage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.PostConstruct;
 import javax.ejb.EJB;
 import javax.enterprise.context.ApplicationScoped;
 import java.util.ArrayList;
@@ -72,6 +73,18 @@ public class SemiSerializedDBConfigStorage implements Configuration {
     @EJB
     DBStorageBean db;
 
+
+    @PostConstruct
+    public void init() {
+        // create locking row in a separate transaction to make sure constraint violations don't rollback the current one
+        try {
+            db.createLockingRowIfnotExists();
+        } catch (DBStorageBean.UnableToPersistLockingRowException e) {
+            if (!db.isLockingRowExists())
+                log.error("Unable to init the locking row in the configuration table. ", e);
+        }
+    }
+
     @Override
     public Map<String, Object> getConfigurationRoot() throws ConfigurationException {
 
@@ -88,9 +101,8 @@ public class SemiSerializedDBConfigStorage implements Configuration {
     @Override
     public Object getConfigurationNode(String path, Class configurableClass) throws ConfigurationException {
 
-        log.warn("Using DB configuration storage without caching. This is not intended usage and will result in very poor performance");
-
         // since some paths are not trivial, e.g. references, just use the root because it will be cached
+        // [speedup-spot] still could be optimized for many cases
         return ConfigNodeUtil.getNode(getConfigurationRoot(), path);
     }
 
