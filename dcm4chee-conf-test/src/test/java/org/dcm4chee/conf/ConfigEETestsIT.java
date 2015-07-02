@@ -40,11 +40,13 @@
 package org.dcm4chee.conf;
 
 import org.dcm4che3.conf.api.ConfigurationNotFoundException;
+import org.dcm4che3.conf.api.internal.DicomConfigurationManager;
 import org.dcm4che3.conf.core.api.Configuration;
 import org.dcm4che3.conf.core.api.ConfigurationException;
 import org.dcm4che3.conf.dicom.CommonDicomConfigurationWithHL7;
 import org.dcm4che3.conf.dicom.DicomConfigurationBuilder;
 import org.dcm4che3.net.Device;
+import org.dcm4chee.conf.cdi.ConfigurationStorage;
 import org.jboss.arquillian.container.test.api.Deployment;
 import org.jboss.arquillian.junit.Arquillian;
 import org.jboss.shrinkwrap.api.ShrinkWrap;
@@ -60,8 +62,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.ejb.EJB;
+import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.inject.Any;
+import javax.enterprise.inject.Produces;
 import javax.inject.Inject;
 import java.io.File;
+import java.util.Map;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -75,9 +81,6 @@ public class ConfigEETestsIT {
             .getLogger(ConfigEETestsIT.class);
 
 
-    @Inject
-    Configuration dbConfigStorage;
-
     @EJB
     MyConfyEJB myConfyEJB;
 
@@ -87,8 +90,11 @@ public class ConfigEETestsIT {
 
         war.addClass(ConfigEETestsIT.class);
         war.addClass(MyConfyEJB.class);
+        war.addClass(MyConfigProducer.class);
 
         war.addAsManifestResource(new FileAsset(new File("src/test/resources/META-INF/MANIFEST.MF")), "MANIFEST.MF");
+        war.addAsManifestResource(new FileAsset(new File("src/test/resources/META-INF/beans.xml")), "beans.xml");
+
         JavaArchive[] archs = Maven.resolver()
                 .loadPomFromFile("testpom.xml")
                 .importRuntimeAndTestDependencies()
@@ -104,31 +110,18 @@ public class ConfigEETestsIT {
         return war;
     }
 
-    private CommonDicomConfigurationWithHL7 getConfig() throws ConfigurationException {
-        DicomConfigurationBuilder builder = new DicomConfigurationBuilder();
+    @Inject
+    @Any
+    Configuration configuration;
 
-        builder.registerCustomConfigurationStorage(dbConfigStorage);
-        builder.cache(false);
-
-//        builder.registerDeviceExtension(ArchiveDeviceExtension.class);
-//        builder.registerDeviceExtension(StorageDeviceExtension.class);
-//        builder.registerDeviceExtension(HL7DeviceExtension.class);
-//        builder.registerDeviceExtension(ImageReaderExtension.class);
-//        builder.registerDeviceExtension(ImageWriterExtension.class);
-//        builder.registerDeviceExtension(AuditRecordRepository.class);
-//        builder.registerDeviceExtension(AuditLogger.class);
-//        builder.registerAEExtension(ArchiveAEExtension.class);
-//        builder.registerHL7ApplicationExtension(ArchiveHL7ApplicationExtension.class);
-
-
-        return builder.build();
+    public DicomConfigurationManager getConfig() throws ConfigurationException {
+        return MyConfigProducer.produceConfig(configuration);
     }
-
 
     @Test
     public void rollbackTest() throws Exception {
 
-        final CommonDicomConfigurationWithHL7 config = getConfig();
+        final DicomConfigurationManager config = getConfig();
         final Configuration storage = config.getConfigurationStorage();
 
 
@@ -181,7 +174,7 @@ public class ConfigEETestsIT {
     @Test
     public void lockTest() throws Exception {
 
-        final CommonDicomConfigurationWithHL7 config = getConfig();
+        final DicomConfigurationManager config = getConfig();
         final Configuration storage = config.getConfigurationStorage();
 
         storage.removeNode("/dicomConfigurationRoot");
@@ -274,6 +267,52 @@ public class ConfigEETestsIT {
         masterSemaphore.release();
 
         Thread.sleep(500);
+
+
+    }
+
+    @Test
+    public void persistRootNodeTest() throws ConfigurationException {
+
+        final DicomConfigurationManager config = getConfig();
+        final Configuration storage = config.getConfigurationStorage();
+
+        storage.removeNode("/dicomConfigurationRoot");
+
+        config.persist(new Device("D1"));
+        config.persist(new Device("D2"));
+
+        Map<String, Object> configurationRoot = storage.getConfigurationRoot();
+
+        storage.removeNode("/dicomConfigurationRoot");
+
+        storage.persistNode("/",configurationRoot,null);
+
+
+        try {
+            config.findDevice("D1");
+        } catch (ConfigurationException e) {
+            Assert.fail("Device should have been found");
+        }
+
+        storage.removeNode("/dicomConfigurationRoot");
+
+        config.persist(new Device("D3"));
+        config.persist(new Device("D4"));
+
+        storage.persistNode("/",configurationRoot,null);
+
+        try {
+            config.findDevice("D1");
+        } catch (ConfigurationException e) {
+            Assert.fail("Device should have been found");
+        }
+
+        try {
+            config.findDevice("D3");
+            Assert.fail("Device D3 shouldn't have been found");
+        } catch (ConfigurationException e) {
+        }
 
 
     }

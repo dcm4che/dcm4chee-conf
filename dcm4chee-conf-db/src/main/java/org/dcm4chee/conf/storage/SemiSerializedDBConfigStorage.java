@@ -45,9 +45,12 @@ import org.dcm4che3.conf.core.util.ConfigNodeUtil;
 import org.dcm4che3.conf.core.util.SplittedPath;
 import org.dcm4che3.conf.dicom.DicomPath;
 import org.dcm4chee.conf.cdi.ConfigurationStorage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.ejb.EJB;
 import javax.enterprise.context.ApplicationScoped;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -58,6 +61,8 @@ import java.util.Map;
 @ApplicationScoped
 @ConfigurationStorage
 public class SemiSerializedDBConfigStorage implements Configuration {
+
+    public static final Logger log = LoggerFactory.getLogger(SemiSerializedDBConfigStorage.class);
 
     /**
      * The level from which on all the nodes are serialized
@@ -83,6 +88,8 @@ public class SemiSerializedDBConfigStorage implements Configuration {
     @Override
     public Object getConfigurationNode(String path, Class configurableClass) throws ConfigurationException {
 
+        log.warn("Using DB configuration storage without caching. This is not intended usage and will result in very poor performance");
+
         // since some paths are not trivial, e.g. references, just use the root because it will be cached
         return ConfigNodeUtil.getNode(getConfigurationRoot(), path);
     }
@@ -100,7 +107,7 @@ public class SemiSerializedDBConfigStorage implements Configuration {
         SplittedPath splittedPath = new SplittedPath(path, level).calc();
 
         // no need to store those
-        if (splittedPath.getTotalDepth() <= level) throw new RuntimeException("Unexpected path "+path);
+        if (splittedPath.getTotalDepth() <= level) throw new RuntimeException("Unexpected path " + path);
 
         return db.nodeExists(splittedPath.getOuterPathItems(), splittedPath.getInnerPathitems());
 
@@ -114,11 +121,38 @@ public class SemiSerializedDBConfigStorage implements Configuration {
         List<String> pathItemsForDB = splittedPath.getOuterPathItems();
         List<String> restPathItems = splittedPath.getInnerPathitems();
 
-        // no need to store those
-        if (i <= level) return;
+        if (i <= level) {
+            removeNode(path);
+            splitTreeAndPersist(pathItemsForDB, configNode);
+        } else
+            db.modifyNode(pathItemsForDB, restPathItems, configNode);
 
-        db.modifyNode(pathItemsForDB, restPathItems, configNode);
+    }
 
+    private void splitTreeAndPersist(List<String> dbPath, Map<String, Object> configNode) {
+
+        if (dbPath.size() == level) {
+
+            // if reached the level, just modify node
+            db.modifyNode(dbPath, new ArrayList<String>(), configNode);
+        } else if (dbPath.size() < level) {
+
+            // if not yet reached the level, go deeper for each of this node's children
+            for (Map.Entry<String, Object> keyValue : configNode.entrySet()) {
+                Object node = keyValue.getValue();
+
+                // skip if null - such 'nodes' are therefore filtered out
+                if (node == null) continue;
+
+                // we are still above the serialization level, then this node must be a map
+                if (!(node instanceof Map)) throw
+                        new IllegalArgumentException("Attempted to persist a node that contains properties in the tree above the serialization level of the storage");
+
+                dbPath.add(keyValue.getKey());
+                splitTreeAndPersist(dbPath, (Map<String, Object>) node);
+                dbPath.remove(dbPath.size() - 1);
+            }
+        }
     }
 
     @Override
@@ -134,7 +168,8 @@ public class SemiSerializedDBConfigStorage implements Configuration {
 
     @Override
     public Iterator search(String liteXPathExpression) throws IllegalArgumentException, ConfigurationException {
-        throw new RuntimeException("Not implemented");
+        log.warn("Using DB configuration storage without caching. This is not intended usage and will result in very poor performance");
+        return ConfigNodeUtil.search(getConfigurationRoot(), liteXPathExpression);
     }
 
     @Override
