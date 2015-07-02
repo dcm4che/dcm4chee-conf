@@ -77,6 +77,9 @@ public class CdiConfigExtensionsManager {
     @Inject
     private Instance<HL7ApplicationExtension> hl7ApplicationExtensions;
 
+    public CdiConfigExtensionsManager() {
+    }
+
     public void registerCdiConfigExtensions(DicomConfigurationBuilder builder) {
         for (DeviceExtension ext : deviceExtensions) builder.registerDeviceExtension(ext.getClass());
         for (AEExtension ext : aeExtensions) builder.registerAEExtension(ext.getClass());

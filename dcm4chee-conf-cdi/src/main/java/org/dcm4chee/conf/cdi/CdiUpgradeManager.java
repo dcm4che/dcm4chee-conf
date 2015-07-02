@@ -70,6 +70,9 @@ public class CdiUpgradeManager {
     @Inject
     private Instance<UpgradeScript> upgradeScripts;
 
+    public CdiUpgradeManager() {
+    }
+
     public void performUpgrade(DicomConfigurationManager manager) throws ConfigurationException {
         // collect available upgrade scripts
         List<UpgradeScript> scripts = new ArrayList<>();
