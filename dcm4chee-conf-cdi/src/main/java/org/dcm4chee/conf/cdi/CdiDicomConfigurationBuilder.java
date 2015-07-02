@@ -40,7 +40,6 @@
 package org.dcm4chee.conf.cdi;
 
 import javax.enterprise.inject.Instance;
-import javax.enterprise.inject.Produces;
 import javax.inject.Inject;
 
 import org.dcm4che3.conf.core.api.Configuration;
@@ -109,15 +108,14 @@ public class CdiDicomConfigurationBuilder extends DicomConfigurationBuilder {
     protected LdapConfigurationStorage createLdapConfigurationStorage() {
         return ldapConfigurationStorageInstance.get();
     }
-
-    @Produces
-    public static SingleJsonFileConfigurationStorage SingleJsonFileConfigurationStorageProducer() {
-        return new SingleJsonFileConfigurationStorage();
+    
+    protected static class CdiSingleJsonFileConfigurationStorage extends SingleJsonFileConfigurationStorage {
+        // Subclassed to make it a CDI bean as parent class is not in a bean archive
+        // Producer method would not work, as values returned by producers are not applicable for decorators
     }
-
-    @Produces
-    public static LdapConfigurationStorage LdapConfigurationStorage() {
-        return new LdapConfigurationStorage();
+    
+    protected static class CdiLdapConfigurationStorage extends LdapConfigurationStorage {
+        // Subclassed to make it a CDI bean as parent class is not in a bean archive
     }
 
 
