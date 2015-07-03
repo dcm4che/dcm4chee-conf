@@ -44,6 +44,8 @@ import javax.enterprise.event.Event;
 import javax.inject.Inject;
 
 import org.dcm4che3.conf.core.api.ConfigChangeEvent;
+import org.dcm4che3.conf.core.api.ConfigurationException;
+import org.dcm4che3.conf.core.api.internal.ConfigurationManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,6 +62,9 @@ public class ConfigNotificationService {
     @Inject
     private ConfigChangeTopicBroker clusterBroker;
     
+    @Inject
+    private ConfigurationManager configurationManager;
+    
     /**
      * Send config change event to all listeners registered within the cluster
      * @param changeEvent
@@ -75,7 +80,18 @@ public class ConfigNotificationService {
      */
     public void sendLocalScopedConfigChangeNotification(ConfigChangeEvent changeEvent) {
         LOGGER.debug("Sending config changed notification CDI event");
+        invalidateConfigCache();
         event.fire(changeEvent);
+    }
+    
+    private void invalidateConfigCache() {
+        try {
+            // TODO: can optimize by refreshing only the changed paths
+            configurationManager.getConfigurationStorage().refreshNode("/");
+            LOGGER.info("Configuration cache updated");
+        } catch (ConfigurationException e) {
+            LOGGER.error("Error while re-loading the configuration from the backend into the cache",e);
+        }
     }
 
 }
