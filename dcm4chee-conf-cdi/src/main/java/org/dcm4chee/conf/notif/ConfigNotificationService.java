@@ -70,7 +70,6 @@ public class ConfigNotificationService {
      * @param changeEvent
      */
     public void sendClusterScopedConfigChangeNotification(ConfigChangeEvent changeEvent) {
-        sendLocalScopedConfigChangeNotification(changeEvent);
         clusterBroker.forwardToClusterNodes(changeEvent);
     }
     

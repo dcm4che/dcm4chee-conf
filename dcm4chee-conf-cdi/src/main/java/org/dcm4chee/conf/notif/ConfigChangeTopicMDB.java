@@ -81,10 +81,6 @@ public class ConfigChangeTopicMDB implements MessageListener {
                 
                 String nodeName = getNodeName();
                 String sendingNode = msg.getStringProperty(SENDING_NODE_MSG_PROP);
-                // do not deliver if sending and receiving node are the same
-                if(nodeName.equals(sendingNode)) {
-                    return;
-                }
                 
                 ConfigChangeEvent event = (ConfigChangeEvent)msg.getObject();
                 LOGGER.debug("Node {} received config changed event from sending node {}: {}", nodeName, sendingNode, event);

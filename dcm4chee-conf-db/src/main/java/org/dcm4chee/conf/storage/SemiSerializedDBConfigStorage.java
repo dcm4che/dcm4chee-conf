@@ -39,22 +39,25 @@
  */
 package org.dcm4chee.conf.storage;
 
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.PostConstruct;
+import javax.ejb.EJB;
+import javax.enterprise.context.ApplicationScoped;
+import javax.inject.Inject;
+
 import org.dcm4che3.conf.core.api.Configuration;
 import org.dcm4che3.conf.core.api.ConfigurationException;
 import org.dcm4che3.conf.core.util.ConfigNodeUtil;
 import org.dcm4che3.conf.core.util.SplittedPath;
 import org.dcm4che3.conf.dicom.DicomPath;
+import org.dcm4chee.conf.cdi.BatchConfigurationService;
 import org.dcm4chee.conf.cdi.ConfigurationStorage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.annotation.PostConstruct;
-import javax.ejb.EJB;
-import javax.enterprise.context.ApplicationScoped;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
 
 /**
  * @author Roman K
@@ -71,9 +74,19 @@ public class SemiSerializedDBConfigStorage implements Configuration {
     public static final int level = 3;
 
     @EJB
-    DBStorageBean db;
-
-
+    private DBStorageBean db;
+    
+    @Inject
+    private BatchConfigurationService batchConfigService;
+    
+    /*
+     * WTF: I inject myself!?
+     * Reason: CDI returns undecorated proxy if normal 'this' is used.  
+     */
+    @Inject
+    @ConfigurationStorage
+    private SemiSerializedDBConfigStorage self;
+   
     @PostConstruct
     public void init() {
         // create locking row in a separate transaction to make sure constraint violations don't rollback the current one
@@ -187,6 +200,12 @@ public class SemiSerializedDBConfigStorage implements Configuration {
     @Override
     public void lock() {
         db.lock();
+    }
+    
+    @Override
+    public void runBatch(ConfigBatch batch) {
+        // use injected self reference to ensure CDI decorators are called
+        batchConfigService.runBatch(batch, self);
     }
 
 }

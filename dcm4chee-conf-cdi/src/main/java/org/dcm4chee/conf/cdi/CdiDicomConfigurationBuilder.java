@@ -39,6 +39,7 @@
 
 package org.dcm4chee.conf.cdi;
 
+import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
@@ -68,10 +69,10 @@ public class CdiDicomConfigurationBuilder extends DicomConfigurationBuilder {
     private CdiUpgradeManager upgradeManager;
 
     @Inject
-    private Instance<SingleJsonFileConfigurationStorage> jsonFileConfigurationStorageInstance;
-
+    private Instance<CdiSingleJsonFileConfigurationStorage> jsonFileConfigurationStorageInstance;
+    
     @Inject
-    private Instance<LdapConfigurationStorage> ldapConfigurationStorageInstance;
+    private Instance<CdiLdapConfigurationStorage> ldapConfigurationStorageInstance;
 
     public CdiDicomConfigurationBuilder() {
         super(System.getProperties());
@@ -109,14 +110,44 @@ public class CdiDicomConfigurationBuilder extends DicomConfigurationBuilder {
         return ldapConfigurationStorageInstance.get();
     }
     
+    @ApplicationScoped
     protected static class CdiSingleJsonFileConfigurationStorage extends SingleJsonFileConfigurationStorage {
-        // Subclassed to make it a CDI bean as parent class is not in a bean archive
-        // Producer method would not work, as values returned by producers are not applicable for decorators
+        @Inject
+        private BatchConfigurationService batchConfigService;
+        
+        /*
+         * WTF: I inject myself!?
+         * CDI returns undecorated proxy if normal 'this' is used.  
+         */
+        @Inject
+        private CdiSingleJsonFileConfigurationStorage self;
+       
+        @Override
+        public void runBatch(ConfigBatch batch) {
+            // use injected self reference to ensure CDI decorators are called
+            batchConfigService.runBatch(batch, self);
+        }
+        
     }
     
+    @ApplicationScoped
     protected static class CdiLdapConfigurationStorage extends LdapConfigurationStorage {
-        // Subclassed to make it a CDI bean as parent class is not in a bean archive
-    }
+        @Inject
+        private BatchConfigurationService batchConfigService;
+        
+        /*
+         * WTF: I inject myself!?
+         * CDI returns undecorated proxy if normal 'this' is used.  
+         */
+        @Inject
+        private CdiLdapConfigurationStorage self;
 
+        @Override
+        public void runBatch(ConfigBatch batch) {
+            // use injected self reference to ensure CDI decorators are called
+            batchConfigService.runBatch(batch, self);
+        }
+      
+    }
 
 }
