@@ -9,6 +9,8 @@ import org.dcm4che3.conf.core.api.Configuration;
 import org.dcm4che3.conf.api.internal.DicomConfigurationManager;
 import org.dcm4che3.conf.core.api.internal.ConfigTypeAdapter;
 import org.dcm4che3.conf.core.api.ConfigurableClass;
+import org.dcm4che3.conf.dicom.CommonDicomConfiguration;
+import org.dcm4che3.conf.dicom.CommonDicomConfigurationWithHL7;
 import org.dcm4che3.conf.dicom.DicomPath;
 import org.dcm4che3.net.AEExtension;
 import org.dcm4che3.net.Device;
@@ -173,6 +175,22 @@ public class ConfigRESTServicesServlet {
     public Map<String,Object> getTransferCapabilitiesConfig() throws ConfigurationException {
         return (Map<String, Object>) configurationManager.getConfigurationStorage().getConfigurationNode(DicomPath.TCGroups.path(), TCConfiguration.class);
     }
+
+    @GET
+    @Path("/exportFullConfiguration")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Map<String,Object> getFullConfig() throws ConfigurationException {
+        return configurationManager.getConfigurationStorage().getConfigurationRoot();
+    }
+
+    @POST
+    @Path("/importFullConfiguration")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public void setFullConfig(Map<String, Object> config) throws ConfigurationException {
+        configurationManager.getConfigurationStorage().persistNode("/",config,CommonDicomConfiguration.DicomConfigurationRootNode.class);
+    }
+
+
 
     @DELETE
     @Path("/device/{deviceName}")
