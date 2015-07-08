@@ -79,11 +79,19 @@ public abstract class ConfigNotificationDecorator implements Configuration {
     @Resource(lookup="java:jboss/TransactionManager")
     private TransactionManager tmManager;
 
+    @Override
     public void persistNode(String path, Map<String, Object> configNode, Class configurableClass) throws ConfigurationException {
         delegate.persistNode(path, configNode, configurableClass);
         recordConfigChange(path);
     }
-    
+
+    @Override
+    public void removeNode(String path) throws ConfigurationException {
+        delegate.removeNode(path);
+        recordConfigChange(path);
+    }
+
+    @Override
     public void lock() {
         delegate.lock();
         setConfigInitContext();
