@@ -25,8 +25,8 @@ public class ServiceDecorator<T> {
 
     private Collection<DelegatingServiceImpl<T>> orderedDecorators = null;
 
-    public Collection<DelegatingServiceImpl<T>> getOrderedDecorators(Instance<DelegatingServiceImpl<T>> dynamicDecoratorsForService, String clazz) {
-        if (orderedDecorators == null) {
+    public Collection<DelegatingServiceImpl<T>> getOrderedDecorators(Instance<DelegatingServiceImpl<T>> dynamicDecoratorsForService,String clazz, boolean usecache) {
+        if (orderedDecorators == null || !usecache) {
             initServiceDecorators(dynamicDecoratorsForService, clazz);
         }
         LOG.trace("Retrieved {}.", orderedDecorators);
@@ -34,11 +34,16 @@ public class ServiceDecorator<T> {
     }
 
 
+    public Collection<DelegatingServiceImpl<T>> getOrderedDecorators(Instance<DelegatingServiceImpl<T>> dynamicDecoratorsForService, String clazz) {
+            return this.getOrderedDecorators(dynamicDecoratorsForService,clazz, true);
+    }
+
+
     private synchronized void initServiceDecorators(Instance<DelegatingServiceImpl<T>> dynamicDecoratorsForService, String clazz) {
-        if (orderedDecorators != null) {
-            LOG.debug("Decorators for {} were already created. Will not recreate.", clazz);
-            return;
-        }
+//        if (orderedDecorators != null) {
+//            LOG.debug("Decorators for {} were already created. Will not recreate.", clazz);
+//            return;
+//        }
         LOG.debug("Creating decorators for {}.", clazz);
 
         Map<Double, DelegatingServiceImpl<T>> decorators = new TreeMap<Double, DelegatingServiceImpl<T>>();
