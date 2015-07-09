@@ -86,7 +86,7 @@ public class CdiUpgradeManager {
             SingleJsonFileConfigurationStorage singleJsonFileConfigurationStorage = new SingleJsonFileConfigurationStorage(filename);
             UpgradeSettings upgradeSettings = new DefaultBeanVitalizer().newConfiguredInstance(singleJsonFileConfigurationStorage.getConfigurationRoot(), UpgradeSettings.class);
 
-            UpgradeRunner upgradeRunner = new UpgradeRunner(manager.getConfigurationStorage(), scripts, manager, upgradeSettings);
+            UpgradeRunner upgradeRunner = new UpgradeRunner(scripts, manager, upgradeSettings);
             upgradeRunner.upgrade();
 
         } else {
