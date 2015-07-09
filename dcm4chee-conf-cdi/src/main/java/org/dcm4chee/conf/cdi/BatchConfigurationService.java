@@ -60,8 +60,7 @@ public interface BatchConfigurationService {
      * </ul>
      * 
      * @param batch Configuration batch change to execute
-     * @param configuration Configuration the changes will be applied upon
      */
-    void runBatch(ConfigBatch batch, Configuration configuration);
+    void runBatch(ConfigBatch batch);
     
 }

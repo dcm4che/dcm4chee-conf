@@ -114,18 +114,11 @@ public class CdiDicomConfigurationBuilder extends DicomConfigurationBuilder {
     protected static class CdiSingleJsonFileConfigurationStorage extends SingleJsonFileConfigurationStorage {
         @Inject
         private BatchConfigurationService batchConfigService;
-        
-        /*
-         * WTF: I inject myself!?
-         * CDI returns undecorated proxy if normal 'this' is used.  
-         */
-        @Inject
-        private CdiSingleJsonFileConfigurationStorage self;
-       
+
         @Override
         public void runBatch(ConfigBatch batch) {
             // use injected self reference to ensure CDI decorators are called
-            batchConfigService.runBatch(batch, self);
+            batchConfigService.runBatch(batch);
         }
         
     }
@@ -134,18 +127,11 @@ public class CdiDicomConfigurationBuilder extends DicomConfigurationBuilder {
     protected static class CdiLdapConfigurationStorage extends LdapConfigurationStorage {
         @Inject
         private BatchConfigurationService batchConfigService;
-        
-        /*
-         * WTF: I inject myself!?
-         * CDI returns undecorated proxy if normal 'this' is used.  
-         */
-        @Inject
-        private CdiLdapConfigurationStorage self;
 
         @Override
         public void runBatch(ConfigBatch batch) {
             // use injected self reference to ensure CDI decorators are called
-            batchConfigService.runBatch(batch, self);
+            batchConfigService.runBatch(batch);
         }
       
     }

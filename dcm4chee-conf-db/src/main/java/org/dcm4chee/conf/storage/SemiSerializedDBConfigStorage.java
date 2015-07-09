@@ -78,14 +78,7 @@ public class SemiSerializedDBConfigStorage implements Configuration {
     
     @Inject
     private BatchConfigurationService batchConfigService;
-    
-    /*
-     * WTF: I inject myself!?
-     * Reason: CDI returns undecorated proxy if normal 'this' is used.  
-     */
-    @Inject
-    @ConfigurationStorage
-    private SemiSerializedDBConfigStorage self;
+
    
     @PostConstruct
     public void init() {
@@ -205,7 +198,7 @@ public class SemiSerializedDBConfigStorage implements Configuration {
     @Override
     public void runBatch(ConfigBatch batch) {
         // use injected self reference to ensure CDI decorators are called
-        batchConfigService.runBatch(batch, self);
+        batchConfigService.runBatch(batch);
     }
 
 }

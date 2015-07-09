@@ -52,8 +52,8 @@ import org.dcm4che3.conf.core.api.Configuration.ConfigBatch;
 public class BatchConfigurationServiceEJB implements BatchConfigurationService {
    
     @Override
-    public void runBatch(ConfigBatch batch, Configuration configuration) {
-        batch.run(configuration);
+    public void runBatch(ConfigBatch batch) {
+        batch.run();
     }
-    
+
 }
