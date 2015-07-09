@@ -51,7 +51,27 @@ Upgrade is performed on server startup before any method can access the configur
 
 Example: [DefaultArchiveConfigInitScript](https://github.com/dcm4che/dcm4chee-arc-cdi/blob/master/dcm4chee-arc-conf-default/src/main/java/org/dcm4chee/archive/conf/defaults/DefaultArchiveConfigInitScript.java)
 
+# DB config storage
 
+To use the database as configuration storage, deploy `org.dcm4che.dcm4chee-conf:dcm4chee-conf-db` as an EJB inside the ear.
+Make sure that caching is enabled when using the database storage - add the following system properties:
+    
+    org.dcm4che.conf.cached=true
+    org.dcm4che.conf.staleTimeout=0
+
+
+# Config change notifications
+Configuration framework triggers cluster-wide notification when a change occurs. 
+Interested components may observe [org.dcm4che3.conf.core.api.ConfigChangeEvent](https://github.com/dcm4che/dcm4che/blob/687dec7390a1b0a9169742354b7f5e0c03411c61/dcm4che-conf/dcm4che-conf-core-api/src/main/java/org/dcm4che3/conf/core/api/ConfigChangeEvent.java) CDI event which is fired on each node.
+In case of batching, the notification is only triggered when the full batch succeeds.
+  
+Current implementation uses `topic/DicomConfigurationChangeTopic` JMS topic to distribute the notifications across the cluster. The topic therefore must be added to the server config, e.g. 
+    
+    jms-topic add --topic-address=DicomConfigurationChangeTopic --entries=/topic/DicomConfigurationChangeTopic
+# Batching
+
+To perform multiple changes as a single atomic operation, one should use `org.dcm4che3.conf.api.DicomConfiguration.runBatch` / `org.dcm4che3.conf.core.api.Configuration.runBatch` methods.  
+ 
 # Examples
 
 - [How to create a custom AE extension and use it in a StoreService decorator ](https://github.com/dcm4che/dcm4chee-integration-examples/tree/master/config-extensions-example)
