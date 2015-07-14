@@ -40,6 +40,7 @@
 package org.dcm4chee.conf;
 
 import org.dcm4che3.conf.api.ConfigurationNotFoundException;
+import org.dcm4che3.conf.api.DicomConfiguration;
 import org.dcm4che3.conf.api.internal.DicomConfigurationManager;
 import org.dcm4che3.conf.core.api.Configuration;
 import org.dcm4che3.conf.core.api.ConfigurationException;
@@ -47,6 +48,7 @@ import org.dcm4che3.net.Device;
 import org.jboss.arquillian.container.test.api.Deployment;
 import org.jboss.arquillian.junit.Arquillian;
 import org.jboss.shrinkwrap.api.ShrinkWrap;
+import org.jboss.shrinkwrap.api.asset.EmptyAsset;
 import org.jboss.shrinkwrap.api.asset.FileAsset;
 import org.jboss.shrinkwrap.api.exporter.ZipExporter;
 import org.jboss.shrinkwrap.api.spec.JavaArchive;
@@ -64,6 +66,7 @@ import javax.inject.Inject;
 import java.io.File;
 import java.util.Map;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -88,6 +91,7 @@ public class ConfigEETestsIT {
         war.addClass(MyConfigProducer.class);
 
         war.addAsManifestResource(new FileAsset(new File("src/test/resources/META-INF/MANIFEST.MF")), "MANIFEST.MF");
+        war.addAsWebInfResource(EmptyAsset.INSTANCE, "beans.xml");
 
         JavaArchive[] archs = Maven.resolver()
                 .loadPomFromFile("testpom.xml")
@@ -106,10 +110,10 @@ public class ConfigEETestsIT {
 
     @Inject
     @Any
-    Configuration configuration;
+    DicomConfigurationManager configurationManager;
 
     public DicomConfigurationManager getConfig() throws ConfigurationException {
-        return MyConfigProducer.produceConfig(configuration);
+        return configurationManager;
     }
 
     @Test
@@ -119,9 +123,9 @@ public class ConfigEETestsIT {
         final Configuration storage = config.getConfigurationStorage();
 
 
-        storage.removeNode("/");
+        storage.removeNode("/dicomConfigurationRoot");
 
-        myConfyEJB.execInTransaction(new Runnable() {
+        storage.runBatch(new Configuration.ConfigBatch() {
             @Override
             public void run() {
 
@@ -136,7 +140,7 @@ public class ConfigEETestsIT {
         Assert.assertNotNull(config.findDevice("shouldWork"));
 
         try {
-            myConfyEJB.execInTransaction(new Runnable() {
+            storage.runBatch(new Configuration.ConfigBatch() {
                 @Override
                 public void run() {
 
@@ -276,11 +280,11 @@ public class ConfigEETestsIT {
         config.persist(new Device("D1"));
         config.persist(new Device("D2"));
 
-        Map<String, Object> configurationRoot = storage.getConfigurationRoot();
+        Map<String, Object> configurationRoot = (Map<String, Object>) storage.getConfigurationNode("/dicomConfigurationRoot", null);
 
         storage.removeNode("/dicomConfigurationRoot");
 
-        storage.persistNode("/",configurationRoot,null);
+        storage.persistNode("/dicomConfigurationRoot", configurationRoot, null);
 
 
         try {
@@ -294,7 +298,7 @@ public class ConfigEETestsIT {
         config.persist(new Device("D3"));
         config.persist(new Device("D4"));
 
-        storage.persistNode("/",configurationRoot,null);
+        storage.persistNode("/dicomConfigurationRoot", configurationRoot, null);
 
         try {
             config.findDevice("D1");
@@ -308,6 +312,104 @@ public class ConfigEETestsIT {
         } catch (ConfigurationException e) {
         }
 
+
+    }
+
+
+    @Test
+    // Only works with em.flush
+    public void test2ConcurrentPersists() throws ConfigurationException, InterruptedException {
+        final Semaphore masterSemaphore = new Semaphore(0);
+        final Semaphore childSemaphore = new Semaphore(0);
+
+        final DicomConfigurationManager config = getConfig();
+        final Configuration storage = config.getConfigurationStorage();
+
+        storage.removeNode("/dicomConfigurationRoot");
+
+        config.persist(new Device("someDevice"));
+        config.persist(new Device("someNotImportantDevice"));
+
+        Thread thread1 = new Thread() {
+            @Override
+            public void run() {
+
+                myConfyEJB.execInTransaction(new Runnable() {
+                    @Override
+                    public void run() {
+
+                        try {
+                            Device someDevice = config.findDevice("someDevice");
+                            someDevice.setSoftwareVersions("5", "6", "7");
+                            config.merge(someDevice);
+
+                            // make sure em flush happens
+                            config.findDevice("someNotImportantDevice");
+                        } catch (ConfigurationException e) {
+                            throw new RuntimeException(e);
+                        }
+
+                        childSemaphore.release();
+                        try {
+                            masterSemaphore.acquire();
+                        } catch (InterruptedException e) {
+                            throw new RuntimeException(e);
+                        }
+
+                    }
+                });
+                LOG.info("Committed");
+                super.run();
+            }
+        };
+        Thread thread2 = new Thread() {
+            @Override
+            public void run() {
+
+                myConfyEJB.execInTransaction(new Runnable() {
+                    @Override
+                    public void run() {
+
+                        try {
+                            Device someDevice = config.findDevice("someDevice");
+                            someDevice.setSoftwareVersions("1", "2", "3");
+                            config.merge(someDevice);
+
+                            // make sure em flush happens
+                            config.findDevice("someNotImportantDevice");
+                        } catch (ConfigurationException e) {
+                            throw new RuntimeException(e);
+                        }
+
+                        childSemaphore.release();
+                        try {
+                            masterSemaphore.acquire();
+                        } catch (InterruptedException e) {
+                            throw new RuntimeException(e);
+                        }
+
+                    }
+                });
+                LOG.info("Committed");
+                super.run();
+            }
+        };
+
+        thread1.start();
+        thread2.start();
+
+        boolean doneIn5Seconds = childSemaphore.tryAcquire(2, 5, TimeUnit.SECONDS);
+
+        try {
+            Assert.assertFalse(doneIn5Seconds);
+        } finally {
+            LOG.info("Releasing children threads..");
+
+            masterSemaphore.release(2);
+
+            Thread.sleep(1000);
+
+        }
 
     }
 

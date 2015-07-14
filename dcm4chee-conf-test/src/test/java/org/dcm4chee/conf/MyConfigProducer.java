@@ -45,14 +45,37 @@ import org.dcm4che3.conf.core.api.Configuration;
 import org.dcm4che3.conf.core.api.ConfigurationException;
 import org.dcm4che3.conf.dicom.DicomConfigurationBuilder;
 
+import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.inject.Any;
+import javax.enterprise.inject.Instance;
+import javax.enterprise.inject.Produces;
+import javax.inject.Inject;
+
 /**
  * Created by aprvf on 02.07.2015.
  */
+
+@ApplicationScoped
 public class MyConfigProducer {
-    public static DicomConfigurationManager produceConfig(Configuration dbConfigStorage) throws ConfigurationException {
+
+
+    @Produces
+    @ApplicationScoped
+    public static DicomConfigurationManager produceConfig(@Any Instance<Configuration> dbConfigStorage) throws ConfigurationException {
         DicomConfigurationBuilder builder = new DicomConfigurationBuilder();
 
-        builder.registerCustomConfigurationStorage(dbConfigStorage);
+
+        for (Configuration configuration : dbConfigStorage) {
+            String storageClassName = configuration.getClass().getName();
+            System.out.println(storageClassName);
+
+
+            if (storageClassName.startsWith("org.dcm4chee.conf.storage.SemiSerialized"))
+                builder.registerCustomConfigurationStorage(configuration);
+
+        }
+
+
         builder.cache(false);
 
 //        builder.registerDeviceExtension(ArchiveDeviceExtension.class);
