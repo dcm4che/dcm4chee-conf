@@ -62,6 +62,14 @@
         </profile>
 
         <profile>
+            <id>asb</id>
+            <properties>
+                <config.classifier>-csp-asb</config.classifier>
+                <classifier>csp-asb</classifier>
+            </properties>
+        </profile>
+
+        <profile>
             <id>xds</id>
             <properties>
                 <config.classifier>-xds</config.classifier>
