@@ -54,8 +54,10 @@ import org.slf4j.LoggerFactory;
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
+
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Matches configuration from a json file with upgrade scripts available as CDI beans and launches the upgrade runner
@@ -84,8 +86,10 @@ public class CdiUpgradeManager {
             // load upgrade settings
             String filename = StringUtils.replaceSystemProperties(property);
             SingleJsonFileConfigurationStorage singleJsonFileConfigurationStorage = new SingleJsonFileConfigurationStorage(filename);
-            UpgradeSettings upgradeSettings = new DefaultBeanVitalizer().newConfiguredInstance(singleJsonFileConfigurationStorage.getConfigurationRoot(), UpgradeSettings.class);
-
+            Map<String,Object> configMap = singleJsonFileConfigurationStorage.getConfigurationRoot();
+            UpgradeSettings upgradeSettings = new DefaultBeanVitalizer().newConfiguredInstance(configMap, UpgradeSettings.class);
+            upgradeSettings.setUpgradeConfig(configMap); 
+            
             UpgradeRunner upgradeRunner = new UpgradeRunner(scripts, manager, upgradeSettings);
             upgradeRunner.upgrade();
 
