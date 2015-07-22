@@ -113,6 +113,7 @@ public class DBStorageBean {
         if (count == 0) {
             ConfigNodeEntity entity = new ConfigNodeEntity();
             entity.setPath(LOCK_PATH);
+            entity.setContent(new byte[]{'{','}'});
             try {
                 em.persist(entity);
             } catch (Exception e) {
