@@ -66,6 +66,10 @@
             <properties>
                 <config.classifier>-csp-asb</config.classifier>
                 <classifier>csp-asb</classifier>
+
+                <!-- TEMPORARILY UN-SECURED -->
+                <browser.security.enabled.l>&lt;!--</browser.security.enabled.l>
+                <browser.security.enabled.r>--&gt;</browser.security.enabled.r>
             </properties>
         </profile>
 
