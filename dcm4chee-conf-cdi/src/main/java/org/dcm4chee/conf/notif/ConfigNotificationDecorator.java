@@ -94,7 +94,6 @@ public abstract class ConfigNotificationDecorator implements Configuration {
     @Override
     public void lock() {
         delegate.lock();
-        setConfigInitContext();
     }
     
     private void recordConfigChange(String path) {
@@ -106,14 +105,7 @@ public abstract class ConfigNotificationDecorator implements Configuration {
                     new ConfigChangeEventImpl(path, CONTEXT.CONFIG_CHANGE));
         }
     }
-    
-    private void setConfigInitContext() {
-        JtaTransactionConfigChangeContainer container = getEventForActiveTransaction();
-        if(container != null) {
-            container.setContext(CONTEXT.CONFIG_INIT);
-        }
-    }
-    
+
     private JtaTransactionConfigChangeContainer getEventForActiveTransaction() {
         Transaction tx = null;
         try {
@@ -165,12 +157,9 @@ public abstract class ConfigNotificationDecorator implements Configuration {
         @Override
         public void afterCompletion(int status) {
             transactionMap.remove(transactionId);
-            
-            // we do not inform about configuration initialization
-            if(CONTEXT.CONFIG_INIT.equals(context)) {
-                return;
-            }
-            
+
+            // only notify if the changes were successfully committed
+            if (status == 0)
             configNotifService.sendClusterScopedConfigChangeNotification(
                     new ConfigChangeEventImpl(changedPaths, context));
         }
