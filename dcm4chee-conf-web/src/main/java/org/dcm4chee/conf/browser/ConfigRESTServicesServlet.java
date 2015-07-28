@@ -2,7 +2,6 @@ package org.dcm4chee.conf.browser;
 
 import org.dcm4che3.conf.api.TCConfiguration;
 import org.dcm4che3.conf.core.api.ConfigurationException;
-import org.dcm4che3.conf.api.hl7.HL7Configuration;
 import org.dcm4che3.conf.core.api.internal.AnnotatedConfigurableProperty;
 import org.dcm4che3.conf.core.api.internal.BeanVitalizer;
 import org.dcm4che3.conf.core.api.Configuration;
@@ -10,7 +9,6 @@ import org.dcm4che3.conf.api.internal.DicomConfigurationManager;
 import org.dcm4che3.conf.core.api.internal.ConfigTypeAdapter;
 import org.dcm4che3.conf.core.api.ConfigurableClass;
 import org.dcm4che3.conf.dicom.CommonDicomConfiguration;
-import org.dcm4che3.conf.dicom.CommonDicomConfigurationWithHL7;
 import org.dcm4che3.conf.dicom.DicomPath;
 import org.dcm4che3.net.AEExtension;
 import org.dcm4che3.net.Device;
@@ -237,15 +235,15 @@ public class ConfigRESTServicesServlet {
         schemas.device = getSchemaForConfigurableClass(Device.class);
 
         schemas.deviceExtensions = new HashMap<>();
-        for (Class<? extends DeviceExtension> deviceExt : configurationManager.getRegisteredDeviceExtensions())
+        for (Class<? extends DeviceExtension> deviceExt : configurationManager.getExtensionClassesByBaseClass(DeviceExtension.class))
             schemas.deviceExtensions.put(deviceExt.getSimpleName(), getSchemaForConfigurableClass(deviceExt));
 
         schemas.aeExtensions = new HashMap<>();
-        for (Class<? extends AEExtension> aeExt : configurationManager.getRegisteredAEExtensions())
+        for (Class<? extends AEExtension> aeExt : configurationManager.getExtensionClassesByBaseClass(AEExtension.class))
             schemas.aeExtensions.put(aeExt.getSimpleName(), getSchemaForConfigurableClass(aeExt));
 
         schemas.hl7AppExtensions = new HashMap<>();
-        for (Class<? extends HL7ApplicationExtension> hl7Ext : configurationManager.getDicomConfigurationExtension(HL7Configuration.class).getRegisteredHL7ApplicationExtensions())
+        for (Class<? extends HL7ApplicationExtension> hl7Ext : configurationManager.getExtensionClassesByBaseClass(HL7ApplicationExtension.class))
             schemas.hl7AppExtensions.put(hl7Ext.getSimpleName(), getSchemaForConfigurableClass(hl7Ext));
 
         return schemas;
@@ -296,7 +294,7 @@ public class ConfigRESTServicesServlet {
 
         // deserialize back
 
-        DeviceExtension de = (DeviceExtension) ad.fromConfigNode(configmap, new AnnotatedConfigurableProperty(extClass), configurationManager.getVitalizer());
+        DeviceExtension de = (DeviceExtension) ad.fromConfigNode(configmap, new AnnotatedConfigurableProperty(extClass), configurationManager.getVitalizer(), null);
 
         // merge config
         d.removeDeviceExtension(de);

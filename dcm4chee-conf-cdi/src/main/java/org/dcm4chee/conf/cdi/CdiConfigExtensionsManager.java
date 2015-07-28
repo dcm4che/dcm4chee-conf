@@ -39,28 +39,14 @@
  */
 package org.dcm4chee.conf.cdi;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
-import org.dcm4che3.conf.api.DicomConfigurationBuilderAddon;
-import org.dcm4che3.conf.api.internal.DicomConfigurationManager;
-import org.dcm4che3.conf.api.upgrade.UpgradeScript;
-import org.dcm4che3.conf.core.DefaultBeanVitalizer;
-import org.dcm4che3.conf.core.api.ConfigurationException;
-import org.dcm4che3.conf.core.storage.SingleJsonFileConfigurationStorage;
 import org.dcm4che3.conf.dicom.DicomConfigurationBuilder;
-import org.dcm4che3.conf.upgrade.UpgradeRunner;
-import org.dcm4che3.conf.upgrade.UpgradeSettings;
 import org.dcm4che3.net.AEExtension;
 import org.dcm4che3.net.DeviceExtension;
 import org.dcm4che3.net.hl7.HL7ApplicationExtension;
-import org.dcm4che3.util.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * @author Roman K
