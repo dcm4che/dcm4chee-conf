@@ -30,16 +30,6 @@ angular.module('dcm4che.config.core', [])
                 };
 
 
-
-                $scope.$watch('confignode', function () {
-
-                    $scope.addAEExtDropdown = ConfigEditorService.makeAddExtensionDropDown('confignode', 'aeExtensions');
-                    $scope.addHL7ExtDropdown = ConfigEditorService.makeAddExtensionDropDown('confignode','hl7AppExtensions');
-
-
-                });
-
-
                 $scope.$watch("schema", function () {
 
                     $scope.doShowAllProps = true;
@@ -95,7 +85,7 @@ angular.module('dcm4che.config.core', [])
             }
         };
     })
-    .controller("CompositeNodeController", function ($scope) {
+    .controller("CompositeNodeController", function ($scope, ConfigEditorService) {
         $scope.$watch("schema", function () {
 
             $scope.groups = null;
@@ -108,6 +98,10 @@ angular.module('dcm4che.config.core', [])
                     })
                     .uniq().without(null).value();
             }
+
+            $scope.$watch('confignode', function () {
+                $scope.addExtDropdown = ConfigEditorService.makeAddExtensionDropDown('confignode', $scope.schema.class);
+            });
 
         });
 

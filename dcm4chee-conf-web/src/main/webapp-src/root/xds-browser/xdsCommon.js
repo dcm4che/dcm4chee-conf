@@ -30,7 +30,7 @@ xdsCommon.factory('xdsEb', [ 'xdsConstants', function(xdsConstants) {
 				console.log(e);
 				return null;
 			}
-		},
+		}
 
 	};
 

@@ -126,7 +126,7 @@
                                             ng-class="(selectedConfigNode.node == extensionConfig ? 'active' : '')">
                                         <a href=""
                                            ng-click="selectConfigNode(extensionConfig,
-                                           ConfigEditorService.schemas.deviceExtensions[extensionName],
+                                           ConfigEditorService.schemas.extensions.Device[extensionName],
                                            selectedDevice.config.deviceExtensions,
                                            {class:'Map',type:'object'},
                                            extensionName)">{{extensionName}}</a>

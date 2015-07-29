@@ -116,7 +116,7 @@ angular.module('dcm4che.xds.common').factory('xdsConstants', function() {
 		B_FindEntities : {
 			"XDS_FindDocuments" : "urn:uuid:14d4debf-8f97-4251-9a74-a90016b0af0d",
 			"XDS_FindFolders" : "urn:uuid:958f3006-baad-4929-a4de-ff1114824431",
-			"XDS_FindSubmissionSets" : "urn:uuid:f26abbcb-ac74-4422-8a30-edb644bbc1a9",
+			"XDS_FindSubmissionSets" : "urn:uuid:f26abbcb-ac74-4422-8a30-edb644bbc1a9"
 		},
 		"XDS_GetAll" : "urn:uuid:10b545ea-725c-446d-9b95-8aeb444eddf3",
 		"XDS_GetAssociations" : "urn:uuid:a7ae438b-4bc2-4642-93e9-be891f7bb155",

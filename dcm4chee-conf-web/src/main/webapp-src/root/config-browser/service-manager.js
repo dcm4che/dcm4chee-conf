@@ -151,7 +151,7 @@ angular.module('dcm4che.config.manager', ['dcm4che.appCommon', 'dcm4che.config.c
             if ($scope.devices.length > 0)
                 $scope.selectedDeviceName = $scope.devices[0].deviceName;
 
-            $scope.addDeviceExtDropdown = ConfigEditorService.makeAddExtensionDropDown('selectedDevice.config', 'deviceExtensions');
+            $scope.addDeviceExtDropdown = ConfigEditorService.makeAddExtensionDropDown('selectedDevice.config', 'Device');
         });
 
 
@@ -259,13 +259,20 @@ angular.module('dcm4che.config.manager', ['dcm4che.appCommon', 'dcm4che.config.c
             devices: [],
             deviceRefs: [],
 
+            extensionsPropertyForClass: {
+                "Device":"deviceExtensions",
+                "ApplicationEntity":"aeExtensions",
+                "HL7Application":"hl7AppExtensions",
+                "Connection":"connectionExtensions"
+            },
+
             schemas: {},
 
-            makeAddExtensionDropDown: function (nodestr, extType) {
-                var map = _.map(conf.schemas[extType], function (value, key) {
+            makeAddExtensionDropDown: function (nodestr, nodeClass) {
+                var map = _.map(conf.schemas.extensions[nodeClass], function (value, key) {
                     return {
                         "text": key,
-                        "click": "ConfigEditorService.addExtension(" + nodestr + ",'" + key + "','" + extType + "')"
+                        "click": "ConfigEditorService.addExtension(" + nodestr + ",'" + key + "','" + nodeClass + "')"
                     };
                 });
                 return map;
@@ -279,15 +286,19 @@ angular.module('dcm4che.config.manager', ['dcm4che.appCommon', 'dcm4che.config.c
              *          hl7AppExtensions
              *          deviceExtensions
              */
-            addExtension: function (node, extName, extType) {
-                if (!node[extType])
-                    node[extType] = {};
-                node[extType][extName] = conf.createNewItem(conf.schemas[extType][extName]);
+            addExtension: function (node, extName, nodeClass) {
+                var extensionsProperty = conf.extensionsPropertyForClass[nodeClass];
+                if (!node[extensionsProperty])
+                    node[extensionsProperty] = {};
+                node[extensionsProperty][extName] = conf.createNewItem(conf.schemas.extensions[nodeClass][extName]);
                 conf.checkModified();
             },
-            removeExtension: function (node, extName, extType) {
-                delete node[extType][extName];
+            removeExtension: function (node, extName, nodeClass) {
+                delete node[conf.extensionsPropertyForClass[nodeClass]][extName];
                 conf.checkModified();
+            },
+            classHasExtensions: function (schema) {
+                return _.has(conf.extensionsPropertyForClass, schema.class);
             },
 
 

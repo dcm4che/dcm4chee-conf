@@ -19,17 +19,16 @@
                         </div>
                     </div>
 
-                    <!-- AE extensions -->
-                    <div ng-if="schema.class=='ApplicationEntity'">
-                        <div ng-repeat="(extensionName,extensionConfig) in confignode.aeExtensions | primaryPropsOnly:doShowAllProps ">
+                    <!-- extensions -->
+                    <div ng-if="ConfigEditorService.classHasExtensions(schema)">
+                        <div ng-repeat="(extensionName,extensionConfig) in confignode[ConfigEditorService.extensionsPropertyForClass[schema.class]] | primaryPropsOnly:doShowAllProps ">
 
-                            <a href="" class="btn btn-danger" ng-click="ConfigEditorService.removeExtension(confignode, extensionName, 'aeExtensions')">
+                            <a href="" class="btn btn-danger" ng-click="ConfigEditorService.removeExtension(confignode, extensionName, schema.class)">
                                 Delete this {{extensionName}}
                             </a>
-
                             <div confignode="extensionConfig"
-                                 schema="ConfigEditorService.schemas.aeExtensions[extensionName]"
-                                 parentnode="confignode.aeExtensions"
+                                 schema="ConfigEditorService.schemas.extensions[schema.class][extensionName]"
+                                 parentnode="confignode[ConfigEditorService.extensionsPropertyForClass[schema.class]]"
                                  index="extensionName"
                                  editor="editor">
                             </div>
@@ -37,34 +36,10 @@
                         <button ng-show="doShowAllProps"
                                 type="button"
                                 class="btn btn-lg btn-primary"
-                                bs-dropdown="addAEExtDropdown"
+                                bs-dropdown="addExtDropdown"
                                 aria-haspopup="true"
                                 aria-expanded="false">
-                            Add AE extension
-                        </button>
-                    </div>
-
-                    <!-- HL7 extensions -->
-                    <div ng-if="schema.class=='HL7Application'">
-                        <div ng-repeat="(extensionName,extensionConfig) in confignode.hl7AppExtensions ">
-
-                            <a href="" class="btn btn-danger" ng-click="ConfigEditorService.removeExtension(confignode, extensionName, 'hl7AppExtensions')">
-                                Delete this {{extensionName}}
-                            </a>
-
-                            <div confignode="extensionConfig"
-                                 schema="ConfigEditorService.schemas.hl7AppExtensions[extensionName]"
-                                 parentnode="confignode.hl7AppExtensions"
-                                 index="extensionName"
-                                 editor="editor">
-                            </div>
-                        </div>
-                        <button type="button"
-                                class="btn btn-lg btn-primary"
-                                bs-dropdown="addHL7ExtDropdown"
-                                aria-haspopup="true"
-                                aria-expanded="false">
-                            Add HL7 extension
+                            Add {{schema.class}} extension
                         </button>
                     </div>
 

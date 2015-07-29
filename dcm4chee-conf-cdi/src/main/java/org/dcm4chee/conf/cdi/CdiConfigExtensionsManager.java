@@ -43,8 +43,10 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
+import org.dcm4che3.conf.api.extensions.CommonConnectionExtension;
 import org.dcm4che3.conf.dicom.DicomConfigurationBuilder;
 import org.dcm4che3.net.AEExtension;
+import org.dcm4che3.net.ConnectionExtension;
 import org.dcm4che3.net.DeviceExtension;
 import org.dcm4che3.net.hl7.HL7ApplicationExtension;
 
@@ -63,6 +65,9 @@ public class CdiConfigExtensionsManager {
     @Inject
     private Instance<HL7ApplicationExtension> hl7ApplicationExtensions;
 
+    @Inject
+    private Instance<CommonConnectionExtension> connectionExtensions;
+
     public CdiConfigExtensionsManager() {
     }
 
@@ -71,6 +76,9 @@ public class CdiConfigExtensionsManager {
         for (AEExtension ext : aeExtensions) builder.registerAEExtension(ext.getClass());
         for (HL7ApplicationExtension ext : hl7ApplicationExtensions)
             builder.registerHL7ApplicationExtension(ext.getClass());
+        for (CommonConnectionExtension connectionExtension : connectionExtensions)
+            builder.registerExtensionForBaseExtension(connectionExtension.getClass(), ConnectionExtension.class);
+
     }
 
 }

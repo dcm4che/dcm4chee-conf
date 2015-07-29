@@ -11,6 +11,7 @@ import org.dcm4che3.conf.core.api.ConfigurableClass;
 import org.dcm4che3.conf.dicom.CommonDicomConfiguration;
 import org.dcm4che3.conf.dicom.DicomPath;
 import org.dcm4che3.net.AEExtension;
+import org.dcm4che3.net.ConnectionExtension;
 import org.dcm4che3.net.Device;
 import org.dcm4che3.net.DeviceExtension;
 import org.dcm4che3.net.hl7.HL7ApplicationExtension;
@@ -74,20 +75,11 @@ public class ConfigRESTServicesServlet {
         }
 
         public Map<String, Object> device;
-        /**
-         * Simple class name to schema
-         */
-        public Map<String, Map<String,Object>> deviceExtensions;
 
         /**
-         * Simple class name to schema
+         * Parent class name to map - simple class name to schema
          */
-        public Map<String, Map<String,Object>> aeExtensions;
-
-        /**
-         * Simple class name to schema
-         */
-        public Map<String, Map<String,Object>> hl7AppExtensions;
+        public Map<String, Map<String,Map>> extensions;
 
     }
 
@@ -233,18 +225,29 @@ public class ConfigRESTServicesServlet {
 
         SchemasJSON schemas = new SchemasJSON();
         schemas.device = getSchemaForConfigurableClass(Device.class);
+        schemas.extensions = new HashMap<>();
 
-        schemas.deviceExtensions = new HashMap<>();
+        HashMap<String, Map> deviceExtensions = new HashMap<String, Map>();
+        schemas.extensions.put("Device", deviceExtensions);
+        HashMap<String, Map> aeExtensions = new HashMap<String, Map>();
+        schemas.extensions.put("ApplicationEntity", aeExtensions);
+        HashMap<String, Map> hl7AppExtensions = new HashMap<String, Map>();
+        schemas.extensions.put("HL7Application", hl7AppExtensions);
+        HashMap<String, Map> connectionExtensions = new HashMap<String, Map>();
+        schemas.extensions.put("Connection", connectionExtensions);
+
         for (Class<? extends DeviceExtension> deviceExt : configurationManager.getExtensionClassesByBaseClass(DeviceExtension.class))
-            schemas.deviceExtensions.put(deviceExt.getSimpleName(), getSchemaForConfigurableClass(deviceExt));
+            deviceExtensions.put(deviceExt.getSimpleName(), getSchemaForConfigurableClass(deviceExt));
 
-        schemas.aeExtensions = new HashMap<>();
         for (Class<? extends AEExtension> aeExt : configurationManager.getExtensionClassesByBaseClass(AEExtension.class))
-            schemas.aeExtensions.put(aeExt.getSimpleName(), getSchemaForConfigurableClass(aeExt));
+            aeExtensions.put(aeExt.getSimpleName(), getSchemaForConfigurableClass(aeExt));
 
-        schemas.hl7AppExtensions = new HashMap<>();
         for (Class<? extends HL7ApplicationExtension> hl7Ext : configurationManager.getExtensionClassesByBaseClass(HL7ApplicationExtension.class))
-            schemas.hl7AppExtensions.put(hl7Ext.getSimpleName(), getSchemaForConfigurableClass(hl7Ext));
+            hl7AppExtensions.put(hl7Ext.getSimpleName(), getSchemaForConfigurableClass(hl7Ext));
+
+        for (Class<? extends ConnectionExtension> connExt : configurationManager.getExtensionClassesByBaseClass(ConnectionExtension.class)) {
+            connectionExtensions.put(connExt.getSimpleName(), getSchemaForConfigurableClass(connExt));
+        }
 
         return schemas;
     }
