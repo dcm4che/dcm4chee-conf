@@ -66,7 +66,7 @@ public class CdiConfigExtensionsManager {
     private Instance<HL7ApplicationExtension> hl7ApplicationExtensions;
 
     @Inject
-    private Instance<CommonConnectionExtension> connectionExtensions;
+    private Instance<ConnectionExtension> connectionExtensions;
 
     public CdiConfigExtensionsManager() {
     }
@@ -76,7 +76,7 @@ public class CdiConfigExtensionsManager {
         for (AEExtension ext : aeExtensions) builder.registerAEExtension(ext.getClass());
         for (HL7ApplicationExtension ext : hl7ApplicationExtensions)
             builder.registerHL7ApplicationExtension(ext.getClass());
-        for (CommonConnectionExtension connectionExtension : connectionExtensions)
+        for (ConnectionExtension connectionExtension : connectionExtensions)
             builder.registerExtensionForBaseExtension(connectionExtension.getClass(), ConnectionExtension.class);
 
     }
