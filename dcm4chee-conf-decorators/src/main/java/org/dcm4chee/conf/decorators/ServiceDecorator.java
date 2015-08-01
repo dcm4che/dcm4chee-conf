@@ -19,13 +19,13 @@ public class ServiceDecorator<T> {
 
     @Inject
     @ConfiguredDynamicDecorators
-    List<String> disabledDecorators;
+    Instance<List<String>> disabledDecorators;
 
     private static final Logger LOG = LoggerFactory.getLogger(ServiceDecorator.class);
 
     private Collection<DelegatingServiceImpl<T>> orderedDecorators = null;
 
-    public Collection<DelegatingServiceImpl<T>> getOrderedDecorators(Instance<DelegatingServiceImpl<T>> dynamicDecoratorsForService,String clazz, boolean usecache) {
+    public Collection<DelegatingServiceImpl<T>> getOrderedDecorators(Instance<DelegatingServiceImpl<T>> dynamicDecoratorsForService, String clazz, boolean usecache) {
         if (orderedDecorators == null || !usecache) {
             initServiceDecorators(dynamicDecoratorsForService, clazz);
         }
@@ -35,7 +35,7 @@ public class ServiceDecorator<T> {
 
 
     public Collection<DelegatingServiceImpl<T>> getOrderedDecorators(Instance<DelegatingServiceImpl<T>> dynamicDecoratorsForService, String clazz) {
-            return this.getOrderedDecorators(dynamicDecoratorsForService,clazz, true);
+        return this.getOrderedDecorators(dynamicDecoratorsForService, clazz, true);
     }
 
 
@@ -81,10 +81,11 @@ public class ServiceDecorator<T> {
             return false;
         }
 
-        if (disabledDecorators.contains(decoratorClazz.getName())) {
-            LOG.debug("Not configuring the decorator {} because it is disabled.", decoratorClazz);
-            return false;
-        }
+        if (!disabledDecorators.isUnsatisfied())
+            if (disabledDecorators.get().contains(decoratorClazz.getName())) {
+                LOG.debug("Not configuring the decorator {} because it is disabled.", decoratorClazz);
+                return false;
+            }
 
         return true;
     }
