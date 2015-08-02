@@ -39,20 +39,22 @@
  */
 package org.dcm4chee.conf.cdi;
 
-import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.inject.Instance;
-import javax.inject.Inject;
-
-import org.dcm4che3.conf.api.extensions.CommonConnectionExtension;
 import org.dcm4che3.conf.dicom.DicomConfigurationBuilder;
 import org.dcm4che3.net.AEExtension;
 import org.dcm4che3.net.ConnectionExtension;
 import org.dcm4che3.net.DeviceExtension;
 import org.dcm4che3.net.hl7.HL7ApplicationExtension;
 
+import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.inject.Instance;
+import javax.inject.Inject;
+
 /**
+ * Do not rely on this class - will be deleted
+ *
  * @author Roman K
  */
+@Deprecated
 @ApplicationScoped
 public class CdiConfigExtensionsManager {
 

@@ -39,16 +39,17 @@
  */
 package org.dcm4chee.conf.cdi.producer;
 
-import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.inject.Instance;
-import javax.inject.Inject;
-
 import org.dcm4che3.conf.dicom.DicomConfigurationBuilder;
 import org.dcm4che3.net.AEExtension;
+import org.dcm4che3.net.ConnectionExtension;
 import org.dcm4che3.net.DeviceExtension;
 import org.dcm4che3.net.hl7.HL7ApplicationExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.inject.Instance;
+import javax.inject.Inject;
 
 /**
  * Performs lookup of available configuration extensions using CDI.
@@ -68,6 +69,9 @@ public class CdiConfigExtensionsLookup {
     @Inject
     private Instance<HL7ApplicationExtension> hl7ApplicationExtensions;
 
+    @Inject
+    private Instance<ConnectionExtension> connectionExtensions;
+
     public CdiConfigExtensionsLookup() {
         //NOOP
     }
@@ -86,6 +90,11 @@ public class CdiConfigExtensionsLookup {
         for (HL7ApplicationExtension ext : hl7ApplicationExtensions) {
             builder.registerHL7ApplicationExtension(ext.getClass());
             LOG.info("Registered DICOM configuration HL7 application extension {}", ext.getClass().getName());
+        }
+
+        for (ConnectionExtension connectionExtension : connectionExtensions) {
+            builder.registerExtensionForBaseExtension(connectionExtension.getClass(), ConnectionExtension.class);
+            LOG.info("Registered DICOM configuration Connection extension {}",  connectionExtension.getClass().getName());
         }
     }
 
