@@ -68,6 +68,7 @@ import org.dcm4che3.conf.core.api.ConfigurationException;
  */
 @Decorator
 public abstract class ConfigNotificationDecorator implements Configuration {
+    public static final String NOTIFICATIONS_ENABLED_PROPERTY = "org.dcm4che.conf.notifications";
     private final Map<Integer,JtaTransactionConfigChangeContainer> transactionMap = new ConcurrentHashMap<>();
 
     @Inject @Delegate @Any
@@ -101,8 +102,8 @@ public abstract class ConfigNotificationDecorator implements Configuration {
         if(container != null) {
             container.addChangedPath(path);
         } else {
-            configNotifService.sendClusterScopedConfigChangeNotification(
-                    new ConfigChangeEventImpl(path, CONTEXT.CONFIG_CHANGE));
+            if (Boolean.valueOf(System.getProperty(NOTIFICATIONS_ENABLED_PROPERTY, "true")))
+                configNotifService.sendClusterScopedConfigChangeNotification(new ConfigChangeEventImpl(path, CONTEXT.CONFIG_CHANGE));
         }
     }
 
@@ -160,8 +161,9 @@ public abstract class ConfigNotificationDecorator implements Configuration {
 
             // only notify if the changes were successfully committed
             if (status == 0)
-            configNotifService.sendClusterScopedConfigChangeNotification(
-                    new ConfigChangeEventImpl(changedPaths, context));
+                if (Boolean.valueOf(System.getProperty(NOTIFICATIONS_ENABLED_PROPERTY, "true")))
+                    configNotifService.sendClusterScopedConfigChangeNotification(
+                            new ConfigChangeEventImpl(changedPaths, context));
         }
 
         @Override

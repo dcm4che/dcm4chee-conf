@@ -1,6 +1,7 @@
 package org.dcm4chee.conf.browser;
 
 import org.dcm4che3.conf.api.TCConfiguration;
+import org.dcm4che3.conf.core.api.ConfigChangeEvent;
 import org.dcm4che3.conf.core.api.ConfigurationException;
 import org.dcm4che3.conf.core.api.internal.AnnotatedConfigurableProperty;
 import org.dcm4che3.conf.core.api.internal.BeanVitalizer;
@@ -18,6 +19,7 @@ import org.dcm4che3.net.hl7.HL7ApplicationExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.enterprise.event.Event;
 import javax.inject.Inject;
 import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
@@ -32,6 +34,7 @@ import java.util.*;
 @Path("/config")
 @Produces(MediaType.APPLICATION_JSON)
 public class ConfigRESTServicesServlet {
+    public static final String NOTIFICATIONS_ENABLED_PROPERTY = "org.dcm4che.conf.notifications";
 
     public static final Logger log = LoggerFactory.getLogger(ConfigRESTServicesServlet.class);
 
@@ -49,6 +52,7 @@ public class ConfigRESTServicesServlet {
 
     // XDS
     public static final Map<String, String> XDS_REST_PATH = new HashMap<>();
+
     static {
         XDS_REST_PATH.put("StorageConfiguration", "xds-rep-rs");
         XDS_REST_PATH.put("XdsRegistry", "xds-reg-rs");
@@ -57,6 +61,23 @@ public class ConfigRESTServicesServlet {
         XDS_REST_PATH.put("XCAiRespondingGWCfg", "xcai-rs");
         XDS_REST_PATH.put("XCAInitiatingGWCfg", "xca-rs");
         XDS_REST_PATH.put("XCARespondingGWCfg", "xca-rs");
+    }
+
+    private static class SimpleConfigChangeEvent implements ConfigChangeEvent {
+
+        private static final long serialVersionUID = 1338043186323821619L;
+
+        @Override
+        public CONTEXT getContext() {
+            return CONTEXT.CONFIG_CHANGE;
+        }
+
+        @Override
+        public List<String> getChangedPaths() {
+            ArrayList<String> strings = new ArrayList<String>();
+            strings.add("/");
+            return strings;
+        }
     }
 
 
@@ -79,7 +100,7 @@ public class ConfigRESTServicesServlet {
         /**
          * Parent class name to map - simple class name to schema
          */
-        public Map<String, Map<String,Map>> extensions;
+        public Map<String, Map<String, Map>> extensions;
 
     }
 
@@ -91,7 +112,7 @@ public class ConfigRESTServicesServlet {
         /**
          * Object here is either a primitive, an array, a list, or Map<String, Object>
          */
-        public Map<String,Object> rootConfigNode;
+        public Map<String, Object> rootConfigNode;
         public Map<String, Object> schema;
 
     }
@@ -100,6 +121,7 @@ public class ConfigRESTServicesServlet {
 
         public ExtensionJSON() {
         }
+
         public String deviceName;
         /**
          * user-friendly name
@@ -126,6 +148,21 @@ public class ConfigRESTServicesServlet {
     @Inject
     @Manager
     DicomConfigurationManager configurationManager;
+
+    @Inject
+    Event<ConfigChangeEvent> configChangeEvent;
+
+    private void fireConfigUpdateNotificationIfNecessary() throws ConfigurationException {
+        // fire only if notifications are disabled by a property. Normally they should not be, except special cases like IT testing
+        if (!Boolean.valueOf(System.getProperty(NOTIFICATIONS_ENABLED_PROPERTY, "true"))) {
+
+            // no need to refresh nodes - we are assuming non-cluster setup in case if notifications are disabled,
+            // and in this case it is already refreshed while calling persistNode/removeNode
+            //configurationManager.getConfigurationStorage().refreshNode("/");
+
+            configChangeEvent.fire(new SimpleConfigChangeEvent());
+        }
+    }
 
     @GET
     @Path("/devices")
@@ -155,21 +192,21 @@ public class ConfigRESTServicesServlet {
     @GET
     @Path("/device/{deviceName}")
     @Produces(MediaType.APPLICATION_JSON)
-    public Map<String,Object> getDeviceConfig(@PathParam(value = "deviceName") String deviceName) throws ConfigurationException {
+    public Map<String, Object> getDeviceConfig(@PathParam(value = "deviceName") String deviceName) throws ConfigurationException {
         return (Map<String, Object>) configurationManager.getConfigurationStorage().getConfigurationNode(DicomPath.DeviceByName.set("deviceName", deviceName).path(), Device.class);
     }
 
     @GET
     @Path("/transferCapabilities")
     @Produces(MediaType.APPLICATION_JSON)
-    public Map<String,Object> getTransferCapabilitiesConfig() throws ConfigurationException {
+    public Map<String, Object> getTransferCapabilitiesConfig() throws ConfigurationException {
         return (Map<String, Object>) configurationManager.getConfigurationStorage().getConfigurationNode(DicomPath.TCGroups.path(), TCConfiguration.class);
     }
 
     @GET
     @Path("/exportFullConfiguration")
     @Produces(MediaType.APPLICATION_JSON)
-    public Map<String,Object> getFullConfig() throws ConfigurationException {
+    public Map<String, Object> getFullConfig() throws ConfigurationException {
         return configurationManager.getConfigurationStorage().getConfigurationRoot();
     }
 
@@ -177,9 +214,9 @@ public class ConfigRESTServicesServlet {
     @Path("/importFullConfiguration")
     @Consumes(MediaType.APPLICATION_JSON)
     public void setFullConfig(Map<String, Object> config) throws ConfigurationException {
-        configurationManager.getConfigurationStorage().persistNode("/",config,CommonDicomConfiguration.DicomConfigurationRootNode.class);
+        configurationManager.getConfigurationStorage().persistNode("/", config, CommonDicomConfiguration.DicomConfigurationRootNode.class);
+        fireConfigUpdateNotificationIfNecessary();
     }
-
 
 
     @DELETE
@@ -187,8 +224,8 @@ public class ConfigRESTServicesServlet {
     @Produces(MediaType.APPLICATION_JSON)
     public void deleteDevice(@PathParam(value = "deviceName") String deviceName) throws ConfigurationException {
         if (deviceName.isEmpty()) throw new ConfigurationException("Device name cannot be empty");
-
-        configurationManager.getConfigurationStorage().removeNode(DicomPath.DeviceByName.set("deviceName",deviceName).path());
+        configurationManager.getConfigurationStorage().removeNode(DicomPath.DeviceByName.set("deviceName", deviceName).path());
+        fireConfigUpdateNotificationIfNecessary();
     }
 
 
@@ -211,9 +248,10 @@ public class ConfigRESTServicesServlet {
         } catch (ConfigurationException e) {
             // validation failed, replace the node back
             storage.persistNode(devicePath, (Map<String, Object>) oldDeviceConfig, Device.class);
-            throw new ConfigurationException("The device "+deviceName+" cannot be persisted because it violates the configuration integrity", e);
+            throw new ConfigurationException("The device " + deviceName + " cannot be persisted because it violates the configuration integrity", e);
         }
 
+        fireConfigUpdateNotificationIfNecessary();
         return Response.ok().build();
     }
 
@@ -259,6 +297,7 @@ public class ConfigRESTServicesServlet {
 
     /***
      * this method is just left for backwards-compatibility
+     *
      * @param ctx
      * @param extJson
      * @throws ConfigurationException
@@ -316,15 +355,16 @@ public class ConfigRESTServicesServlet {
 
     }
 
+    @Deprecated
     @GET
     @Path("/reconfigure-all-extensions/{deviceName}")
-    public void reloadAllExtensionsOfDevice(@Context UriInfo ctx,@PathParam("deviceName")  String deviceName) throws ConfigurationException {
+    public void reloadAllExtensionsOfDevice(@Context UriInfo ctx, @PathParam("deviceName") String deviceName) throws ConfigurationException {
         Device device = configurationManager.findDevice(deviceName);
 
         // xds
         for (DeviceExtension deviceExtension : device.listDeviceExtensions()) {
             String extensionName = deviceExtension.getClass().getSimpleName();
-            if (XDS_REST_PATH.get(extensionName)!=null)
+            if (XDS_REST_PATH.get(extensionName) != null)
                 reconfigureExtension(ctx, deviceName, extensionName);
         }
 
@@ -334,6 +374,7 @@ public class ConfigRESTServicesServlet {
 
     }
 
+    @Deprecated
     @GET
     @Path("/reconfigure-extension/{deviceName}/{extension}")
     @Produces(MediaType.APPLICATION_JSON)
@@ -342,7 +383,7 @@ public class ConfigRESTServicesServlet {
         String connectedDeviceUrl = System.getProperty("org.dcm4chee.device." + deviceName);
 
         if (connectedDeviceUrl == null)
-            throw new ConfigurationException("Device "+deviceName+" is not controlled (connected), please inspect the JBoss configuration");
+            throw new ConfigurationException("Device " + deviceName + " is not controlled (connected), please inspect the JBoss configuration");
 
         // add prefix part if needed
         String ext_prefix = "";
