@@ -44,7 +44,7 @@ public class ServiceDecorator<T> {
 //            LOG.debug("Decorators for {} were already created. Will not recreate.", clazz);
 //            return;
 //        }
-        LOG.debug("Creating decorators for {}.", clazz);
+        LOG.info("Creating decorators for {}.", clazz);
 
         Map<Double, DelegatingServiceImpl<T>> decorators = new TreeMap<Double, DelegatingServiceImpl<T>>();
 
@@ -63,7 +63,7 @@ public class ServiceDecorator<T> {
                     throw new RuntimeException("Dynamic decorator configuration not found for decorator " + decoratorClazz.getName() + " of service " + clazz, e);
                 }
                 decorators.put(priority, dynamicDecorator);
-                LOG.debug("Configuring the decorator {} with priority {}.", decoratorClazz, priority);
+                LOG.info("Configuring the decorator {} with priority {}.", decoratorClazz, priority);
             }
         }
 
