@@ -88,6 +88,9 @@
                     <value>true</value>
                 </property>
             </activation>
+          <properties>
+            <hibernate.dialect>org.hibernate.dialect.Oracle10gDialect</hibernate.dialect>
+          </properties>
             <build>
                 <resources>
                     <resource>
@@ -95,6 +98,56 @@
                         <filtering>true</filtering>
                     </resource>
                 </resources>
+              <plugins>
+                <plugin>
+                  <groupId>org.codehaus.mojo</groupId>
+                  <artifactId>exec-maven-plugin</artifactId>
+                  <version>1.1.1</version>
+                  <executions>
+                    <execution>
+                      <id>generate-create-schema-ddl</id>
+                      <phase>process-classes</phase>
+                      <goals>
+                        <goal>java</goal>
+                      </goals>
+                      <configuration>
+                        <includePluginDependencies>true</includePluginDependencies>
+                        <mainClass>com.blogspot.doingenterprise.SchemaExport</mainClass>
+                        <arguments>
+                          <argument>--create</argument>
+                          <argument>--delimiter=;</argument>
+                          <argument>--output=${project.build.directory}/create-table.ddl</argument>
+                          <argument>dcm4chee-conf</argument>
+                        </arguments>
+                      </configuration>
+                    </execution>
+                    <execution>
+                      <id>generate-drop-schema-ddl</id>
+                      <phase>process-classes</phase>
+                      <goals>
+                        <goal>java</goal>
+                      </goals>
+                      <configuration>
+                        <includePluginDependencies>true</includePluginDependencies>
+                        <mainClass>com.blogspot.doingenterprise.SchemaExport</mainClass>
+                        <arguments>
+                          <argument>--drop</argument>
+                          <argument>--delimiter=;</argument>
+                          <argument>--output=${project.build.directory}/drop-table.ddl</argument>
+                          <argument>dcm4chee-conf</argument>
+                        </arguments>
+                      </configuration>
+                    </execution>
+                  </executions>
+                  <dependencies>
+                    <dependency>
+                      <groupId>com.blogspot.doingenterprise</groupId>
+                      <artifactId>schema-export</artifactId>
+                      <version>2012_05_01</version>
+                    </dependency>
+                  </dependencies>
+                </plugin>
+              </plugins>
             </build>
         </profile>
     </profiles>
