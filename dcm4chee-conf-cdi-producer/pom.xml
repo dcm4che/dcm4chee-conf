@@ -67,8 +67,6 @@
           <configuration>
             <archive>
               <manifestEntries>
-                <Dependencies>
-                </Dependencies>
               </manifestEntries>
             </archive>
           </configuration>
