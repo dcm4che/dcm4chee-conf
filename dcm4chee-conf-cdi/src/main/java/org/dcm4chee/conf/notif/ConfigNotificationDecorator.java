@@ -160,7 +160,7 @@ public abstract class ConfigNotificationDecorator implements Configuration {
             transactionMap.remove(transactionId);
 
             // only notify if the changes were successfully committed
-            if (status == 0)
+            if (status == Status.STATUS_COMMITTED)
                 if (Boolean.valueOf(System.getProperty(NOTIFICATIONS_ENABLED_PROPERTY, "true")))
                     configNotifService.sendClusterScopedConfigChangeNotification(
                             new ConfigChangeEventImpl(changedPaths, context));
