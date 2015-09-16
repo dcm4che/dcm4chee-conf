@@ -12,7 +12,6 @@ public class DynamicDecoratorWrapper<T> {
 	private static final Logger LOG = LoggerFactory.getLogger(DynamicDecoratorWrapper.class);
 
 	@Inject
-	@ConfiguredDynamicDecorators
 	Instance<Collection<DelegatingServiceImpl<T>>> dynamicDecorators;
 	
 	private T wrappedDecorator = null;
@@ -26,7 +25,7 @@ public class DynamicDecoratorWrapper<T> {
     	return wrappedDecorator;
     }
     
-    private synchronized void getWrappedDynamicDecorators(T delegate) { 
+    private synchronized void getWrappedDynamicDecorators(T delegate) {
     	if (wrappedDecorator != null) {
     		return;
     	}
