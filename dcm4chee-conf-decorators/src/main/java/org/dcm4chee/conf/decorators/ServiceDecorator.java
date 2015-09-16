@@ -77,13 +77,13 @@ public class ServiceDecorator<T> {
         }
 
         if (!decoratorsConfig.getDecoratedServices().get(serviceClazz).getPrioritiesMap().containsKey(decoratorClazz.getName())) {
-            LOG.debug("Not configuring the decorator {} because it is not in the configuration.", decoratorClazz);
+            LOG.info("Not configuring the decorator {} because it is not in the configuration.", decoratorClazz);
             return false;
         }
 
         if (!disabledDecorators.isUnsatisfied())
             if (disabledDecorators.get().contains(decoratorClazz.getName())) {
-                LOG.debug("Not configuring the decorator {} because it is disabled.", decoratorClazz);
+                LOG.info("Not configuring the decorator {} because it is disabled.", decoratorClazz);
                 return false;
             }
 
