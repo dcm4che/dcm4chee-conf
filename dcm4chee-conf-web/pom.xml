@@ -54,6 +54,9 @@
     </properties>
     <profiles>
         <profile>
+            <id>secure</id>
+        </profile>
+        <profile>
             <id>xds-asb</id>
             <properties>
                 <config.classifier>-xds-asb</config.classifier>
