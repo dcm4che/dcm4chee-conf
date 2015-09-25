@@ -49,6 +49,12 @@ Upgrade is performed on server startup before any method can access the configur
 
 3. If the upgrade succeeds, the changes are committed and the startup process proceeds. If there is an error during the upgrade, the changes are rolled back and the deployment fails.
 
+
+Every upgrade script should be marked with `@org.dcm4che3.conf.api.upgrade.ScriptVersion` annotation. The runner will make sure that an upgrade script is only executed when either
+- the script was never executed before
+- the current version of the script is greater than the last executed version (String.compareTo is used to compare)
+If a script has no such annotation - it will be assigned a default version - see constant org.dcm4che3.conf.api.upgrade.UpgradeScript#NO_VERSION .
+
 Example: [DefaultArchiveConfigInitScript](https://github.com/dcm4che/dcm4chee-arc-cdi/blob/master/dcm4chee-arc-conf-default/src/main/java/org/dcm4chee/archive/conf/defaults/DefaultArchiveConfigInitScript.java)
 
 ### DB config storage
