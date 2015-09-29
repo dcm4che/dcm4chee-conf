@@ -44,6 +44,38 @@ import java.util.Iterator;
 import java.util.List;
 
 /**
+ * <p>Hooks are a simple mechanism to allow extensibility for dcm4chee functionality.
+ *
+ * Components should define an interface for a hook, inject the hooks using this interface and call them at the appropriate time.
+ * Hook implementors should put extension logic into hooks.
+ * The Hooks producer takes care about providing the hooks specified by the centralized configuration, taking care about the order and enabling/disabling hooks.
+ *
+ * Using hooks is almost the same as using Instance injection, except that the order and the enabling/disabling
+ * is configurable in a centralized manner.</p>
+ *
+ * So, instead of
+ *
+ * <pre>
+ * {@code
+ *
+ * @ Inject
+ * Instance&lt;T&gt;
+ * }
+ * </pre>
+ * the extensible components can use
+ *
+ * <pre>
+ * {@code
+ *
+ * @ Inject
+ * Hooks<T>
+ * }
+ * </pre>
+ *
+ * and iterate over the resolved hooks just like one would do with Instance<br/>
+ *
+ * <b>T</b> - hook type
+ *
  * @author Roman K
  */
 public interface Hooks<T> extends Iterable<T>{
