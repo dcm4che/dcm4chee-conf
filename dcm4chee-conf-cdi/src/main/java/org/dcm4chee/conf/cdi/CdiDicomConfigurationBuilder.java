@@ -49,8 +49,11 @@ import org.dcm4che3.conf.core.storage.SingleJsonFileConfigurationStorage;
 import org.dcm4che3.conf.dicom.CommonDicomConfigurationWithHL7;
 import org.dcm4che3.conf.dicom.DicomConfigurationBuilder;
 import org.dcm4che3.conf.dicom.ldap.LdapConfigurationStorage;
+import org.dcm4chee.conf.cache.CachedConfigurationEJB;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.List;
 
 /**
  * @author Alexander Hoermandinger <alexander.hoermandinger@agfa.com>
@@ -58,10 +61,6 @@ import org.slf4j.LoggerFactory;
 public class CdiDicomConfigurationBuilder extends DicomConfigurationBuilder {
     private static final Logger LOG = LoggerFactory.getLogger(CdiDicomConfigurationBuilder.class);
     
-    @Inject
-    @ConfigurationStorage
-    private Instance<Configuration> customConfigStorage;
-
     @Inject
     private CdiConfigExtensionsManager configExtensionsManager;
 
@@ -78,15 +77,24 @@ public class CdiDicomConfigurationBuilder extends DicomConfigurationBuilder {
         super(System.getProperties());
     }
 
+
+    @Inject
+    CachedConfigurationEJB configurationEJB;
+
+    @Override
+    protected Configuration createConfigurationStorage(List<Class> allExtensions) throws ConfigurationException {
+        Configuration storage = super.createConfigurationStorage(allExtensions);
+
+        // strap caching on
+
+
+        return storage;
+    }
+
     @Override
     public CommonDicomConfigurationWithHL7 build() throws ConfigurationException {
 
-        // Set custom storage
-        if(!customConfigStorage.isUnsatisfied()) {
-            Configuration storage = customConfigStorage.get();
-            LOG.info("Registering custom dicom configuration storage: " + storage.getClass().getName());
-            registerCustomConfigurationStorage(storage);
-        }
+        registerCustomConfigurationStorage(configurationEJB);
 
         // Add cdi-based config extensions
         configExtensionsManager.registerCdiConfigExtensions(this);
