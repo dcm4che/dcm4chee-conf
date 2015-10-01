@@ -40,6 +40,7 @@
 
 package org.dcm4chee.conf.cdi;
 
+import javax.enterprise.util.Nonbinding;
 import javax.inject.Qualifier;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -47,4 +48,5 @@ import java.lang.annotation.RetentionPolicy;
 @Retention(RetentionPolicy.RUNTIME)
 @Qualifier
 public @interface ConfigurationStorage {
+    String value() default "";
 }

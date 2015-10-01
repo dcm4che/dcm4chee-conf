@@ -63,7 +63,7 @@ import org.slf4j.LoggerFactory;
  * @author Roman K
  */
 @ApplicationScoped
-@ConfigurationStorage
+@ConfigurationStorage(value = "db-blobs")
 public class SemiSerializedDBConfigStorage implements Configuration {
 
     public static final Logger log = LoggerFactory.getLogger(SemiSerializedDBConfigStorage.class);

@@ -39,17 +39,15 @@
 
 package org.dcm4chee.conf.cdi;
 
-import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
+import org.dcm4che3.conf.core.api.ConfigurableClassExtension;
 import org.dcm4che3.conf.core.api.Configuration;
 import org.dcm4che3.conf.core.api.ConfigurationException;
-import org.dcm4che3.conf.core.storage.SingleJsonFileConfigurationStorage;
 import org.dcm4che3.conf.dicom.CommonDicomConfigurationWithHL7;
 import org.dcm4che3.conf.dicom.DicomConfigurationBuilder;
-import org.dcm4che3.conf.dicom.ldap.LdapConfigurationStorage;
-import org.dcm4chee.conf.cache.CachedConfigurationEJB;
+import org.dcm4chee.conf.storage.ConfigurationEJB;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -61,17 +59,9 @@ import java.util.List;
 public class CdiDicomConfigurationBuilder extends DicomConfigurationBuilder {
     private static final Logger LOG = LoggerFactory.getLogger(CdiDicomConfigurationBuilder.class);
     
-    @Inject
-    private CdiConfigExtensionsManager configExtensionsManager;
 
     @Inject
     private CdiUpgradeManager upgradeManager;
-
-    @Inject
-    private Instance<CdiSingleJsonFileConfigurationStorage> jsonFileConfigurationStorageInstance;
-    
-    @Inject
-    private Instance<CdiLdapConfigurationStorage> ldapConfigurationStorageInstance;
 
     public CdiDicomConfigurationBuilder() {
         super(System.getProperties());
@@ -79,7 +69,10 @@ public class CdiDicomConfigurationBuilder extends DicomConfigurationBuilder {
 
 
     @Inject
-    CachedConfigurationEJB configurationEJB;
+    ConfigurationEJB configurationEJB;
+
+    @Inject
+    private Instance<ConfigurableClassExtension> allExtensions;
 
     @Override
     protected Configuration createConfigurationStorage(List<Class> allExtensions) throws ConfigurationException {
@@ -97,7 +90,7 @@ public class CdiDicomConfigurationBuilder extends DicomConfigurationBuilder {
         registerCustomConfigurationStorage(configurationEJB);
 
         // Add cdi-based config extensions
-        configExtensionsManager.registerCdiConfigExtensions(this);
+        registerExtensions();
 
         // Build the config
         CommonDicomConfigurationWithHL7 commonConfig = super.build();
@@ -108,40 +101,12 @@ public class CdiDicomConfigurationBuilder extends DicomConfigurationBuilder {
         return commonConfig;
     }
 
-    @Override
-    protected SingleJsonFileConfigurationStorage createJsonFileConfigurationStorage() {
-        return jsonFileConfigurationStorageInstance.get();
-    }
-
-    @Override
-    protected LdapConfigurationStorage createLdapConfigurationStorage() {
-        return ldapConfigurationStorageInstance.get();
-    }
-    
-    @ApplicationScoped
-    protected static class CdiSingleJsonFileConfigurationStorage extends SingleJsonFileConfigurationStorage {
-        @Inject
-        private BatchConfigurationService batchConfigService;
-
-        @Override
-        public void runBatch(ConfigBatch batch) {
-            // use injected self reference to ensure CDI decorators are called
-            batchConfigService.runBatch(batch);
+    private void registerExtensions() {
+        for (ConfigurableClassExtension extension : allExtensions) {
+            LOG.info("Registering {} : {}", extension.getBaseClass().getSimpleName(), extension.getClass().getName());
+            registerExtensionForBaseExtension(extension.getBaseClass(), extension.getClass());
         }
-        
     }
-    
-    @ApplicationScoped
-    protected static class CdiLdapConfigurationStorage extends LdapConfigurationStorage {
-        @Inject
-        private BatchConfigurationService batchConfigService;
 
-        @Override
-        public void runBatch(ConfigBatch batch) {
-            // use injected self reference to ensure CDI decorators are called
-            batchConfigService.runBatch(batch);
-        }
-      
-    }
 
 }

@@ -41,7 +41,7 @@ package org.dcm4chee.conf.cdi.producer;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 
-import org.dcm4che3.conf.api.internal.DicomConfigurationManagerFactory;
+import org.dcm4che3.conf.api.internal.DicomConfigurationManagerProvider;
 import org.dcm4che3.conf.api.internal.DicomConfigurationManager;
 import org.dcm4che3.conf.core.api.ConfigurationException;
 import org.dcm4che3.conf.dicom.DicomConfigurationBuilder;
@@ -58,7 +58,7 @@ import org.dcm4che3.net.web.WebServiceAEExtension;
  * @author Gunter Zeilinger <gunterze@gmail.com>
  */
 @ApplicationScoped
-public class SharedDicomConfigurationFactory implements DicomConfigurationManagerFactory {
+public class SharedDicomConfigurationFactory implements DicomConfigurationManagerProvider {
     @Inject
     private DicomConfigurationBuilder builder;
     

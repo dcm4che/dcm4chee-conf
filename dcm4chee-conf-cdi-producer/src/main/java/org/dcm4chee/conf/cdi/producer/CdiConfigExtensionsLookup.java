@@ -39,6 +39,7 @@
  */
 package org.dcm4chee.conf.cdi.producer;
 
+import org.dcm4che3.conf.core.api.ConfigurableClassExtension;
 import org.dcm4che3.conf.dicom.DicomConfigurationBuilder;
 import org.dcm4che3.net.AEExtension;
 import org.dcm4che3.net.ConnectionExtension;
@@ -55,46 +56,19 @@ import javax.inject.Inject;
  * Performs lookup of available configuration extensions using CDI.
  * 
  * @author Alexander Hoermandinger <alexander.hoermandinger@agfa.com>
+ * @author Roman K
  */
 @ApplicationScoped
 public class CdiConfigExtensionsLookup {
     private final static Logger LOG = LoggerFactory.getLogger(CdiConfigExtensionsLookup.class);
 
     @Inject
-    private Instance<DeviceExtension> deviceExtensions;
-
-    @Inject
-    private Instance<AEExtension> aeExtensions;
-
-    @Inject
-    private Instance<HL7ApplicationExtension> hl7ApplicationExtensions;
-
-    @Inject
-    private Instance<ConnectionExtension> connectionExtensions;
-
-    public CdiConfigExtensionsLookup() {
-        //NOOP
-    }
+    private Instance<ConfigurableClassExtension> allExtensions;
 
     public void registerCdiConfigExtensions(DicomConfigurationBuilder builder) {
-        for (DeviceExtension ext : deviceExtensions) {
-            builder.registerDeviceExtension(ext.getClass());
-            LOG.info("Registered DICOM configuration device extension {}", ext.getClass().getName());
-        }
-        
-        for (AEExtension ext : aeExtensions) {
-            builder.registerAEExtension(ext.getClass());
-            LOG.info("Registered DICOM configuration ae extension {}", ext.getClass().getName());
-        }
-        
-        for (HL7ApplicationExtension ext : hl7ApplicationExtensions) {
-            builder.registerHL7ApplicationExtension(ext.getClass());
-            LOG.info("Registered DICOM configuration HL7 application extension {}", ext.getClass().getName());
-        }
-
-        for (ConnectionExtension connectionExtension : connectionExtensions) {
-            builder.registerExtensionForBaseExtension(connectionExtension.getClass(), ConnectionExtension.class);
-            LOG.info("Registered DICOM configuration Connection extension {}",  connectionExtension.getClass().getName());
+        for (ConfigurableClassExtension extension : allExtensions) {
+            LOG.info("Registering {} : {}", extension.getBaseClass().getSimpleName(), extension.getClass().getName());
+            builder.registerExtensionForBaseExtension(extension.getBaseClass(), extension.getClass());
         }
     }
 

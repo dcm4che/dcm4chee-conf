@@ -38,9 +38,10 @@
  *  ***** END LICENSE BLOCK *****
  */
 
-package org.dcm4chee.conf.cache;
+package org.dcm4chee.conf.storage;
 
 import org.codehaus.jackson.map.ObjectMapper;
+import org.dcm4che3.conf.ConfigurationSettingsLoader;
 import org.dcm4che3.conf.core.api.Configuration;
 import org.dcm4che3.conf.core.api.ConfigurationException;
 import org.dcm4che3.conf.core.util.ConfigNodeUtil;
@@ -48,8 +49,10 @@ import org.dcm4chee.conf.cdi.ConfigurationStorage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.PostConstruct;
 import javax.ejb.Singleton;
 import javax.enterprise.inject.Instance;
+import javax.enterprise.util.AnnotationLiteral;
 import javax.inject.Inject;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -58,30 +61,55 @@ import java.util.List;
 import java.util.Map;
 
 @Singleton
-public class CachedConfigurationEJB implements Configuration {
+public class ConfigurationEJB implements Configuration {
 
-    public static final Logger log = LoggerFactory.getLogger(CachedConfigurationEJB.class);
+    public static final Logger log = LoggerFactory.getLogger(ConfigurationEJB.class);
 
     private Map<String, Object> cachedConfigurationRoot = null;
 
     @Inject
-    @ConfigurationStorage
-    private Instance<Configuration> customConfigStorage;
+    private Instance<Configuration> availableConfigStorage;
+
+    private Configuration storage;
+
+    private static class ConfigStorageAnno extends AnnotationLiteral<ConfigurationStorage> implements ConfigurationStorage {
+
+        private static final long serialVersionUID = -142091870920142805L;
+        private String value;
+
+        public ConfigStorageAnno(String value) {
+            this.value = value;
+        }
+
+        @Override
+        public String value() {
+            return value;
+        }
+    }
+
+    @PostConstruct
+    public void init() {
+
+        // detect user setting (system property) for config backend type
+        String storageType = ConfigurationSettingsLoader.getPropertyWithNotice(
+                System.getProperties(),
+                Configuration.CONF_STORAGE_SYSTEM_PROP, ConfigStorageType.DB_BLOBS.name()
+        );
+
+        // resolve the corresponding implementation
+        storage = availableConfigStorage.select(new ConfigStorageAnno(storageType)).get();
+
+    }
+
+
 
 
     @Override
     public synchronized Map<String, Object> getConfigurationRoot() throws ConfigurationException {
 
-        long now = System.currentTimeMillis();
-
-        if (cachedConfigurationRoot == null ||
-                (staleTimeout != 0 && now > fetchTime + staleTimeout)) {
-            fetchTime = now;
-            if (cachedConfigurationRoot == null)
-                log.info("Configuration cache initialized"); else
-                log.debug("Configuration cache refreshed");
-
-            cachedConfigurationRoot = delegate.getConfigurationRoot();
+        if (cachedConfigurationRoot == null) {
+            cachedConfigurationRoot = storage.getConfigurationRoot();
+            log.info("Configuration cache initialized");
         }
         return cachedConfigurationRoot;
     }
@@ -107,6 +135,11 @@ public class CachedConfigurationEJB implements Configuration {
         }
     }
 
+    @Override
+    public Class getConfigurationNodeClass(String path) throws ConfigurationException, ClassNotFoundException {
+        return null;
+    }
+
     private Object deepCloneNode(Object node) {
         // clone
         ObjectMapper objectMapper = new ObjectMapper();
@@ -119,7 +152,7 @@ public class CachedConfigurationEJB implements Configuration {
 
     @Override
     public synchronized void persistNode(String path, Map<String, Object> configNode, Class configurableClass) throws ConfigurationException {
-        delegate.persistNode(path, configNode, configurableClass);
+        storage.persistNode(path, configNode, configurableClass);
         if (!path.equals("/"))
             ConfigNodeUtil.replaceNode(getConfigurationRoot(), path, configNode);
         else
@@ -128,7 +161,7 @@ public class CachedConfigurationEJB implements Configuration {
 
     @Override
     public synchronized void refreshNode(String path) throws ConfigurationException {
-        Object newConfigurationNode = delegate.getConfigurationNode(path, null);
+        Object newConfigurationNode = storage.getConfigurationNode(path, null);
         if (path.equals("/"))
             cachedConfigurationRoot = (Map<String, Object>) newConfigurationNode;
         else
@@ -143,7 +176,7 @@ public class CachedConfigurationEJB implements Configuration {
 
     @Override
     public synchronized void removeNode(String path) throws ConfigurationException {
-        delegate.removeNode(path);
+        storage.removeNode(path);
         ConfigNodeUtil.removeNodes(getConfigurationRoot(), path);
     }
 
@@ -160,9 +193,14 @@ public class CachedConfigurationEJB implements Configuration {
     }
 
     @Override
+    public void lock() {
+        storage.lock();
+    }
+
+    @Override
     public synchronized void runBatch(ConfigBatch batch) {
         try {
-            super.runBatch(batch);
+            storage.runBatch(batch);
         }catch (RuntimeException e) {
 
             // if something goes wrong during batching - invalidate the cache before others are able to read inconsistent data
