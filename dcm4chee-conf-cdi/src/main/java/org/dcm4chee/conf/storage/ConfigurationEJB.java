@@ -45,47 +45,68 @@ import org.dcm4che3.conf.ConfigurationSettingsLoader;
 import org.dcm4che3.conf.core.api.Configuration;
 import org.dcm4che3.conf.core.api.ConfigurationException;
 import org.dcm4che3.conf.core.util.ConfigNodeUtil;
-import org.dcm4chee.conf.cdi.ConfigurationStorage;
+import org.dcm4chee.conf.notif.ConfigNotificationDecorator;
+import org.dcm4chee.util.TransactionSynchronization;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.PostConstruct;
+import javax.ejb.ConcurrencyManagement;
+import javax.ejb.ConcurrencyManagementType;
 import javax.ejb.Singleton;
 import javax.enterprise.inject.Instance;
-import javax.enterprise.util.AnnotationLiteral;
 import javax.inject.Inject;
+import javax.transaction.RollbackException;
+import javax.transaction.Synchronization;
+import javax.transaction.SystemException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+/**
+ * A per-deployment configuration singleton that brings the following parts together:
+ * <ul>
+ * <li> Injects the proper config storage by looking up the system property
+ * <li> Sets up config notifications
+ * <li> Performs read/write caching with proper isolation
+ * <li> Triggers integrity checks on transaction pre-commit
+ * </ul>
+ */
+@SuppressWarnings("unchecked")
 @Singleton
+@ConcurrencyManagement(ConcurrencyManagementType.BEAN)
 public class ConfigurationEJB implements Configuration {
 
     public static final Logger log = LoggerFactory.getLogger(ConfigurationEJB.class);
 
-    private Map<String, Object> cachedConfigurationRoot = null;
-
     @Inject
     private Instance<Configuration> availableConfigStorage;
 
+    @Inject
+    private ConfigNotificationDecorator configNotificationDecorator;
+
+    @Inject
+    private ConfigurationIntegrityCheck integrityCheck;
+
+    @Inject
+    TransactionSynchronization txSync;
+
     private Configuration storage;
 
-    private static class ConfigStorageAnno extends AnnotationLiteral<ConfigurationStorage> implements ConfigurationStorage {
 
-        private static final long serialVersionUID = -142091870920142805L;
-        private String value;
+    // readers cache - shared cache, only rarely and shortly locked for writing just to replace new nodes loaded from backend
+    private Map<String, Object> readerConfigurationCache = null;
+    private ReadWriteLock readCacheLock = new ReentrantReadWriteLock();
 
-        public ConfigStorageAnno(String value) {
-            this.value = value;
-        }
-
-        @Override
-        public String value() {
-            return value;
-        }
-    }
+    // writer's cache - exclusive cache for the modifying transaction
+    // locked with both the storage lock globally and with the local reentrant lock in case non-lockable storage is used
+    private Map<String, Object> writerConfigurationCache = null;
+    private ReentrantLock writeCacheLock = new ReentrantLock();
 
     @PostConstruct
     public void init() {
@@ -97,47 +118,20 @@ public class ConfigurationEJB implements Configuration {
         );
 
         // resolve the corresponding implementation
-        storage = availableConfigStorage.select(new ConfigStorageAnno(storageType)).get();
+        storage = availableConfigStorage.select(new ConfigurationStorage.ConfigStorageAnno(storageType)).get();
 
-    }
+        // decorate with config notification
+        configNotificationDecorator.setDelegate(storage);
+        storage = configNotificationDecorator;
 
-
-
-
-    @Override
-    public synchronized Map<String, Object> getConfigurationRoot() throws ConfigurationException {
-
-        if (cachedConfigurationRoot == null) {
-            cachedConfigurationRoot = storage.getConfigurationRoot();
-            log.info("Configuration cache initialized");
-        }
-        return cachedConfigurationRoot;
-    }
-
-    /**
-     * Return cached node
-     *
-     * @param path
-     * @param configurableClass
-     * @return
-     * @throws ConfigurationException
-     */
-    @Override
-    public synchronized Object getConfigurationNode(String path, Class configurableClass) throws ConfigurationException {
-        Object node = ConfigNodeUtil.getNode(getConfigurationRoot(), path);
-
-        if (node == null) return null;
-
+        // init reader cache
         try {
-            return deepCloneNode(node);
-        } catch (Exception e) {
-            throw new ConfigurationException(e);
+            readerConfigurationCache = storage.getConfigurationRoot();
+            log.info("Configuration cache initialized");
+        } catch (ConfigurationException e) {
+            throw new RuntimeException("Cannot initialize config cache", e);
         }
-    }
 
-    @Override
-    public Class getConfigurationNodeClass(String path) throws ConfigurationException, ClassNotFoundException {
-        return null;
     }
 
     private Object deepCloneNode(Object node) {
@@ -150,46 +144,216 @@ public class ConfigurationEJB implements Configuration {
         }
     }
 
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Readers ///////////////////////////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
     @Override
-    public synchronized void persistNode(String path, Map<String, Object> configNode, Class configurableClass) throws ConfigurationException {
-        storage.persistNode(path, configNode, configurableClass);
-        if (!path.equals("/"))
-            ConfigNodeUtil.replaceNode(getConfigurationRoot(), path, configNode);
-        else
-            cachedConfigurationRoot = configNode;
+    public Map<String, Object> getConfigurationRoot() throws ConfigurationException {
+
+        if (isPartOfModifyingTransaction())
+            return (Map<String, Object>) deepCloneNode(writerConfigurationCache);
+
+        readCacheLock.readLock().lock();
+        try {
+            return (Map<String, Object>) deepCloneNode(readerConfigurationCache);
+        } finally {
+            readCacheLock.readLock().unlock();
+        }
+    }
+
+    /**
+     * Return cached node
+     *
+     * @param path
+     * @param configurableClass
+     * @return
+     * @throws ConfigurationException
+     */
+    @Override
+    public Object getConfigurationNode(String path, Class configurableClass) throws ConfigurationException {
+
+        if (isPartOfModifyingTransaction())
+            return getConfigurationNodeFromCache(path, writerConfigurationCache);
+
+        readCacheLock.readLock().lock();
+        try {
+            return getConfigurationNodeFromCache(path, readerConfigurationCache);
+        } finally {
+            readCacheLock.readLock().unlock();
+        }
+    }
+
+    private Object getConfigurationNodeFromCache(String path, Map<String, Object> writerConfigurationCache) {
+        Object node = ConfigNodeUtil.getNode(writerConfigurationCache, path);
+        if (node == null) return null;
+        return deepCloneNode(node);
     }
 
     @Override
-    public synchronized void refreshNode(String path) throws ConfigurationException {
+    public boolean nodeExists(String path) throws ConfigurationException {
+
+        if (isPartOfModifyingTransaction())
+            ConfigNodeUtil.nodeExists(writerConfigurationCache, path);
+
+        readCacheLock.readLock().lock();
+        try {
+            return ConfigNodeUtil.nodeExists(readerConfigurationCache, path);
+        } finally {
+            readCacheLock.readLock().unlock();
+        }
+    }
+
+    @Override
+    public void refreshNode(String path) throws ConfigurationException {
+
         Object newConfigurationNode = storage.getConfigurationNode(path, null);
-        if (path.equals("/"))
-            cachedConfigurationRoot = (Map<String, Object>) newConfigurationNode;
-        else
-            ConfigNodeUtil.replaceNode(getConfigurationRoot(), path, newConfigurationNode);
 
+        if (isPartOfModifyingTransaction()) {
+            if (path.equals("/"))
+                writerConfigurationCache = (Map<String, Object>) newConfigurationNode;
+            else
+                ConfigNodeUtil.replaceNode(writerConfigurationCache, path, newConfigurationNode);
+
+        } else {
+
+            readCacheLock.writeLock().lock();
+            try {
+                if (path.equals("/"))
+                    readerConfigurationCache = (Map<String, Object>) newConfigurationNode;
+                else
+                    ConfigNodeUtil.replaceNode(readerConfigurationCache, path, newConfigurationNode);
+            } finally {
+                readCacheLock.writeLock().unlock();
+            }
+        }
     }
 
     @Override
-    public synchronized boolean nodeExists(String path) throws ConfigurationException {
-        return ConfigNodeUtil.nodeExists(getConfigurationRoot(), path);
+    public Iterator search(String liteXPathExpression) throws IllegalArgumentException, ConfigurationException {
+
+        readCacheLock.writeLock().lock();
+        try {
+            // fully iterate and make copies of all returned results to ensure the consistency and isolation
+            List l = new ArrayList();
+            final Iterator origIterator = ConfigNodeUtil.search(readerConfigurationCache, liteXPathExpression);
+
+            while (origIterator.hasNext()) l.add(deepCloneNode(origIterator.next()));
+
+            return l.iterator();
+
+        } finally {
+            readCacheLock.writeLock().unlock();
+        }
+    }
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Writers ///////////////////////////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    @Override
+    public void persistNode(String path, Map<String, Object> configNode, Class configurableClass) throws ConfigurationException {
+        writeCacheLock.lock();
+        try {
+            storage.lock();
+            registerBeforeCommitChecks();
+
+            storage.persistNode(path, configNode, configurableClass);
+
+            if (!path.equals("/"))
+                ConfigNodeUtil.replaceNode(getWriterConfigurationCache(), path, configNode);
+            else
+                writerConfigurationCache = configNode;
+        } finally {
+            writeCacheLock.unlock();
+        }
     }
 
     @Override
-    public synchronized void removeNode(String path) throws ConfigurationException {
-        storage.removeNode(path);
-        ConfigNodeUtil.removeNodes(getConfigurationRoot(), path);
+    public void removeNode(String path) throws ConfigurationException {
+        writeCacheLock.lock();
+        try {
+            storage.lock();
+            registerBeforeCommitChecks();
+
+            storage.removeNode(path);
+            ConfigNodeUtil.removeNodes(getWriterConfigurationCache(), path);
+        } finally {
+            writeCacheLock.unlock();
+        }
     }
 
     @Override
-    public synchronized Iterator search(String liteXPathExpression) throws IllegalArgumentException, ConfigurationException {
+    public void runBatch(ConfigBatch batch) {
+        writeCacheLock.lock();
+        try {
+            storage.lock();
+            registerBeforeCommitChecks();
+            batch.run();
+        } finally {
+            writeCacheLock.unlock();
+        }
+    }
 
-        // fully iterate and make copies of all returned results to ensure the consistency and isolation
-        List l = new ArrayList();
-        final Iterator origIterator = ConfigNodeUtil.search(getConfigurationRoot(), liteXPathExpression);
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Transactions  /////////////////////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-        while (origIterator.hasNext()) l.add(deepCloneNode(origIterator.next()));
+    /**
+     * Ensures that integrity checking will be done before committing the transaction
+     */
+    private void registerBeforeCommitChecks() {
 
-        return l.iterator();
+        // only register if there is no marker
+        Object configTxMarker = txSync.getSynchronizationRegistry().getResource(ConfigurationEJB.class);
+        if (configTxMarker == null) {
+
+            // mark this tx as a writertx
+            txSync.getSynchronizationRegistry().putResource(ConfigurationEJB.class, new Object());
+
+            // register pre-commit hook
+            try {
+                txSync.getTransactionManager().getTransaction().registerSynchronization(new Synchronization() {
+                    @Override
+                    public void beforeCompletion() {
+                        beforeCommit();
+                    }
+
+                    @Override
+                    public void afterCompletion(int i) {
+
+                    }
+                });
+            } catch (RollbackException | SystemException e) {
+                throw new RuntimeException("Error when trying to register a pre-commit hook for config change transaction", e);
+            }
+        }
+    }
+
+    private void beforeCommit() {
+        try {
+            // perform referential integrity check
+            integrityCheck.performCheck(writerConfigurationCache);
+
+        } catch (ConfigurationException e) {
+            throw new IllegalArgumentException("Configuration integrity violated");
+
+        } finally {
+            // clear writer cache
+            writerConfigurationCache = null;
+        }
+    }
+
+    private boolean isPartOfModifyingTransaction() {
+        return txSync.getSynchronizationRegistry().getResource(ConfigurationEJB.class) != null;
+    }
+
+    private Map<String, Object> getWriterConfigurationCache() throws ConfigurationException {
+        if (writerConfigurationCache == null) {
+            // read fully from the backend to ensure 0 inconsistency
+            writerConfigurationCache = storage.getConfigurationRoot();
+        }
+        return writerConfigurationCache;
     }
 
     @Override
@@ -197,19 +361,6 @@ public class ConfigurationEJB implements Configuration {
         storage.lock();
     }
 
-    @Override
-    public synchronized void runBatch(ConfigBatch batch) {
-        try {
-            storage.runBatch(batch);
-        }catch (RuntimeException e) {
-
-            // if something goes wrong during batching - invalidate the cache before others are able to read inconsistent data
-            // we cannot re-load here since an underlying transaction is likely to be inactive
-            cachedConfigurationRoot = null;
-
-            throw e;
-        }
-
-    }
-
 }
+
+

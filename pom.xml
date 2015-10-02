@@ -53,7 +53,6 @@
     </scm>
     <modules>
         <module>dcm4chee-conf-cdi</module>
-        <module>dcm4chee-conf-cdi-producer</module>
         <module>dcm4chee-conf-db</module>
         <module>dcm4chee-conf-web</module>
         <module>dcm4chee-conf-decorators</module>

@@ -38,63 +38,76 @@
  *  ***** END LICENSE BLOCK *****
  */
 
-package org.dcm4chee.conf.cdi;
+package org.dcm4chee.conf;
 
 import org.dcm4che3.conf.api.internal.DicomConfigurationManager;
-import org.dcm4che3.conf.api.upgrade.UpgradeScript;
-import org.dcm4che3.conf.core.DefaultBeanVitalizer;
+import org.dcm4che3.conf.core.api.ConfigurableClassExtension;
 import org.dcm4che3.conf.core.api.ConfigurationException;
-import org.dcm4che3.conf.core.storage.SingleJsonFileConfigurationStorage;
-import org.dcm4chee.conf.upgrade.UpgradeRunner;
-import org.dcm4chee.conf.upgrade.UpgradeSettings;
-import org.dcm4che3.util.StringUtils;
+import org.dcm4che3.conf.dicom.CommonDicomConfigurationWithHL7;
+import org.dcm4chee.conf.storage.ConfigurationEJB;
+import org.dcm4chee.conf.upgrade.CdiUpgradeManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Instance;
+import javax.enterprise.inject.Produces;
 import javax.inject.Inject;
-
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
- * Matches configuration from a json file with upgrade scripts available as CDI beans and launches the upgrade runner
+ * @Roman K
  */
-@ApplicationScoped
-public class CdiUpgradeManager {
+public class DicomConfigManagerProducer {
 
-    private static Logger LOG = LoggerFactory.getLogger(CdiUpgradeManager.class);
-
-    public static final String UPGRADE_SETTINGS_PROP = "org.dcm4che.conf.upgrade.settingsFile";
+    private final static Logger log = LoggerFactory.getLogger(DicomConfigManagerProducer.class);
 
     @Inject
-    private Instance<UpgradeScript> upgradeScripts;
+    ConfigurationEJB configStorage;
 
-    public CdiUpgradeManager() {
-    }
+    @Inject
+    private Instance<ConfigurableClassExtension> allExtensions;
 
-    public void performUpgrade(DicomConfigurationManager manager) throws ConfigurationException {
-        // collect available upgrade scripts
-        List<UpgradeScript> scripts = new ArrayList<>();
-        for (UpgradeScript upgradeScript : upgradeScripts) scripts.add(upgradeScript);
+    @Inject
+    CdiUpgradeManager upgradeManager;
 
-        // perform upgrade
-        String property = System.getProperty(UPGRADE_SETTINGS_PROP);
-        if (property != null) {
-            // load upgrade settings
-            String filename = StringUtils.replaceSystemProperties(property);
-            SingleJsonFileConfigurationStorage singleJsonFileConfigurationStorage = new SingleJsonFileConfigurationStorage(filename);
-            Map<String,Object> configMap = singleJsonFileConfigurationStorage.getConfigurationRoot();
-            UpgradeSettings upgradeSettings = new DefaultBeanVitalizer().newConfiguredInstance(configMap, UpgradeSettings.class);
-            upgradeSettings.setUpgradeConfig(configMap); 
-            
-            UpgradeRunner upgradeRunner = new UpgradeRunner(scripts, manager, upgradeSettings);
-            upgradeRunner.upgrade();
+    @Produces
+    public DicomConfigurationManager createDicomConfigurationManager() {
+        CommonDicomConfigurationWithHL7 configurationWithHL7 = new CommonDicomConfigurationWithHL7(
+                configStorage,
+                resolveExtensionsMap()
+        );
 
-        } else {
-            LOG.info("Dcm4che configuration init: {} property not set, no config upgrade will be performed", UPGRADE_SETTINGS_PROP);
+        // Perform upgrade
+        try {
+            upgradeManager.performUpgrade(configurationWithHL7);
+        } catch (ConfigurationException e) {
+            throw new RuntimeException("Cannot create DicomConfiguration due to upgrade failure", e);
         }
+
+        return configurationWithHL7;
     }
+
+    private Map<Class, List<Class>> resolveExtensionsMap() {
+        Map<Class, List<Class>> extensions = new HashMap<>();
+        for (ConfigurableClassExtension extension : allExtensions) {
+            log.info("Registering {} : {}", extension.getBaseClass().getSimpleName(), extension.getClass().getName());
+
+            Class baseExtensionClass = extension.getBaseClass();
+
+            List<Class> extensionsForBaseClass = extensions.get(baseExtensionClass);
+
+            if (extensionsForBaseClass == null)
+                extensions.put(baseExtensionClass, extensionsForBaseClass = new ArrayList<>());
+
+            // don't put duplicates
+            if (!extensionsForBaseClass.contains(extension.getClass()))
+                extensionsForBaseClass.add(extension.getClass());
+
+        }
+        return extensions;
+    }
+
 }

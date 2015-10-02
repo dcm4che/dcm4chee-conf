@@ -43,34 +43,23 @@ package org.dcm4chee.conf.storage;
 import org.dcm4che3.conf.core.api.ConfigurationException;
 import org.dcm4che3.conf.core.storage.SingleJsonFileConfigurationStorage;
 import org.dcm4che3.conf.dicom.ldap.LdapConfigurationStorage;
-import org.dcm4chee.conf.cdi.BatchConfigurationService;
-import org.dcm4chee.conf.cdi.ConfigurationStorage;
 
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 
 /**
- * Created by aprvf on 01.10.2015.
+ * @author Roman K
  */
 public class CdiDefaultConfigStorageWrappers {
 
     @ApplicationScoped
     @ConfigurationStorage("json_file")
     public static class CdiSingleJsonFileConfigurationStorage extends SingleJsonFileConfigurationStorage {
-        @Inject
-        private BatchConfigurationService batchConfigService;
-
 
         @PostConstruct
         public void init() {
             setFileName(resolveConfigFileNameSetting(System.getProperties()));
-        }
-
-        @Override
-        public void runBatch(ConfigBatch batch) {
-            // use injected self reference to ensure CDI decorators are called
-            batchConfigService.runBatch(batch);
         }
 
     }
@@ -78,9 +67,6 @@ public class CdiDefaultConfigStorageWrappers {
     @ApplicationScoped
     @ConfigurationStorage("ldap")
     public static class CdiLdapConfigurationStorage extends LdapConfigurationStorage {
-        @Inject
-        private BatchConfigurationService batchConfigService;
-
         @PostConstruct
         public void init() {
             try {
@@ -89,12 +75,5 @@ public class CdiDefaultConfigStorageWrappers {
                 throw new RuntimeException("Cannot load ldap config", e);
             }
         }
-
-        @Override
-        public void runBatch(ConfigBatch batch) {
-            // use injected self reference to ensure CDI decorators are called
-            batchConfigService.runBatch(batch);
-        }
-
     }
 }

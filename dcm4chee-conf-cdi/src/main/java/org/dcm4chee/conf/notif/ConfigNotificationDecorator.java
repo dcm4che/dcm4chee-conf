@@ -56,6 +56,7 @@ import javax.transaction.SystemException;
 import javax.transaction.Transaction;
 import javax.transaction.TransactionManager;
 
+import org.dcm4che3.conf.core.DelegatingConfiguration;
 import org.dcm4che3.conf.core.api.ConfigChangeEvent;
 import org.dcm4che3.conf.core.api.ConfigChangeEvent.CONTEXT;
 import org.dcm4che3.conf.core.api.Configuration;
@@ -66,19 +67,22 @@ import org.dcm4che3.conf.core.api.ConfigurationException;
  * 
  * @author Alexander Hoermandinger <alexander.hoermandinger@agfa.com>
  */
-@Decorator
-public abstract class ConfigNotificationDecorator implements Configuration {
+public class ConfigNotificationDecorator extends DelegatingConfiguration {
     public static final String NOTIFICATIONS_ENABLED_PROPERTY = "org.dcm4che.conf.notifications";
     private final Map<Integer,JtaTransactionConfigChangeContainer> transactionMap = new ConcurrentHashMap<>();
 
-    @Inject @Delegate @Any
-    private Configuration delegate;
-    
     @Inject
     private ConfigNotificationService configNotifService;
     
     @Resource(lookup="java:jboss/TransactionManager")
     private TransactionManager tmManager;
+
+    /**
+     * to avoid using CDI decorators
+     */
+    public void setDelegate(Configuration delegate) {
+        this.delegate = delegate;
+    }
 
     @Override
     public void persistNode(String path, Map<String, Object> configNode, Class configurableClass) throws ConfigurationException {
@@ -92,11 +96,6 @@ public abstract class ConfigNotificationDecorator implements Configuration {
         recordConfigChange(path);
     }
 
-    @Override
-    public void lock() {
-        delegate.lock();
-    }
-    
     private void recordConfigChange(String path) {
         JtaTransactionConfigChangeContainer container = getEventForActiveTransaction();
         if(container != null) {

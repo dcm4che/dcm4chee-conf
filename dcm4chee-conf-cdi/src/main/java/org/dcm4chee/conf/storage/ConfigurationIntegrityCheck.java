@@ -1,5 +1,5 @@
 /*
- * **** BEGIN LICENSE BLOCK *****
+ * *** BEGIN LICENSE BLOCK *****
  *  Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
  *  The contents of this file are subject to the Mozilla Public License Version
@@ -17,7 +17,7 @@
  *
  *  The Initial Developer of the Original Code is
  *  Agfa Healthcare.
- *  Portions created by the Initial Developer are Copyright (C) 2014
+ *  Portions created by the Initial Developer are Copyright (C) 2015
  *  the Initial Developer. All Rights Reserved.
  *
  *  Contributor(s):
@@ -37,39 +37,58 @@
  *
  *  ***** END LICENSE BLOCK *****
  */
-package org.dcm4chee.conf.cdi.producer;
+
+package org.dcm4chee.conf.storage;
 
 import org.dcm4che3.conf.core.api.ConfigurableClassExtension;
-import org.dcm4che3.conf.dicom.DicomConfigurationBuilder;
-import org.dcm4che3.net.AEExtension;
-import org.dcm4che3.net.ConnectionExtension;
-import org.dcm4che3.net.DeviceExtension;
-import org.dcm4che3.net.hl7.HL7ApplicationExtension;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.dcm4che3.conf.core.api.ConfigurationException;
+import org.dcm4che3.conf.core.storage.InMemoryReadOnlyConfiguration;
+import org.dcm4che3.conf.dicom.CommonDicomConfigurationWithHL7;
 
-import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
- * Performs lookup of available configuration extensions using CDI.
- * 
- * @author Alexander Hoermandinger <alexander.hoermandinger@agfa.com>
  * @author Roman K
  */
-@ApplicationScoped
-public class CdiConfigExtensionsLookup {
-    private final static Logger LOG = LoggerFactory.getLogger(CdiConfigExtensionsLookup.class);
+public class ConfigurationIntegrityCheck {
+
 
     @Inject
     private Instance<ConfigurableClassExtension> allExtensions;
 
-    public void registerCdiConfigExtensions(DicomConfigurationBuilder builder) {
-        for (ConfigurableClassExtension extension : allExtensions) {
-            LOG.info("Registering {} : {}", extension.getBaseClass().getSimpleName(), extension.getClass().getName());
-            builder.registerExtensionForBaseExtension(extension.getBaseClass(), extension.getClass());
-        }
+    public void performCheck(Map<String, Object> configurationRoot) throws ConfigurationException {
+
+        // temporarily just 'materialize' full config
+        // TODO later will be replaced with proper referential consistency analysis
+
+        InMemoryReadOnlyConfiguration configuration = new InMemoryReadOnlyConfiguration(configurationRoot);
+        CommonDicomConfigurationWithHL7 dicomConfiguration = new CommonDicomConfigurationWithHL7(configuration, resolveExtensionsMap());
+        for (String deviceName : dicomConfiguration.listDeviceNames())
+            dicomConfiguration.findDevice(deviceName);
+
     }
 
+    private Map<Class, List<Class>> resolveExtensionsMap() {
+        Map<Class, List<Class>> extensions = new HashMap<>();
+        for (ConfigurableClassExtension extension : allExtensions) {
+
+            Class baseExtensionClass = extension.getBaseClass();
+
+            List<Class> extensionsForBaseClass = extensions.get(baseExtensionClass);
+
+            if (extensionsForBaseClass == null)
+                extensions.put(baseExtensionClass, extensionsForBaseClass = new ArrayList<>());
+
+            // don't put duplicates
+            if (!extensionsForBaseClass.contains(extension.getClass()))
+                extensionsForBaseClass.add(extension.getClass());
+
+        }
+        return extensions;
+    }
 }

@@ -1,5 +1,5 @@
 /*
- * **** BEGIN LICENSE BLOCK *****
+ * *** BEGIN LICENSE BLOCK *****
  *  Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
  *  The contents of this file are subject to the Mozilla Public License Version
@@ -17,7 +17,7 @@
  *
  *  The Initial Developer of the Original Code is
  *  Agfa Healthcare.
- *  Portions created by the Initial Developer are Copyright (C) 2014
+ *  Portions created by the Initial Developer are Copyright (C) 2015
  *  the Initial Developer. All Rights Reserved.
  *
  *  Contributor(s):
@@ -37,50 +37,32 @@
  *
  *  ***** END LICENSE BLOCK *****
  */
-package org.dcm4chee.conf.cdi;
 
-import org.dcm4che3.conf.dicom.DicomConfigurationBuilder;
-import org.dcm4che3.net.AEExtension;
-import org.dcm4che3.net.ConnectionExtension;
-import org.dcm4che3.net.DeviceExtension;
-import org.dcm4che3.net.hl7.HL7ApplicationExtension;
+package org.dcm4chee.conf.storage;
 
-import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.inject.Instance;
-import javax.inject.Inject;
+import javax.enterprise.util.AnnotationLiteral;
+import javax.enterprise.util.Nonbinding;
+import javax.inject.Qualifier;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 
-/**
- * Do not rely on this class - will be deleted
- *
- * @author Roman K
- */
-@Deprecated
-@ApplicationScoped
-public class CdiConfigExtensionsManager {
+@Retention(RetentionPolicy.RUNTIME)
+@Qualifier
+public @interface ConfigurationStorage {
+    String value() default "";
 
-    @Inject
-    private Instance<DeviceExtension> deviceExtensions;
+    class ConfigStorageAnno extends AnnotationLiteral<ConfigurationStorage> implements ConfigurationStorage {
 
-    @Inject
-    private Instance<AEExtension> aeExtensions;
+        private static final long serialVersionUID = -142091870920142805L;
+        private String value;
 
-    @Inject
-    private Instance<HL7ApplicationExtension> hl7ApplicationExtensions;
+        public ConfigStorageAnno(String value) {
+            this.value = value;
+        }
 
-    @Inject
-    private Instance<ConnectionExtension> connectionExtensions;
-
-    public CdiConfigExtensionsManager() {
+        @Override
+        public String value() {
+            return value;
+        }
     }
-
-    public void registerCdiConfigExtensions(DicomConfigurationBuilder builder) {
-        for (DeviceExtension ext : deviceExtensions) builder.registerDeviceExtension(ext.getClass());
-        for (AEExtension ext : aeExtensions) builder.registerAEExtension(ext.getClass());
-        for (HL7ApplicationExtension ext : hl7ApplicationExtensions)
-            builder.registerHL7ApplicationExtension(ext.getClass());
-        for (ConnectionExtension connectionExtension : connectionExtensions)
-            builder.registerExtensionForBaseExtension(connectionExtension.getClass(), ConnectionExtension.class);
-
-    }
-
 }
