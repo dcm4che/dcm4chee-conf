@@ -57,11 +57,16 @@ import java.util.Map;
  */
 public class ConfigurationIntegrityCheck {
 
+    private static final String DISABLE_INTEGRITY_CHECK_PROPERTY = "org.dcm4che.conf.disableIntegrityCheck";
 
     @Inject
     private Instance<ConfigurableClassExtension> allExtensions;
 
     public void performCheck(Map<String, Object> configurationRoot) throws ConfigurationException {
+
+        // check if the check is not disabled
+        if (System.getProperty(DISABLE_INTEGRITY_CHECK_PROPERTY) != null)
+            return;
 
         // temporarily just 'materialize' full config
         // TODO later will be replaced with proper referential consistency analysis

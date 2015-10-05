@@ -49,6 +49,8 @@ import org.dcm4chee.conf.upgrade.CdiUpgradeManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.ejb.EJB;
+import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Instance;
 import javax.enterprise.inject.Produces;
 import javax.inject.Inject;
@@ -64,7 +66,7 @@ public class DicomConfigManagerProducer {
 
     private final static Logger log = LoggerFactory.getLogger(DicomConfigManagerProducer.class);
 
-    @Inject
+    @EJB
     ConfigurationEJB configStorage;
 
     @Inject
@@ -74,6 +76,7 @@ public class DicomConfigManagerProducer {
     CdiUpgradeManager upgradeManager;
 
     @Produces
+    @ApplicationScoped
     public DicomConfigurationManager createDicomConfigurationManager() {
         CommonDicomConfigurationWithHL7 configurationWithHL7 = new CommonDicomConfigurationWithHL7(
                 configStorage,

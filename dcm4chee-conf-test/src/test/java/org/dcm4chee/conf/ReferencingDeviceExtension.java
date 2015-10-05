@@ -40,55 +40,26 @@
 
 package org.dcm4chee.conf;
 
-import org.dcm4che3.conf.api.internal.DicomConfigurationManager;
-import org.dcm4che3.conf.core.api.Configuration;
-import org.dcm4che3.conf.core.api.ConfigurationException;
-import org.dcm4che3.conf.dicom.DicomConfigurationBuilder;
-
-import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.inject.Any;
-import javax.enterprise.inject.Instance;
-import javax.enterprise.inject.Produces;
-import javax.inject.Inject;
+import org.dcm4che3.conf.api.extensions.CommonDeviceExtension;
+import org.dcm4che3.conf.core.api.ConfigurableClass;
+import org.dcm4che3.conf.core.api.ConfigurableProperty;
+import org.dcm4che3.net.Device;
+import org.dcm4che3.net.DeviceExtension;
 
 /**
- * Created by aprvf on 02.07.2015.
+ * Created by aprvf on 05.10.2015.
  */
+@ConfigurableClass
+public class ReferencingDeviceExtension extends CommonDeviceExtension {
 
-@ApplicationScoped
-public class MyConfigProducer {
+    @ConfigurableProperty(isReference = true)
+    Device ref;
 
+    public Device getRef() {
+        return ref;
+    }
 
-    @Produces
-    @ApplicationScoped
-    public static DicomConfigurationManager produceConfig(@Any Instance<Configuration> dbConfigStorage) throws ConfigurationException {
-        DicomConfigurationBuilder builder = new DicomConfigurationBuilder();
-
-
-        for (Configuration configuration : dbConfigStorage) {
-            String storageClassName = configuration.getClass().getName();
-            System.out.println(storageClassName);
-
-
-            if (storageClassName.startsWith("org.dcm4chee.conf.storage.SemiSerialized"))
-                builder.registerCustomConfigurationStorage(configuration);
-
-        }
-
-
-        builder.cache(false);
-
-//        builder.registerDeviceExtension(ArchiveDeviceExtension.class);
-//        builder.registerDeviceExtension(StorageDeviceExtension.class);
-//        builder.registerDeviceExtension(HL7DeviceExtension.class);
-//        builder.registerDeviceExtension(ImageReaderExtension.class);
-//        builder.registerDeviceExtension(ImageWriterExtension.class);
-//        builder.registerDeviceExtension(AuditRecordRepository.class);
-//        builder.registerDeviceExtension(AuditLogger.class);
-//        builder.registerAEExtension(ArchiveAEExtension.class);
-//        builder.registerHL7ApplicationExtension(ArchiveHL7ApplicationExtension.class);
-
-
-        return builder.build();
+    public void setRef(Device ref) {
+        this.ref = ref;
     }
 }

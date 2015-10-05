@@ -53,12 +53,12 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.PostConstruct;
 import javax.ejb.ConcurrencyManagement;
 import javax.ejb.ConcurrencyManagementType;
+import javax.ejb.Local;
 import javax.ejb.Singleton;
+import javax.enterprise.inject.Any;
 import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
-import javax.transaction.RollbackException;
-import javax.transaction.Synchronization;
-import javax.transaction.SystemException;
+import javax.transaction.*;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -80,11 +80,13 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 @SuppressWarnings("unchecked")
 @Singleton
 @ConcurrencyManagement(ConcurrencyManagementType.BEAN)
+@Local(ConfigurationEJB.class)
 public class ConfigurationEJB implements Configuration {
 
     public static final Logger log = LoggerFactory.getLogger(ConfigurationEJB.class);
 
     @Inject
+    @Any
     private Instance<Configuration> availableConfigStorage;
 
     @Inject
@@ -107,6 +109,7 @@ public class ConfigurationEJB implements Configuration {
     // locked with both the storage lock globally and with the local reentrant lock in case non-lockable storage is used
     private Map<String, Object> writerConfigurationCache = null;
     private ReentrantLock writeCacheLock = new ReentrantLock();
+    private Map<String, Object> writerConfigurationCacheBeforeCommit;
 
     @PostConstruct
     public void init() {
@@ -114,8 +117,9 @@ public class ConfigurationEJB implements Configuration {
         // detect user setting (system property) for config backend type
         String storageType = ConfigurationSettingsLoader.getPropertyWithNotice(
                 System.getProperties(),
-                Configuration.CONF_STORAGE_SYSTEM_PROP, ConfigStorageType.DB_BLOBS.name()
+                Configuration.CONF_STORAGE_SYSTEM_PROP, ConfigStorageType.DB_BLOBS.name().toLowerCase()
         );
+        log.info("Using configuration storage '{}'", storageType);
 
         // resolve the corresponding implementation
         storage = availableConfigStorage.select(new ConfigurationStorage.ConfigStorageAnno(storageType)).get();
@@ -152,7 +156,7 @@ public class ConfigurationEJB implements Configuration {
     public Map<String, Object> getConfigurationRoot() throws ConfigurationException {
 
         if (isPartOfModifyingTransaction())
-            return (Map<String, Object>) deepCloneNode(writerConfigurationCache);
+            return (Map<String, Object>) deepCloneNode(getWriterConfigurationCache());
 
         readCacheLock.readLock().lock();
         try {
@@ -174,7 +178,7 @@ public class ConfigurationEJB implements Configuration {
     public Object getConfigurationNode(String path, Class configurableClass) throws ConfigurationException {
 
         if (isPartOfModifyingTransaction())
-            return getConfigurationNodeFromCache(path, writerConfigurationCache);
+            return getConfigurationNodeFromCache(path, getWriterConfigurationCache());
 
         readCacheLock.readLock().lock();
         try {
@@ -194,7 +198,7 @@ public class ConfigurationEJB implements Configuration {
     public boolean nodeExists(String path) throws ConfigurationException {
 
         if (isPartOfModifyingTransaction())
-            ConfigNodeUtil.nodeExists(writerConfigurationCache, path);
+            ConfigNodeUtil.nodeExists(getWriterConfigurationCache(), path);
 
         readCacheLock.readLock().lock();
         try {
@@ -213,7 +217,7 @@ public class ConfigurationEJB implements Configuration {
             if (path.equals("/"))
                 writerConfigurationCache = (Map<String, Object>) newConfigurationNode;
             else
-                ConfigNodeUtil.replaceNode(writerConfigurationCache, path, newConfigurationNode);
+                ConfigNodeUtil.replaceNode(getWriterConfigurationCache(), path, newConfigurationNode);
 
         } else {
 
@@ -256,7 +260,7 @@ public class ConfigurationEJB implements Configuration {
         writeCacheLock.lock();
         try {
             storage.lock();
-            registerBeforeCommitChecks();
+            registerTxHooks();
 
             storage.persistNode(path, configNode, configurableClass);
 
@@ -274,7 +278,7 @@ public class ConfigurationEJB implements Configuration {
         writeCacheLock.lock();
         try {
             storage.lock();
-            registerBeforeCommitChecks();
+            registerTxHooks();
 
             storage.removeNode(path);
             ConfigNodeUtil.removeNodes(getWriterConfigurationCache(), path);
@@ -288,7 +292,7 @@ public class ConfigurationEJB implements Configuration {
         writeCacheLock.lock();
         try {
             storage.lock();
-            registerBeforeCommitChecks();
+            registerTxHooks();
             batch.run();
         } finally {
             writeCacheLock.unlock();
@@ -300,9 +304,10 @@ public class ConfigurationEJB implements Configuration {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     /**
-     * Ensures that integrity checking will be done before committing the transaction
+     * Ensures that integrity checking will be done before committing the transaction,
+     * and reader cache will be modified after
      */
-    private void registerBeforeCommitChecks() {
+    private void registerTxHooks() {
 
         // only register if there is no marker
         Object configTxMarker = txSync.getSynchronizationRegistry().getResource(ConfigurationEJB.class);
@@ -321,7 +326,7 @@ public class ConfigurationEJB implements Configuration {
 
                     @Override
                     public void afterCompletion(int i) {
-
+                        afterCommit(i);
                     }
                 });
             } catch (RollbackException | SystemException e) {
@@ -333,14 +338,29 @@ public class ConfigurationEJB implements Configuration {
     private void beforeCommit() {
         try {
             // perform referential integrity check
-            integrityCheck.performCheck(writerConfigurationCache);
+            integrityCheck.performCheck(getWriterConfigurationCache());
 
         } catch (ConfigurationException e) {
-            throw new IllegalArgumentException("Configuration integrity violated");
+            throw new IllegalArgumentException("Configuration integrity violated", e);
 
         } finally {
-            // clear writer cache
+            // remember writer cache and clear it
+            writerConfigurationCacheBeforeCommit = writerConfigurationCache;
             writerConfigurationCache = null;
+        }
+    }
+
+    private void afterCommit(int i) {
+
+        // overwrite reader cache if tx successful
+        if (i == Status.STATUS_COMMITTED) {
+
+            readCacheLock.writeLock().lock();
+            try {
+                readerConfigurationCache = writerConfigurationCacheBeforeCommit;
+            } finally {
+                readCacheLock.writeLock().unlock();
+            }
         }
     }
 
