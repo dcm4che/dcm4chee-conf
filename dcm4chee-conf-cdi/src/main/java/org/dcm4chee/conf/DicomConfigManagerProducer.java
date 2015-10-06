@@ -43,6 +43,7 @@ package org.dcm4chee.conf;
 import org.dcm4che3.conf.api.internal.DicomConfigurationManager;
 import org.dcm4che3.conf.core.api.ConfigurableClassExtension;
 import org.dcm4che3.conf.core.api.ConfigurationException;
+import org.dcm4che3.conf.core.normalization.DefaultsAndNullFilterDecorator;
 import org.dcm4che3.conf.dicom.CommonDicomConfigurationWithHL7;
 import org.dcm4chee.conf.storage.ConfigurationEJB;
 import org.dcm4chee.conf.upgrade.CdiUpgradeManager;
@@ -79,7 +80,7 @@ public class DicomConfigManagerProducer {
     @ApplicationScoped
     public DicomConfigurationManager createDicomConfigurationManager() {
         CommonDicomConfigurationWithHL7 configurationWithHL7 = new CommonDicomConfigurationWithHL7(
-                configStorage,
+                new DefaultsAndNullFilterDecorator(configStorage, false, resolveExtensionsList()),
                 resolveExtensionsMap()
         );
 
@@ -91,6 +92,12 @@ public class DicomConfigManagerProducer {
         }
 
         return configurationWithHL7;
+    }
+
+    private List<Class> resolveExtensionsList() {
+        List<Class> list = new ArrayList<>();
+        for (ConfigurableClassExtension allExtension : allExtensions) list.add(allExtension.getClass());
+        return list;
     }
 
     private Map<Class, List<Class>> resolveExtensionsMap() {
