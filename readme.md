@@ -57,14 +57,14 @@ If a script has no such annotation - it will be assigned a default version - see
 
 Example: [DefaultArchiveConfigInitScript](https://github.com/dcm4che/dcm4chee-arc-cdi/blob/master/dcm4chee-arc-conf-default/src/main/java/org/dcm4chee/archive/conf/defaults/DefaultArchiveConfigInitScript.java)
 
-### DB config storage
+### Config storage
 
-To use the database as configuration storage, deploy `org.dcm4che.dcm4chee-conf:dcm4chee-conf-db` as an EJB inside the ear.
-Make sure that caching is enabled when using the database storage - add the following system properties:
-    
-    org.dcm4che.conf.cached=true
-    org.dcm4che.conf.staleTimeout=0
+Currently, only the database config storage backend provides the support for clustering and transactional ACID properties, and is therefore recommended for production deployments.
+To use the database as configuration storage, deploy `org.dcm4che.dcm4chee-conf:dcm4chee-conf-db` as an EJB inside the ear and set the property 
 
+    org.dcm4che.conf.storage = db_blobs
+
+Alternatively, e.g. for development purposes, one can simple json file config storage (org.dcm4che.conf.storage = json_file)  
 
 ### Config change notifications
 Configuration framework triggers cluster-wide notification when a change occurs. 
@@ -78,6 +78,19 @@ Current implementation uses `topic/DicomConfigurationChangeTopic` JMS topic to d
 
 To perform multiple changes as a single atomic operation, one should use `org.dcm4che3.conf.api.DicomConfiguration.runBatch` / `org.dcm4che3.conf.core.api.Configuration.runBatch` methods.  
  
+ 
+### Development
+Configuration components of can be disabled for development purposes.
+
+- To disable referential integrity check performed before transaction commit, set
+
+        org.dcm4che.conf.disableIntegrityCheck = true
+
+- To disable JMS-based cluster config update notifications, set
+
+        org.dcm4che.conf.notifications = false
+   
+
 # Examples
 
 - [How to create a custom AE extension and use it in a StoreService decorator ](https://github.com/dcm4che/dcm4chee-integration-examples/tree/master/config-extensions-example)
