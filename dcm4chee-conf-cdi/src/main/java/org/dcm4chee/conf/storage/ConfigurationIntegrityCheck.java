@@ -40,16 +40,13 @@
 
 package org.dcm4chee.conf.storage;
 
-import org.dcm4che3.conf.core.api.ConfigurableClassExtension;
 import org.dcm4che3.conf.core.api.ConfigurationException;
+import org.dcm4che3.conf.core.normalization.DefaultsAndNullFilterDecorator;
 import org.dcm4che3.conf.core.storage.InMemoryReadOnlyConfiguration;
 import org.dcm4che3.conf.dicom.CommonDicomConfigurationWithHL7;
+import org.dcm4chee.conf.DicomConfigManagerProducer;
 
-import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -59,8 +56,10 @@ public class ConfigurationIntegrityCheck {
 
     private static final String DISABLE_INTEGRITY_CHECK_PROPERTY = "org.dcm4che.conf.disableIntegrityCheck";
 
+    // temporarily, to re-use extension resolvers
     @Inject
-    private Instance<ConfigurableClassExtension> allExtensions;
+    DicomConfigManagerProducer dicomConfigManagerProducer;
+
 
     public void performCheck(Map<String, Object> configurationRoot) throws ConfigurationException {
 
@@ -72,28 +71,15 @@ public class ConfigurationIntegrityCheck {
         // TODO later will be replaced with proper referential consistency analysis
 
         InMemoryReadOnlyConfiguration configuration = new InMemoryReadOnlyConfiguration(configurationRoot);
-        CommonDicomConfigurationWithHL7 dicomConfiguration = new CommonDicomConfigurationWithHL7(configuration, resolveExtensionsMap());
+
+        CommonDicomConfigurationWithHL7 dicomConfiguration = new CommonDicomConfigurationWithHL7(
+                new DefaultsAndNullFilterDecorator(configuration, false, dicomConfigManagerProducer.resolveExtensionsList()),
+                dicomConfigManagerProducer.resolveExtensionsMap(false)
+        );
+
         for (String deviceName : dicomConfiguration.listDeviceNames())
             dicomConfiguration.findDevice(deviceName);
 
     }
 
-    private Map<Class, List<Class>> resolveExtensionsMap() {
-        Map<Class, List<Class>> extensions = new HashMap<>();
-        for (ConfigurableClassExtension extension : allExtensions) {
-
-            Class baseExtensionClass = extension.getBaseClass();
-
-            List<Class> extensionsForBaseClass = extensions.get(baseExtensionClass);
-
-            if (extensionsForBaseClass == null)
-                extensions.put(baseExtensionClass, extensionsForBaseClass = new ArrayList<>());
-
-            // don't put duplicates
-            if (!extensionsForBaseClass.contains(extension.getClass()))
-                extensionsForBaseClass.add(extension.getClass());
-
-        }
-        return extensions;
-    }
 }

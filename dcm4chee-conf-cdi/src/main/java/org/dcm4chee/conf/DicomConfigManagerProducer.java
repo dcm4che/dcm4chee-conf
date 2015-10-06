@@ -42,7 +42,6 @@ package org.dcm4chee.conf;
 
 import org.dcm4che3.conf.api.internal.DicomConfigurationManager;
 import org.dcm4che3.conf.core.api.ConfigurableClassExtension;
-import org.dcm4che3.conf.core.api.ConfigurationException;
 import org.dcm4che3.conf.core.normalization.DefaultsAndNullFilterDecorator;
 import org.dcm4che3.conf.dicom.CommonDicomConfigurationWithHL7;
 import org.dcm4chee.conf.storage.ConfigurationEJB;
@@ -55,10 +54,7 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Instance;
 import javax.enterprise.inject.Produces;
 import javax.inject.Inject;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * @Roman K
@@ -68,42 +64,63 @@ public class DicomConfigManagerProducer {
     private final static Logger log = LoggerFactory.getLogger(DicomConfigManagerProducer.class);
 
     @EJB
-    ConfigurationEJB configStorage;
+    private ConfigurationEJB configStorage;
 
     @Inject
     private Instance<ConfigurableClassExtension> allExtensions;
 
     @Inject
-    CdiUpgradeManager upgradeManager;
+    private CdiUpgradeManager upgradeManager;
+
 
     @Produces
     @ApplicationScoped
     public DicomConfigurationManager createDicomConfigurationManager() {
         CommonDicomConfigurationWithHL7 configurationWithHL7 = new CommonDicomConfigurationWithHL7(
                 new DefaultsAndNullFilterDecorator(configStorage, false, resolveExtensionsList()),
-                resolveExtensionsMap()
+                resolveExtensionsMap(true)
         );
 
         // Perform upgrade
         try {
             upgradeManager.performUpgrade(configurationWithHL7);
-        } catch (ConfigurationException e) {
-            throw new RuntimeException("Cannot create DicomConfiguration due to upgrade failure", e);
+        } catch (Exception e) {
+            throw new RuntimeException("DicomConfiguration upgrade failure", e);
         }
 
         return configurationWithHL7;
     }
 
-    private List<Class> resolveExtensionsList() {
+
+    public List<Class> resolveExtensionsList() {
         List<Class> list = new ArrayList<>();
-        for (ConfigurableClassExtension allExtension : allExtensions) list.add(allExtension.getClass());
+        for (ConfigurableClassExtension extension : allExtensions)
+            if (!list.contains(extension))
+                list.add(extension.getClass());
+
         return list;
     }
 
-    private Map<Class, List<Class>> resolveExtensionsMap() {
+    public Map<Class, List<Class>> resolveExtensionsMap(boolean doLog) {
         Map<Class, List<Class>> extensions = new HashMap<>();
-        for (ConfigurableClassExtension extension : allExtensions) {
-            log.info("Registering {} : {}", extension.getBaseClass().getSimpleName(), extension.getClass().getName());
+
+        List<ConfigurableClassExtension> extList = new ArrayList<>();
+
+        for (ConfigurableClassExtension extension : allExtensions)
+            extList.add(extension);
+
+        // sort for nicer logging
+        if (doLog)
+            Collections.sort(extList, new Comparator<ConfigurableClassExtension>() {
+                @Override
+                public int compare(ConfigurableClassExtension o1, ConfigurableClassExtension o2) {
+                    return o1.getBaseClass().getName().compareTo(o2.getBaseClass().getName());
+                }
+            });
+
+        for (ConfigurableClassExtension extension : extList) {
+            if (doLog)
+                log.info("Registering {} : {}", extension.getBaseClass().getSimpleName(), extension.getClass().getName());
 
             Class baseExtensionClass = extension.getBaseClass();
 
