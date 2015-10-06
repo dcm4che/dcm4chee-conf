@@ -39,15 +39,16 @@
 
 package org.dcm4chee.conf.notif;
 
-import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.event.Event;
-import javax.inject.Inject;
-
 import org.dcm4che3.conf.core.api.ConfigChangeEvent;
 import org.dcm4che3.conf.core.api.ConfigurationException;
+import org.dcm4che3.conf.core.api.InternalConfigChangeEvent;
 import org.dcm4che3.conf.core.api.internal.ConfigurationManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.event.Event;
+import javax.inject.Inject;
 
 /**
  * @author Alexander Hoermandinger <alexander.hoermandinger@agfa.com>
@@ -55,10 +56,13 @@ import org.slf4j.LoggerFactory;
 @ApplicationScoped
 public class ConfigNotificationService {
     private static final Logger LOGGER = LoggerFactory.getLogger(ConfigNotificationService.class);
-    
+
+    @Inject
+    private Event<InternalConfigChangeEvent> internalEvent;
+
     @Inject
     private Event<ConfigChangeEvent> event;
-    
+
     @Inject
     private ConfigChangeTopicBroker clusterBroker;
     
@@ -80,6 +84,11 @@ public class ConfigNotificationService {
     public void sendLocalScopedConfigChangeNotification(ConfigChangeEvent changeEvent) {
         LOGGER.debug("Sending config changed notification CDI event");
         invalidateConfigCache();
+
+        // first fire the internal event that should only be handled by the (archive/ARR) Device itself
+        internalEvent.fire(new InternalConfigChangeEvent());
+
+        // then everybody else gets notified
         event.fire(changeEvent);
     }
     

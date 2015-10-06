@@ -1,14 +1,15 @@
 package org.dcm4chee.conf.browser;
 
 import org.dcm4che3.conf.api.TCConfiguration;
+import org.dcm4che3.conf.api.internal.DicomConfigurationManager;
 import org.dcm4che3.conf.core.api.ConfigChangeEvent;
+import org.dcm4che3.conf.core.api.ConfigurableClass;
+import org.dcm4che3.conf.core.api.Configuration;
 import org.dcm4che3.conf.core.api.ConfigurationException;
+import org.dcm4che3.conf.core.api.InternalConfigChangeEvent;
 import org.dcm4che3.conf.core.api.internal.AnnotatedConfigurableProperty;
 import org.dcm4che3.conf.core.api.internal.BeanVitalizer;
-import org.dcm4che3.conf.core.api.Configuration;
-import org.dcm4che3.conf.api.internal.DicomConfigurationManager;
 import org.dcm4che3.conf.core.api.internal.ConfigTypeAdapter;
-import org.dcm4che3.conf.core.api.ConfigurableClass;
 import org.dcm4che3.conf.dicom.CommonDicomConfiguration;
 import org.dcm4che3.conf.dicom.DicomPath;
 import org.dcm4che3.net.AEExtension;
@@ -21,7 +22,13 @@ import org.slf4j.LoggerFactory;
 
 import javax.enterprise.event.Event;
 import javax.inject.Inject;
-import javax.ws.rs.*;
+import javax.ws.rs.Consumes;
+import javax.ws.rs.DELETE;
+import javax.ws.rs.GET;
+import javax.ws.rs.POST;
+import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
+import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -29,7 +36,11 @@ import javax.ws.rs.core.UriInfo;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Path("/config")
 @Produces(MediaType.APPLICATION_JSON)
@@ -150,6 +161,9 @@ public class ConfigRESTServicesServlet {
     DicomConfigurationManager configurationManager;
 
     @Inject
+    Event<InternalConfigChangeEvent> internalConfigChangeEvent;
+
+    @Inject
     Event<ConfigChangeEvent> configChangeEvent;
 
     private void fireConfigUpdateNotificationIfNecessary() throws ConfigurationException {
@@ -160,6 +174,7 @@ public class ConfigRESTServicesServlet {
             // and in this case it is already refreshed while calling persistNode/removeNode
             //configurationManager.getConfigurationStorage().refreshNode("/");
 
+            internalConfigChangeEvent.fire(new InternalConfigChangeEvent());
             configChangeEvent.fire(new SimpleConfigChangeEvent());
         }
     }
