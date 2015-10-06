@@ -47,15 +47,12 @@ import java.util.Map;
 import javax.annotation.PostConstruct;
 import javax.ejb.EJB;
 import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
 
 import org.dcm4che3.conf.core.api.Configuration;
 import org.dcm4che3.conf.core.api.ConfigurationException;
 import org.dcm4che3.conf.core.util.ConfigNodeUtil;
 import org.dcm4che3.conf.core.util.SplittedPath;
 import org.dcm4che3.conf.dicom.DicomPath;
-import org.dcm4chee.conf.cdi.BatchConfigurationService;
-import org.dcm4chee.conf.cdi.ConfigurationStorage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,7 +60,7 @@ import org.slf4j.LoggerFactory;
  * @author Roman K
  */
 @ApplicationScoped
-@ConfigurationStorage
+@ConfigurationStorage(value = "db_blobs")
 public class SemiSerializedDBConfigStorage implements Configuration {
 
     public static final Logger log = LoggerFactory.getLogger(SemiSerializedDBConfigStorage.class);
@@ -76,10 +73,6 @@ public class SemiSerializedDBConfigStorage implements Configuration {
     @EJB
     private DBStorageBean db;
     
-    @Inject
-    private BatchConfigurationService batchConfigService;
-
-   
     @PostConstruct
     public void init() {
         // create locking row in a separate transaction to make sure constraint violations don't rollback the current one
@@ -110,11 +103,6 @@ public class SemiSerializedDBConfigStorage implements Configuration {
         // since some paths are not trivial, e.g. references, just use the root because it will be cached
         // [speedup-spot] still could be optimized for many cases
         return ConfigNodeUtil.getNode(getConfigurationRoot(), path);
-    }
-
-    @Override
-    public Class getConfigurationNodeClass(String path) throws ConfigurationException, ClassNotFoundException {
-        throw new RuntimeException("Not implemented");
     }
 
     @Override
@@ -197,8 +185,7 @@ public class SemiSerializedDBConfigStorage implements Configuration {
     
     @Override
     public void runBatch(ConfigBatch batch) {
-        // use injected self reference to ensure CDI decorators are called
-        batchConfigService.runBatch(batch);
+        db.runBatch(batch);
     }
 
 }

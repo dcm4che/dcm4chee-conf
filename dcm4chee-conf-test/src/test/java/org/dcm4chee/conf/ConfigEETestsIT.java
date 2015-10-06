@@ -42,6 +42,7 @@ package org.dcm4chee.conf;
 import org.dcm4che3.conf.api.ConfigurationNotFoundException;
 import org.dcm4che3.conf.api.DicomConfiguration;
 import org.dcm4che3.conf.api.internal.DicomConfigurationManager;
+import org.dcm4che3.conf.api.upgrade.UpgradeScript;
 import org.dcm4che3.conf.core.api.Configuration;
 import org.dcm4che3.conf.core.api.ConfigurationException;
 import org.dcm4che3.net.Device;
@@ -64,6 +65,7 @@ import javax.ejb.EJB;
 import javax.enterprise.inject.Any;
 import javax.inject.Inject;
 import java.io.File;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
@@ -88,7 +90,7 @@ public class ConfigEETestsIT {
 
         war.addClass(ConfigEETestsIT.class);
         war.addClass(MyConfyEJB.class);
-        war.addClass(MyConfigProducer.class);
+        war.addClass(ReferencingDeviceExtension.class);
 
         war.addAsManifestResource(new FileAsset(new File("src/test/resources/META-INF/MANIFEST.MF")), "MANIFEST.MF");
         war.addAsWebInfResource(EmptyAsset.INSTANCE, "beans.xml");
@@ -113,6 +115,10 @@ public class ConfigEETestsIT {
     DicomConfigurationManager configurationManager;
 
     public DicomConfigurationManager getConfig() throws ConfigurationException {
+        // disable upgrade
+        System.getProperties().remove("org.dcm4che.conf.upgrade.settingsFile");
+        // disable notifications
+        System.setProperty("org.dcm4che.conf.notifications", "false");
         return configurationManager;
     }
 
@@ -123,13 +129,12 @@ public class ConfigEETestsIT {
         final Configuration storage = config.getConfigurationStorage();
 
 
-        storage.removeNode("/dicomConfigurationRoot");
 
         storage.runBatch(new Configuration.ConfigBatch() {
             @Override
             public void run() {
-
                 try {
+                    storage.removeNode("/dicomConfigurationRoot");
                     config.persist(new Device("shouldWork"));
                 } catch (ConfigurationException e) {
                     throw new RuntimeException(e);
@@ -172,13 +177,14 @@ public class ConfigEETestsIT {
     @Test
     public void lockTest() throws Exception {
 
+
         final DicomConfigurationManager config = getConfig();
         final Configuration storage = config.getConfigurationStorage();
 
-        storage.removeNode("/dicomConfigurationRoot");
-
         final Semaphore masterSemaphore = new Semaphore(0);
         final Semaphore childSemaphore = new Semaphore(0);
+
+        storage.persistNode("/dicomConfigurationRoot", new HashMap<String, Object>(), null);
 
         final AtomicInteger parallel = new AtomicInteger(0);
 
@@ -275,16 +281,24 @@ public class ConfigEETestsIT {
         final DicomConfigurationManager config = getConfig();
         final Configuration storage = config.getConfigurationStorage();
 
-        storage.removeNode("/dicomConfigurationRoot");
+        storage.persistNode("/dicomConfigurationRoot", new HashMap<String, Object>(), null);
 
         config.persist(new Device("D1"));
         config.persist(new Device("D2"));
 
-        Map<String, Object> configurationRoot = (Map<String, Object>) storage.getConfigurationNode("/dicomConfigurationRoot", null);
+        final Map<String, Object> configurationRoot = (Map<String, Object>) storage.getConfigurationNode("/dicomConfigurationRoot", null);
 
-        storage.removeNode("/dicomConfigurationRoot");
-
-        storage.persistNode("/dicomConfigurationRoot", configurationRoot, null);
+        myConfyEJB.execInTransaction(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    storage.removeNode("/dicomConfigurationRoot");
+                    storage.persistNode("/dicomConfigurationRoot", configurationRoot, null);
+                } catch (ConfigurationException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        });
 
 
         try {
@@ -293,7 +307,7 @@ public class ConfigEETestsIT {
             Assert.fail("Device should have been found");
         }
 
-        storage.removeNode("/dicomConfigurationRoot");
+        storage.persistNode("/dicomConfigurationRoot", new HashMap<String, Object>(), null);
 
         config.persist(new Device("D3"));
         config.persist(new Device("D4"));
@@ -309,7 +323,7 @@ public class ConfigEETestsIT {
         try {
             config.findDevice("D3");
             Assert.fail("Device D3 shouldn't have been found");
-        } catch (ConfigurationException e) {
+        } catch (ConfigurationException ignored) {
         }
 
 
@@ -319,13 +333,15 @@ public class ConfigEETestsIT {
     @Test
     // Only works with em.flush
     public void test2ConcurrentPersists() throws ConfigurationException, InterruptedException {
+
+
         final Semaphore masterSemaphore = new Semaphore(0);
         final Semaphore childSemaphore = new Semaphore(0);
 
         final DicomConfigurationManager config = getConfig();
         final Configuration storage = config.getConfigurationStorage();
 
-        storage.removeNode("/dicomConfigurationRoot");
+        storage.persistNode("/dicomConfigurationRoot", new HashMap<String, Object>(), null);
 
         config.persist(new Device("someDevice"));
         config.persist(new Device("someNotImportantDevice"));
@@ -409,6 +425,50 @@ public class ConfigEETestsIT {
 
             Thread.sleep(1000);
 
+        }
+
+    }
+
+    @Test
+    public void testIntegrityCheck() throws ConfigurationException {
+        final DicomConfigurationManager config = getConfig();
+        final Configuration storage = config.getConfigurationStorage();
+
+        storage.persistNode("/dicomConfigurationRoot", new HashMap<String, Object>(), null);
+
+        final Device a = new Device("a");
+        final Device b = new Device("b");
+
+        ReferencingDeviceExtension ext = new ReferencingDeviceExtension();
+        ext.setRef(a);
+        b.addDeviceExtension(ext);
+
+        try {
+            config.persist(b);
+            Assert.fail("Should have failed since device 'a' is not persisted yet but referenced");
+        } catch (Exception e) {
+            // ok
+        }
+
+
+        // this should work since integrity check is done on commit
+        config.runBatch(new DicomConfiguration.DicomConfigBatch() {
+            @Override
+            public void run() {
+                try {
+                    config.persist(b);
+                    config.persist(a);
+                } catch (ConfigurationException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        });
+
+        try {
+            config.removeDevice(a.getDeviceName());
+            Assert.fail("Should have failed since device 'a' is referenced");
+        } catch (Exception e) {
+            // ok
         }
 
     }

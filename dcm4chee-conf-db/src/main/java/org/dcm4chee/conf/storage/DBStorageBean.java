@@ -40,6 +40,7 @@
 package org.dcm4chee.conf.storage;
 
 import org.codehaus.jackson.map.ObjectMapper;
+import org.dcm4che3.conf.core.api.Configuration;
 import org.dcm4che3.conf.core.util.SimpleConfigNodeUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -237,4 +238,9 @@ public class DBStorageBean {
 
         return (ConfigNodeEntity) query.getSingleResult();
     }
+
+    public void runBatch(Configuration.ConfigBatch r) {
+        r.run();
+    }
+
 }

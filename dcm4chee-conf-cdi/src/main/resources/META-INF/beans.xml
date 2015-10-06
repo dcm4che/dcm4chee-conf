@@ -3,8 +3,4 @@
        xsi:schemaLocation="
       http://java.sun.com/xml/ns/javaee 
       http://java.sun.com/xml/ns/javaee/beans_1_0.xsd">
-    <decorators>
-        <!--<class>org.dcm4che3.conf.core.storage.CachedRootNodeConfigurationclass>-->
-        <class>org.dcm4chee.conf.notif.ConfigNotificationDecorator</class>
-    </decorators>
 </beans>

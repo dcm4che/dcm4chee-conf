@@ -1,5 +1,5 @@
 /*
- * **** BEGIN LICENSE BLOCK *****
+ * *** BEGIN LICENSE BLOCK *****
  *  Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
  *  The contents of this file are subject to the Mozilla Public License Version
@@ -17,7 +17,7 @@
  *
  *  The Initial Developer of the Original Code is
  *  Agfa Healthcare.
- *  Portions created by the Initial Developer are Copyright (C) 2014
+ *  Portions created by the Initial Developer are Copyright (C) 2015
  *  the Initial Developer. All Rights Reserved.
  *
  *  Contributor(s):
@@ -37,50 +37,44 @@
  *
  *  ***** END LICENSE BLOCK *****
  */
-package org.dcm4chee.conf.cdi;
 
-import org.dcm4che3.conf.dicom.DicomConfigurationBuilder;
-import org.dcm4che3.net.AEExtension;
-import org.dcm4che3.net.ConnectionExtension;
-import org.dcm4che3.net.DeviceExtension;
-import org.dcm4che3.net.hl7.HL7ApplicationExtension;
+package org.dcm4chee.conf.upgrade;
 
-import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.inject.Instance;
-import javax.inject.Inject;
+import org.dcm4che3.conf.api.upgrade.UpgradeScript;
+import org.dcm4che3.conf.core.api.ConfigurableClass;
+import org.dcm4che3.conf.core.api.ConfigurableProperty;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
- * Do not rely on this class - will be deleted
- *
  * @author Roman K
  */
-@Deprecated
-@ApplicationScoped
-public class CdiConfigExtensionsManager {
+@ConfigurableClass
+public class ConfigurationMetadata {
 
-    @Inject
-    private Instance<DeviceExtension> deviceExtensions;
+    @ConfigurableProperty
+    private String version;
 
-    @Inject
-    private Instance<AEExtension> aeExtensions;
+    @ConfigurableProperty
+    Map<String, UpgradeScript.UpgradeScriptMetadata> metadataOfUpgradeScripts = new HashMap<String, UpgradeScript.UpgradeScriptMetadata>();
 
-    @Inject
-    private Instance<HL7ApplicationExtension> hl7ApplicationExtensions;
-
-    @Inject
-    private Instance<ConnectionExtension> connectionExtensions;
-
-    public CdiConfigExtensionsManager() {
+    public String getVersion() {
+        return version;
     }
 
-    public void registerCdiConfigExtensions(DicomConfigurationBuilder builder) {
-        for (DeviceExtension ext : deviceExtensions) builder.registerDeviceExtension(ext.getClass());
-        for (AEExtension ext : aeExtensions) builder.registerAEExtension(ext.getClass());
-        for (HL7ApplicationExtension ext : hl7ApplicationExtensions)
-            builder.registerHL7ApplicationExtension(ext.getClass());
-        for (ConnectionExtension connectionExtension : connectionExtensions)
-            builder.registerExtensionForBaseExtension(connectionExtension.getClass(), ConnectionExtension.class);
+    public void setVersion(String version) {
+        this.version = version;
+    }
 
+    public Map<String, UpgradeScript.UpgradeScriptMetadata> getMetadataOfUpgradeScripts() {
+        return metadataOfUpgradeScripts;
+    }
+
+    public void setMetadataOfUpgradeScripts(Map<String, UpgradeScript.UpgradeScriptMetadata> metadataOfUpgradeScripts) {
+        this.metadataOfUpgradeScripts = metadataOfUpgradeScripts;
     }
 
 }
+
+

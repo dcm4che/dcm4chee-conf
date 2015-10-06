@@ -86,6 +86,11 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
+            <groupId>org.dcm4che.dcm4chee</groupId>
+            <artifactId>dcm4chee-ee-core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>javax</groupId>
             <artifactId>javaee-api</artifactId>
         </dependency>

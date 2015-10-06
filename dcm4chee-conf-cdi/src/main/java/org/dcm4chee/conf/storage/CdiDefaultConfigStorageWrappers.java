@@ -38,57 +38,42 @@
  *  ***** END LICENSE BLOCK *****
  */
 
-package org.dcm4chee.conf;
+package org.dcm4chee.conf.storage;
 
-import org.dcm4che3.conf.api.internal.DicomConfigurationManager;
-import org.dcm4che3.conf.core.api.Configuration;
 import org.dcm4che3.conf.core.api.ConfigurationException;
-import org.dcm4che3.conf.dicom.DicomConfigurationBuilder;
+import org.dcm4che3.conf.core.storage.SingleJsonFileConfigurationStorage;
+import org.dcm4che3.conf.dicom.ldap.LdapConfigurationStorage;
 
+import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.inject.Any;
-import javax.enterprise.inject.Instance;
-import javax.enterprise.inject.Produces;
 import javax.inject.Inject;
 
 /**
- * Created by aprvf on 02.07.2015.
+ * @author Roman K
  */
+public class CdiDefaultConfigStorageWrappers {
 
-@ApplicationScoped
-public class MyConfigProducer {
-
-
-    @Produces
     @ApplicationScoped
-    public static DicomConfigurationManager produceConfig(@Any Instance<Configuration> dbConfigStorage) throws ConfigurationException {
-        DicomConfigurationBuilder builder = new DicomConfigurationBuilder();
+    @ConfigurationStorage("json_file")
+    public static class CdiSingleJsonFileConfigurationStorage extends SingleJsonFileConfigurationStorage {
 
-
-        for (Configuration configuration : dbConfigStorage) {
-            String storageClassName = configuration.getClass().getName();
-            System.out.println(storageClassName);
-
-
-            if (storageClassName.startsWith("org.dcm4chee.conf.storage.SemiSerialized"))
-                builder.registerCustomConfigurationStorage(configuration);
-
+        @PostConstruct
+        public void init() {
+            setFileName(resolveConfigFileNameSetting(System.getProperties()));
         }
 
+    }
 
-        builder.cache(false);
-
-//        builder.registerDeviceExtension(ArchiveDeviceExtension.class);
-//        builder.registerDeviceExtension(StorageDeviceExtension.class);
-//        builder.registerDeviceExtension(HL7DeviceExtension.class);
-//        builder.registerDeviceExtension(ImageReaderExtension.class);
-//        builder.registerDeviceExtension(ImageWriterExtension.class);
-//        builder.registerDeviceExtension(AuditRecordRepository.class);
-//        builder.registerDeviceExtension(AuditLogger.class);
-//        builder.registerAEExtension(ArchiveAEExtension.class);
-//        builder.registerHL7ApplicationExtension(ArchiveHL7ApplicationExtension.class);
-
-
-        return builder.build();
+    @ApplicationScoped
+    @ConfigurationStorage("ldap")
+    public static class CdiLdapConfigurationStorage extends LdapConfigurationStorage {
+        @PostConstruct
+        public void init() {
+            try {
+                setEnvironment(collectLDAPProps(System.getProperties()));
+            } catch (ConfigurationException e) {
+                throw new RuntimeException("Cannot load ldap config", e);
+            }
+        }
     }
 }

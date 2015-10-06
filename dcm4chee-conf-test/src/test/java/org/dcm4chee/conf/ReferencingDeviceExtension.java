@@ -38,13 +38,28 @@
  *  ***** END LICENSE BLOCK *****
  */
 
-package org.dcm4chee.conf.cdi;
+package org.dcm4chee.conf;
 
-import javax.inject.Qualifier;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
+import org.dcm4che3.conf.api.extensions.CommonDeviceExtension;
+import org.dcm4che3.conf.core.api.ConfigurableClass;
+import org.dcm4che3.conf.core.api.ConfigurableProperty;
+import org.dcm4che3.net.Device;
+import org.dcm4che3.net.DeviceExtension;
 
-@Retention(RetentionPolicy.RUNTIME)
-@Qualifier
-public @interface ConfigurationStorage {
+/**
+ * Created by aprvf on 05.10.2015.
+ */
+@ConfigurableClass
+public class ReferencingDeviceExtension extends CommonDeviceExtension {
+
+    @ConfigurableProperty(isReference = true)
+    Device ref;
+
+    public Device getRef() {
+        return ref;
+    }
+
+    public void setRef(Device ref) {
+        this.ref = ref;
+    }
 }
