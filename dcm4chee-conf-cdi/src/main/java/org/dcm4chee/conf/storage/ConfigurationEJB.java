@@ -117,7 +117,7 @@ public class ConfigurationEJB implements Configuration {
         // detect user setting (system property) for config backend type
         String storageType = ConfigurationSettingsLoader.getPropertyWithNotice(
                 System.getProperties(),
-                Configuration.CONF_STORAGE_SYSTEM_PROP, ConfigStorageType.DB_BLOBS.name().toLowerCase()
+                Configuration.CONF_STORAGE_SYSTEM_PROP, ConfigStorageType.JSON_FILE.name().toLowerCase()
         );
         log.info("Using configuration storage '{}'", storageType);
 
