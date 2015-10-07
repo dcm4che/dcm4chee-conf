@@ -95,7 +95,7 @@ public class DicomConfigManagerProducer {
     public List<Class> resolveExtensionsList() {
         List<Class> list = new ArrayList<>();
         for (ConfigurableClassExtension extension : allExtensions)
-            if (!list.contains(extension))
+            if (!list.contains(extension.getClass()))
                 list.add(extension.getClass());
 
         return list;
