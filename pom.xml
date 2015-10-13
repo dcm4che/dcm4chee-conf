@@ -57,7 +57,6 @@
         <module>dcm4chee-conf-web</module>
         <module>dcm4chee-conf-decorators</module>
         <module>dcm4chee-conf-test</module>
-        <module>dcm4chee-conf-jboss-modules</module>
         <module>dcm4chee-ee-core</module>
     </modules>
     <dependencyManagement>
