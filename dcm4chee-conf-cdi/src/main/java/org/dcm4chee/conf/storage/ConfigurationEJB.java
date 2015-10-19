@@ -44,7 +44,6 @@ import org.dcm4che3.conf.ConfigurationSettingsLoader;
 import org.dcm4che3.conf.core.DelegatingConfiguration;
 import org.dcm4che3.conf.core.api.Configuration;
 import org.dcm4che3.conf.core.api.ConfigurationException;
-import org.dcm4chee.conf.TransactionalConfiguration;
 import org.dcm4chee.conf.notif.ConfigNotificationDecorator;
 import org.dcm4chee.conf.storage.ConfigurationStorage.ConfigStorageAnno;
 import org.dcm4chee.util.TransactionSynchronization;
@@ -65,7 +64,7 @@ import java.util.Map;
  * A per-deployment configuration singleton that brings the following parts together:
  * <ul>
  * <li> Injects the proper config storage by looking up the system property
- * <li> Sets up dual cache, config notifications, optimistic locking
+ * <li> Sets up dual cache, config notifications
  * <li> Triggers integrity checks on transaction pre-commit
  * </ul>
  */
@@ -73,7 +72,7 @@ import java.util.Map;
 @Singleton
 @ConcurrencyManagement(ConcurrencyManagementType.BEAN)
 @Local(ConfigurationEJB.class)
-public class ConfigurationEJB extends DelegatingConfiguration implements TxInfo {
+public class ConfigurationEJB extends DelegatingConfiguration implements TransactionalConfiguration.TxInfo {
 
     public static final Logger log = LoggerFactory.getLogger(ConfigurationEJB.class);
 

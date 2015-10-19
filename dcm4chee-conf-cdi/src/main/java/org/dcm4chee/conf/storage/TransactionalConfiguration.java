@@ -1,7 +1,6 @@
-package org.dcm4chee.conf;
+package org.dcm4chee.conf.storage;
 
 import org.dcm4che3.conf.core.api.Configuration;
-import org.dcm4chee.conf.storage.TxInfo;
 
 /**
  * @author Roman K
@@ -13,4 +12,8 @@ public interface TransactionalConfiguration extends Configuration {
     void beforeCommit();
 
     void afterCommit(int i);
+
+    interface TxInfo {
+        boolean isPartOfModifyingTransaction();
+    }
 }

@@ -4,7 +4,6 @@ import org.dcm4che3.conf.core.DelegatingConfiguration;
 import org.dcm4che3.conf.core.api.Configuration;
 import org.dcm4che3.conf.core.api.ConfigurationException;
 import org.dcm4che3.conf.core.util.ConfigNodeUtil;
-import org.dcm4chee.conf.TransactionalConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
