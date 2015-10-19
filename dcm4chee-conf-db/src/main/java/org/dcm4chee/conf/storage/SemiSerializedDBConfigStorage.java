@@ -184,7 +184,7 @@ public class SemiSerializedDBConfigStorage implements Configuration {
     }
     
     @Override
-    public void runBatch(ConfigBatch batch) {
+    public void runBatch(Batch batch) {
         db.runBatch(batch);
     }
 

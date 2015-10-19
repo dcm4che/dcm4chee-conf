@@ -14,7 +14,7 @@ import org.junit.runner.RunWith;
 import javax.inject.Inject;
 
 /**
- * Created by player on 06-Oct-15.
+ * @author Roman K
  */
 @RunWith(Arquillian.class)
 public class ConfigDBStorageTests extends ConfigEETestsIT {

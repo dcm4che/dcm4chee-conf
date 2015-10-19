@@ -41,8 +41,12 @@
 package org.dcm4chee.conf;
 
 import org.dcm4che3.conf.api.internal.DicomConfigurationManager;
+import org.dcm4che3.conf.core.api.BatchRunner;
 import org.dcm4che3.conf.core.api.ConfigurableClassExtension;
+import org.dcm4che3.conf.core.api.Configuration;
 import org.dcm4che3.conf.core.normalization.DefaultsAndNullFilterDecorator;
+import org.dcm4che3.conf.core.olock.HashBasedOptimisticLockingConfiguration;
+import org.dcm4che3.conf.core.util.Extensions;
 import org.dcm4che3.conf.dicom.CommonDicomConfigurationWithHL7;
 import org.dcm4chee.conf.storage.ConfigurationEJB;
 import org.dcm4chee.conf.upgrade.CdiUpgradeManager;
@@ -54,7 +58,10 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Instance;
 import javax.enterprise.inject.Produces;
 import javax.inject.Inject;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 
 /**
  * @Roman K
@@ -76,8 +83,32 @@ public class DicomConfigManagerProducer {
     @Produces
     @ApplicationScoped
     public DicomConfigurationManager createDicomConfigurationManager() {
+
+        Configuration storage;
+
+        List<Class> allExtensionClasses = resolveExtensionsList();
+
+        // olocking
+        storage = new HashBasedOptimisticLockingConfiguration(
+                configStorage,
+                allExtensionClasses,
+
+                // make sure that OLocking will perform the access to the config within a single transaction (if the tx is not yet provided by the caller)
+                // and use the writer cache when it will first read from storage
+                // so just re-use ConfigurationEJB
+                new BatchRunner() {
+                    @Override
+                    public void runBatch(Batch batch) {
+                        configStorage.runWithRequiresTxWithLock(batch);
+                    }
+                });
+
+        // defaults filtering
+        storage = new DefaultsAndNullFilterDecorator(storage, allExtensionClasses);
+
+
         CommonDicomConfigurationWithHL7 configurationWithHL7 = new CommonDicomConfigurationWithHL7(
-                new DefaultsAndNullFilterDecorator(configStorage, false, resolveExtensionsList()),
+                storage,
                 resolveExtensionsMap(true)
         );
 
@@ -102,39 +133,23 @@ public class DicomConfigManagerProducer {
     }
 
     public Map<Class, List<Class>> resolveExtensionsMap(boolean doLog) {
-        Map<Class, List<Class>> extensions = new HashMap<>();
 
         List<ConfigurableClassExtension> extList = new ArrayList<>();
 
         for (ConfigurableClassExtension extension : allExtensions)
             extList.add(extension);
 
-        // sort for nicer logging
-        if (doLog)
-            Collections.sort(extList, new Comparator<ConfigurableClassExtension>() {
-                @Override
-                public int compare(ConfigurableClassExtension o1, ConfigurableClassExtension o2) {
-                    return o1.getBaseClass().getName().compareTo(o2.getBaseClass().getName());
-                }
-            });
+        Map<Class, List<Class>> extByBaseExtMap = Extensions.getAMapOfExtensionsByBaseExtension(extList);
 
-        for (ConfigurableClassExtension extension : extList) {
-            if (doLog)
-                log.info("Registering {} : {}", extension.getBaseClass().getSimpleName(), extension.getClass().getName());
 
-            Class baseExtensionClass = extension.getBaseClass();
-
-            List<Class> extensionsForBaseClass = extensions.get(baseExtensionClass);
-
-            if (extensionsForBaseClass == null)
-                extensions.put(baseExtensionClass, extensionsForBaseClass = new ArrayList<>());
-
-            // don't put duplicates
-            if (!extensionsForBaseClass.contains(extension.getClass()))
-                extensionsForBaseClass.add(extension.getClass());
-
+        if (doLog) {
+            for (Entry<Class, List<Class>> classListEntry : extByBaseExtMap.entrySet()) {
+                log.info("Extension classes of {}", classListEntry.getKey().getSimpleName());
+                for (Class aClass : classListEntry.getValue()) log.info(aClass.getName());
+            }
         }
-        return extensions;
+
+        return extByBaseExtMap;
     }
 
 }

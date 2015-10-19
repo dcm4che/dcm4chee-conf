@@ -42,6 +42,7 @@ package org.dcm4chee.conf;
 import org.dcm4che3.conf.api.ConfigurationNotFoundException;
 import org.dcm4che3.conf.api.DicomConfiguration;
 import org.dcm4che3.conf.api.internal.DicomConfigurationManager;
+import org.dcm4che3.conf.core.api.BatchRunner.Batch;
 import org.dcm4che3.conf.core.api.Configuration;
 import org.dcm4che3.conf.core.api.ConfigurationException;
 import org.dcm4che3.net.Device;
@@ -134,7 +135,7 @@ public class ConfigEETestsIT {
         storage.persistNode("/dicomConfigurationRoot", new HashMap<String, Object>(), null);
 
 
-        storage.runBatch(new Configuration.ConfigBatch() {
+        storage.runBatch(new Batch() {
             @Override
             public void run() {
                 try {
@@ -148,7 +149,7 @@ public class ConfigEETestsIT {
         Assert.assertNotNull(config.findDevice("shouldWork"));
 
         try {
-            storage.runBatch(new Configuration.ConfigBatch() {
+            storage.runBatch(new Batch() {
                 @Override
                 public void run() {
 

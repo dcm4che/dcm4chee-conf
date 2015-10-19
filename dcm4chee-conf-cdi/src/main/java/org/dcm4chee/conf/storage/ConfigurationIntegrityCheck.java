@@ -73,7 +73,7 @@ public class ConfigurationIntegrityCheck {
         InMemoryReadOnlyConfiguration configuration = new InMemoryReadOnlyConfiguration(configurationRoot);
 
         CommonDicomConfigurationWithHL7 dicomConfiguration = new CommonDicomConfigurationWithHL7(
-                new DefaultsAndNullFilterDecorator(configuration, false, dicomConfigManagerProducer.resolveExtensionsList()),
+                new DefaultsAndNullFilterDecorator(configuration, dicomConfigManagerProducer.resolveExtensionsList()),
                 dicomConfigManagerProducer.resolveExtensionsMap(false)
         );
 
