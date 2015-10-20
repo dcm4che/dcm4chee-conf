@@ -45,7 +45,10 @@ import org.dcm4che3.conf.core.util.SimpleConfigNodeUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.ejb.*;
+import javax.ejb.EJB;
+import javax.ejb.Stateless;
+import javax.ejb.TransactionAttribute;
+import javax.ejb.TransactionAttributeType;
 import javax.persistence.*;
 import java.io.IOException;
 import java.util.HashMap;
@@ -102,24 +105,31 @@ public class DBStorageBean {
         Query query = em.createQuery("SELECT n FROM ConfigNodeEntity n WHERE n.path=?1");
         query.setParameter(1, LOCK_PATH);
         ConfigNodeEntity singleResult = (ConfigNodeEntity) query.getSingleResult();
+        log.debug("Trying to aquire a pessimistic lock on " + LOCK_PATH);
         em.lock(singleResult, LockModeType.PESSIMISTIC_WRITE);
+        log.debug("Aquired a pessimistic lock on " + LOCK_PATH);
     }
 
     @TransactionAttribute(TransactionAttributeType.REQUIRES_NEW)
     public void createLockingRowIfnotExists() throws UnableToPersistLockingRowException {
+        log.debug("Checking if locking row exists");
         Query query = em.createQuery("SELECT count (n) FROM ConfigNodeEntity n WHERE n.path=?1");
         query.setParameter(1, LOCK_PATH);
         Long count = (Long) query.getSingleResult();
 
         if (count == 0) {
+            log.debug("Locking row does not exist, inserting...");
             ConfigNodeEntity entity = new ConfigNodeEntity();
             entity.setPath(LOCK_PATH);
-            entity.setContent(new byte[]{'{','}'});
+            entity.setContent(new byte[]{'{', '}'});
             try {
                 em.persist(entity);
+                log.debug("Locking row inserted");
             } catch (Exception e) {
                 throw new UnableToPersistLockingRowException(e);
             }
+        } else {
+            log.debug("Locking row already exists");
         }
     }
 

@@ -39,15 +39,6 @@
  */
 package org.dcm4chee.conf.storage;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-
-import javax.annotation.PostConstruct;
-import javax.ejb.EJB;
-import javax.enterprise.context.ApplicationScoped;
-
 import org.dcm4che3.conf.core.api.Configuration;
 import org.dcm4che3.conf.core.api.ConfigurationException;
 import org.dcm4che3.conf.core.util.ConfigNodeUtil;
@@ -55,6 +46,14 @@ import org.dcm4che3.conf.core.util.SplittedPath;
 import org.dcm4che3.conf.dicom.DicomPath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.annotation.PostConstruct;
+import javax.ejb.EJB;
+import javax.enterprise.context.ApplicationScoped;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
 /**
  * @author Roman K
@@ -77,7 +76,9 @@ public class SemiSerializedDBConfigStorage implements Configuration {
     public void init() {
         // create locking row in a separate transaction to make sure constraint violations don't rollback the current one
         try {
+            log.debug("Initializing the locking row ...");
             db.createLockingRowIfnotExists();
+            log.debug("Successfully initialized the locking row");
         } catch (DBStorageBean.UnableToPersistLockingRowException e) {
             if (!db.isLockingRowExists())
                 log.error("Unable to init the locking row in the configuration table. ", e);
