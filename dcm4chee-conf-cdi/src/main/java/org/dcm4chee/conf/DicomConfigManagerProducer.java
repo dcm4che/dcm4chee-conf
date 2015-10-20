@@ -42,6 +42,7 @@ package org.dcm4chee.conf;
 
 import org.dcm4che3.conf.api.internal.DicomConfigurationManager;
 import org.dcm4che3.conf.core.api.BatchRunner;
+import org.dcm4che3.conf.core.api.BatchRunner.Batch;
 import org.dcm4che3.conf.core.api.ConfigurableClassExtension;
 import org.dcm4che3.conf.core.api.Configuration;
 import org.dcm4che3.conf.core.normalization.DefaultsAndNullFilterDecorator;
@@ -71,7 +72,7 @@ public class DicomConfigManagerProducer {
     private final static Logger log = LoggerFactory.getLogger(DicomConfigManagerProducer.class);
 
     @EJB
-    private ConfigurationEJB configStorage;
+    private ConfigurationEJB providedConfigStorage;
 
     @Inject
     private Instance<ConfigurableClassExtension> allExtensions;
@@ -79,18 +80,19 @@ public class DicomConfigManagerProducer {
     @Inject
     private CdiUpgradeManager upgradeManager;
 
+    private CommonDicomConfigurationWithHL7 configurationWithHL7;
+
 
     @Produces
     @ApplicationScoped
     public DicomConfigurationManager createDicomConfigurationManager() {
 
-        Configuration storage;
 
         List<Class> allExtensionClasses = resolveExtensionsList();
 
         // olocking
-        storage = new HashBasedOptimisticLockingConfiguration(
-                configStorage,
+        Configuration storage = new HashBasedOptimisticLockingConfiguration(
+                providedConfigStorage,
                 allExtensionClasses,
 
                 // make sure that OLocking will perform the access to the config within a single transaction (if the tx is not yet provided by the caller)
@@ -99,7 +101,7 @@ public class DicomConfigManagerProducer {
                 new BatchRunner() {
                     @Override
                     public void runBatch(Batch batch) {
-                        configStorage.runWithRequiresTxWithLock(batch);
+                        providedConfigStorage.runWithRequiresTxWithLock(batch);
                     }
                 });
 
@@ -107,10 +109,17 @@ public class DicomConfigManagerProducer {
         storage = new DefaultsAndNullFilterDecorator(storage, allExtensionClasses);
 
 
-        CommonDicomConfigurationWithHL7 configurationWithHL7 = new CommonDicomConfigurationWithHL7(
-                storage,
-                resolveExtensionsMap(true)
-        );
+        final Configuration finalStorage = storage;
+        // run in a batch to ensure we don't lock the ongoing transaction by accident if we init the config
+        providedConfigStorage.runBatch(new Batch() {
+            @Override
+            public void run() {
+                DicomConfigManagerProducer.this.configurationWithHL7 = new CommonDicomConfigurationWithHL7(
+                        finalStorage,
+                        resolveExtensionsMap(true)
+                );
+            }
+        });
 
         // Perform upgrade
         try {
