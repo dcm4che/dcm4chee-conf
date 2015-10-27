@@ -59,7 +59,7 @@ public class CdiDefaultConfigStorageWrappers {
 
         @PostConstruct
         public void init() {
-            setFileName(resolveConfigFileNameSetting(System.getProperties()));
+            configure(System.getProperties());
         }
 
     }
