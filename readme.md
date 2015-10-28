@@ -46,7 +46,7 @@ The configuration will be fully reloaded from the backend into that cache, and a
 ## Hash-based optimistic locking
 
 When updating something in the configuration, hash-based optimistic locking is used to prevent conflicting changes and to preserve the parts of the configuration object 
-that were changed by other user/component, but was not changed by the transaction at hand.     
+that were changed by other user/component, but were not changed by the transaction at hand.     
 
 #### Core principle
 
