@@ -105,7 +105,7 @@ Current implementation uses `topic/DicomConfigurationChangeTopic` JMS topic to d
 
   
 ## Development
-Configuration components of can be disabled for development purposes.
+Configuration components can be disabled for development purposes.
 
 - To disable referential integrity check performed before transaction commit, set
 
