@@ -80,6 +80,7 @@ public class DicomConfigManagerProducer {
     @Inject
     private CdiUpgradeManager upgradeManager;
 
+    // temp workaround just for closure
     private CommonDicomConfigurationWithHL7 configurationWithHL7;
 
 
