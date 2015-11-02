@@ -21,11 +21,15 @@ The archive contains a device producer so many components can easily lookup the 
 
 **IMPORTANT - do not change 'injected' device**
 
-This java object is an application scoped CDI bean and is shared across the application It is therefore should only be used for reading the config.
-
+This java object is a singleton and its producer is an application scoped CDI bean, so this Device instance is shared among the application components and is therefore should only be used for reading the config.
 To make modifications, use DicomConfiguration to lookup the device yourself (you could get the device name from that very configDevice), modify and merge that fresh isolated instance.
+Otherwise, it's not thread-safe and could result into unexpected behavior.       
 
-Otherwise, it's not thread-safe and could result into unexpected behavoir.
+An attempt to change the injected device will result into an error log message like the following:
+
+    17:33:34,654 ERROR [org.dcm4che3.conf.dicom.CommonDicomConfiguration] (pool-7-thread-5) Persisting the config for the Device object that is marked as read-only. This error is not affecting the behavior for now, but soon it will be replaced with an exception!If you want to make config modifications, use a separate instance of Device! See CSP configuration docs for details.
+
+ If you find such a message in the log related to your config manipulations - then you are doing it wrong.
 
 ### Low-level configuration access
 
