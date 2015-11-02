@@ -11,6 +11,22 @@ To access the dicom configuration, inject a `DicomConfiguration` bean with CDI l
 
 Build dedicated APIs on top of `DicomConfiguration` to wrap up some special configuration functionality.
 
+### Shortcut to access the 'primary device'
+
+The archive contains a device producer so many components can easily lookup the configuration of the primary device that corresponds to the running application, like
+
+    @Inject 
+    private Device configDevice;
+
+
+**IMPORTANT - do not change 'injected' device**
+
+This java object is an application scoped CDI bean and is shared across the application It is therefore should only be used for reading the config.
+
+To make modifications, use DicomConfiguration to lookup the device yourself (you could get the device name from that very configDevice), modify and merge that fresh isolated instance.
+
+Otherwise, it's not thread-safe and could result into unexpected behavoir.
+
 ### Low-level configuration access
 
 For special cases, one can inject `DicomConfigurationManager` and call `.getConfigurationStorage()` on it to obtain an instance of [Configuration](https://github.com/dcm4che/dcm4che/blob/master/dcm4che-conf/dcm4che-conf-core-api/src/main/java/org/dcm4che3/conf/core/api/Configuration.java).
