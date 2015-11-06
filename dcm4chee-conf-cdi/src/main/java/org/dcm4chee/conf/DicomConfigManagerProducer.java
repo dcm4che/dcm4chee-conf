@@ -78,7 +78,8 @@ public class DicomConfigManagerProducer {
     private Instance<ConfigurableClassExtension> allExtensions;
 
     @Inject
-    private CdiUpgradeManager upgradeManager;
+    private Instance<CdiUpgradeManager> upgradeManagerInstance;
+
 
     // temp workaround just for closure
     private CommonDicomConfigurationWithHL7 configurationWithHL7;
@@ -88,6 +89,7 @@ public class DicomConfigManagerProducer {
     @ApplicationScoped
     public DicomConfigurationManager createDicomConfigurationManager() {
 
+        log.info("Constructing DicomConfiguration ...");
 
         List<Class> allExtensionClasses = resolveExtensionsList();
 
@@ -122,12 +124,17 @@ public class DicomConfigManagerProducer {
             }
         });
 
-        // Perform upgrade
-        try {
-            upgradeManager.performUpgrade(configurationWithHL7);
-        } catch (Exception e) {
-            throw new RuntimeException("DicomConfiguration upgrade failure", e);
-        }
+        if (upgradeManagerInstance.isUnsatisfied()) {
+            log.info("Dicom configuration upgrade is not configured for this deployment, skipping");
+        } else
+            // Perform upgrade
+            try {
+                upgradeManagerInstance.get().performUpgrade(configurationWithHL7);
+            } catch (Exception e) {
+                throw new RuntimeException("DicomConfiguration upgrade failure", e);
+            }
+
+        log.info("DicomConfiguration created.");
 
         return configurationWithHL7;
     }
