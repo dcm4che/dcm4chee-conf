@@ -48,7 +48,6 @@ import org.dcm4che3.conf.api.upgrade.UpgradeScript;
 import org.dcm4che3.conf.core.DefaultBeanVitalizer;
 import org.dcm4che3.conf.core.api.Configuration;
 import org.dcm4che3.conf.core.api.ConfigurationException;
-import org.dcm4che3.conf.core.api.internal.BeanVitalizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,6 +62,9 @@ import java.util.Properties;
 public class UpgradeRunner {
 
     public static final String RUN_ALWAYS = "org.dcm4che.conf.upgrade.runAlways";
+
+    public static final String PASSIVE_UPGRADE_TIMEOUT = "org.dcm4che.conf.upgrade.passiveTimeoutSec";
+
     private static Logger log = LoggerFactory
             .getLogger(UpgradeRunner.class);
 
@@ -71,14 +73,16 @@ public class UpgradeRunner {
     private Collection<UpgradeScript> availableUpgradeScripts;
     private DicomConfigurationManager dicomConfigurationManager;
     private UpgradeSettings upgradeSettings;
+    private String appName;
 
     public UpgradeRunner() {
     }
 
-    public UpgradeRunner(Collection<UpgradeScript> availableUpgradeScripts, DicomConfigurationManager dicomConfigurationManager, UpgradeSettings upgradeSettings) {
+    public UpgradeRunner(Collection<UpgradeScript> availableUpgradeScripts, DicomConfigurationManager dicomConfigurationManager, UpgradeSettings upgradeSettings, String appName) {
         this.availableUpgradeScripts = availableUpgradeScripts;
         this.dicomConfigurationManager = dicomConfigurationManager;
         this.upgradeSettings = upgradeSettings;
+        this.appName = appName;
     }
 
     public void upgrade() {
@@ -88,32 +92,95 @@ public class UpgradeRunner {
         }
 
         String toVersion = upgradeSettings.getUpgradeToVersion();
-        if (toVersion != null) {
-            upgradeToVersion(toVersion);
-        } else
-            log.warn("Dcm4che configuration init: target upgrade version is null. Upgrade will not be performed. Set the target config version in upgrade settings first.'");
 
+        if (toVersion == null) {
+            log.warn("Dcm4che configuration init: target upgrade version is null. Upgrade will not be performed. Set the target config version in upgrade settings first.'");
+            return;
+        }
+
+        if (upgradeSettings.getActiveUpgradeRunnerDeployment() == null) {
+            // if ActiveUpgradeRunnerDeployment not set, just run the upgrade no matter in which deployment we are
+            upgradeToVersion(toVersion);
+        } else {
+            if (appName.startsWith(upgradeSettings.getActiveUpgradeRunnerDeployment())) {
+                // if deployment name matches - go ahead with the upgrade
+                upgradeToVersion(toVersion);
+            } else {
+                waitUntilOtherRunnerUpdatesToTargetConfigurationVersion();
+            }
+        }
     }
 
+    private ConfigurationMetadata loadConfigurationMetadata() {
+        Object metadataNode = dicomConfigurationManager
+                .getConfigurationStorage()
+                .getConfigurationNode(METADATA_ROOT_PATH, ConfigurationMetadata.class);
+        ConfigurationMetadata configurationMetadata = null;
+        if (metadataNode != null)
+            configurationMetadata = new DefaultBeanVitalizer().newConfiguredInstance((Map<String, Object>) metadataNode, ConfigurationMetadata.class);
+        return configurationMetadata;
+    }
+
+    private void persistConfigurationMetadata(ConfigurationMetadata metadata) {
+        dicomConfigurationManager
+                .getConfigurationStorage()
+                .persistNode(
+                        METADATA_ROOT_PATH,
+                        new DefaultBeanVitalizer().createConfigNodeFromInstance(metadata),
+                        ConfigurationMetadata.class
+                );
+    }
+
+    public void waitUntilOtherRunnerUpdatesToTargetConfigurationVersion() {
+
+        Integer timeout, configuredTimeout;
+        try {
+            configuredTimeout = timeout = Integer.valueOf(System.getProperty(PASSIVE_UPGRADE_TIMEOUT, "300"));
+        } catch (NumberFormatException e) {
+            throw new RuntimeException(PASSIVE_UPGRADE_TIMEOUT + " property must be an integer", e);
+        }
+
+        log.info("This deployment is not configured to perform the configuration upgrade. Waiting for the upgrade to be done elsewhere." +
+                "\nTimeout: "+configuredTimeout+" sec" +
+                "\nExpected configuration version: "+ upgradeSettings.getUpgradeToVersion());
+
+        boolean success = false;
+        while (timeout > 0) {
+            try {
+                ConfigurationMetadata configurationMetadata = loadConfigurationMetadata();
+
+                if (configurationMetadata.getVersion().equals(upgradeSettings.getUpgradeToVersion())) {
+                    success = true;
+                    break;
+                }
+
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new RuntimeException(e);
+            }
+            timeout--;
+        }
+
+        if (!success)
+            throw new ConfigurationException("Waited for " + configuredTimeout + " sec, but configuration was not updated to target version ('" + upgradeSettings.getUpgradeToVersion() + "')." +
+                    "Configuration will not be initialized.");
+        else
+            log.info("Detected the expected configuration version ('{}'), proceeding", upgradeSettings.getUpgradeToVersion());
+    }
 
     protected void upgradeToVersion(final String toVersion) {
         dicomConfigurationManager.runBatch(new DicomConfiguration.DicomConfigBatch() {
             @Override
             public void run() {
-
                 try {
 
                     Configuration configuration = dicomConfigurationManager.getConfigurationStorage();
                     configuration.lock();
 
-                    BeanVitalizer beanVitalizer = new DefaultBeanVitalizer();
-
                     // load or initialize config metadata
-                    Object metadataNode = configuration.getConfigurationNode(METADATA_ROOT_PATH, ConfigurationMetadata.class);
-                    ConfigurationMetadata configMetadata = null;
-                    if (metadataNode != null)
-                        configMetadata = beanVitalizer.newConfiguredInstance((Map<String, Object>) metadataNode, ConfigurationMetadata.class);
-                    else {
+                    ConfigurationMetadata configMetadata = loadConfigurationMetadata();
+                    if (configMetadata == null) {
                         configMetadata = new ConfigurationMetadata();
                         configMetadata.setVersion(UpgradeScript.NO_VERSION);
                     }
@@ -193,7 +260,7 @@ public class UpgradeRunner {
                     configMetadata.setVersion(toVersion);
 
                     // persist updated metadata
-                    configuration.persistNode(METADATA_ROOT_PATH, beanVitalizer.createConfigNodeFromInstance(configMetadata), ConfigurationMetadata.class);
+                    persistConfigurationMetadata(configMetadata);
                 } catch (ConfigurationException e) {
                     throw new RuntimeException("Error while running the upgrade", e);
                 }

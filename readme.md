@@ -154,6 +154,7 @@ Upgrade is performed on server startup before any method can access the configur
            "com.mycompany.upgrade.UpgradeFirst",
            "com.mycompany.upgrade.UpgradeSecond",
           ],
+          "activeUpgradeRunnerDeployment": "my-ear-name-which-should-perform-upgrade"
           "properties":{
             "aPropertyForMyUpgradeScripts":"aValue"
           }
@@ -169,6 +170,9 @@ Every upgrade script should be marked with `@org.dcm4che3.conf.api.upgrade.Scrip
 - the script was never executed before
 - the current version of the script is greater than the last executed version (String.compareTo is used to compare)
 If a script has no such annotation - it will be assigned a default version - see constant org.dcm4che3.conf.api.upgrade.UpgradeScript#NO_VERSION .
+
+If the property `activeUpgradeRunnerDeployment` is specified (can be either full name (without extension) or a prefix), the upgrade will only be ran from that deployment. 
+Other deployments will just wait for the current configuration version to become equal to `upgradeToVersion`.  
 
 Example: [DefaultArchiveConfigInitScript](https://github.com/dcm4che/dcm4chee-arc-cdi/blob/master/dcm4chee-arc-conf-default/src/main/java/org/dcm4chee/archive/conf/defaults/DefaultArchiveConfigInitScript.java)
    

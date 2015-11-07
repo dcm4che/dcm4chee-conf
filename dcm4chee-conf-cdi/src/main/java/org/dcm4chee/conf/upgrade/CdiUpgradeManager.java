@@ -49,6 +49,7 @@ import org.dcm4che3.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Resource;
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
@@ -58,7 +59,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Matches configuration from a json file with upgrade scripts available as CDI beans and launches the upgrade runner
+ * Reads configuration from a json file, configures and launches the upgrade runner
  */
 @ApplicationScoped
 public class CdiUpgradeManager {
@@ -70,10 +71,14 @@ public class CdiUpgradeManager {
     @Inject
     private Instance<UpgradeScript> upgradeScripts;
 
+    @Resource(lookup="java:app/AppName")
+    private String appName;
+
     public CdiUpgradeManager() {
     }
 
     public void performUpgrade(DicomConfigurationManager manager) throws ConfigurationException {
+
         // collect available upgrade scripts
         List<UpgradeScript> scripts = new ArrayList<>();
         for (UpgradeScript upgradeScript : upgradeScripts) scripts.add(upgradeScript);
@@ -84,11 +89,13 @@ public class CdiUpgradeManager {
             // load upgrade settings
             String filename = StringUtils.replaceSystemProperties(property);
             SingleJsonFileConfigurationStorage singleJsonFileConfigurationStorage = new SingleJsonFileConfigurationStorage(filename);
-            Map<String,Object> configMap = singleJsonFileConfigurationStorage.getConfigurationRoot();
+            Map<String, Object> configMap = singleJsonFileConfigurationStorage.getConfigurationRoot();
             UpgradeSettings upgradeSettings = new DefaultBeanVitalizer().newConfiguredInstance(configMap, UpgradeSettings.class);
-            upgradeSettings.setUpgradeConfig(configMap); 
-            
-            UpgradeRunner upgradeRunner = new UpgradeRunner(scripts, manager, upgradeSettings);
+            upgradeSettings.setUpgradeConfig(configMap);
+
+            if (appName == null) throw new RuntimeException("Cannot detect deployment name");
+
+            UpgradeRunner upgradeRunner = new UpgradeRunner(scripts, manager, upgradeSettings, appName);
             upgradeRunner.upgrade();
 
         } else {

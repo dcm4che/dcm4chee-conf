@@ -63,10 +63,23 @@ public class UpgradeSettings {
     List<String> upgradeScriptsToRun;
 
     @ConfigurableProperty(
+            description = "The exact name or prefix (i.e. startsWith logic) of the deployment which will run the upgrade. " +
+                    "Other deployments will just wait until the version of configuration becomes equal to what is specified by #upgradeToVersion")
+    String activeUpgradeRunnerDeployment;
+
+    @ConfigurableProperty(
             description = "These key/value properties are available to upgrade scripts"
     )
     Map<String, String> properties;
-    
+
+    public String getActiveUpgradeRunnerDeployment() {
+        return activeUpgradeRunnerDeployment;
+    }
+
+    public void setActiveUpgradeRunnerDeployment(String activeUpgradeRunnerDeployment) {
+        this.activeUpgradeRunnerDeployment = activeUpgradeRunnerDeployment;
+    }
+
     private Map<String,Object> upgradeConfig;
 
     public Map<String, String> getProperties() {
