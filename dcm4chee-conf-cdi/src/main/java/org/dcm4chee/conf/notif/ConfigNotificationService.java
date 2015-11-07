@@ -43,6 +43,7 @@ import org.dcm4che3.conf.core.api.ConfigChangeEvent;
 import org.dcm4che3.conf.core.api.ConfigurationException;
 import org.dcm4che3.conf.core.api.InternalConfigChangeEvent;
 import org.dcm4che3.conf.core.api.internal.ConfigurationManager;
+import org.dcm4chee.conf.storage.ConfigurationEJB;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,7 +68,7 @@ public class ConfigNotificationService {
     private ConfigChangeTopicBroker clusterBroker;
     
     @Inject
-    private ConfigurationManager configurationManager;
+    private ConfigurationEJB configurationEJB;
     
     /**
      * Send config change event to all listeners registered within the cluster
@@ -79,9 +80,14 @@ public class ConfigNotificationService {
     
     /**
      * Send config change event to all listeners registered within the node
+     *
+     * temp solution - synchronized to avoid concurrent updates:
+     * This does not impact config cache/backend, but can affect the observers of ConfigChangeEvent,
+     * better to keep it easy for them, and the performance is not a concern here
+     *
      * @param changeEvent
      */
-    public void sendLocalScopedConfigChangeNotification(ConfigChangeEvent changeEvent) {
+    public synchronized void sendLocalScopedConfigChangeNotification(ConfigChangeEvent changeEvent) {
         LOGGER.debug("Sending config changed notification CDI event");
         invalidateConfigCache();
 
@@ -95,7 +101,7 @@ public class ConfigNotificationService {
     private void invalidateConfigCache() {
         try {
             // TODO: can optimize by refreshing only the changed paths
-            configurationManager.getConfigurationStorage().refreshNode("/");
+            configurationEJB.refreshNode("/");
             LOGGER.info("Configuration cache updated");
         } catch (ConfigurationException e) {
             LOGGER.error("Error while re-loading the configuration from the backend into the cache",e);

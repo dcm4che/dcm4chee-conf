@@ -135,7 +135,7 @@ public class UpgradeRunner {
 
         Integer timeout, configuredTimeout;
         try {
-            configuredTimeout = timeout = Integer.valueOf(System.getProperty(PASSIVE_UPGRADE_TIMEOUT, "300"));
+            configuredTimeout = timeout = Integer.valueOf(System.getProperty(PASSIVE_UPGRADE_TIMEOUT, "60"));
         } catch (NumberFormatException e) {
             throw new RuntimeException(PASSIVE_UPGRADE_TIMEOUT + " property must be an integer", e);
         }

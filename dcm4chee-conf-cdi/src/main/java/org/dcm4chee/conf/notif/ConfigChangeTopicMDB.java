@@ -39,6 +39,7 @@
 
 package org.dcm4chee.conf.notif;
 
+import javax.annotation.Resource;
 import javax.ejb.ActivationConfigProperty;
 import javax.ejb.MessageDriven;
 import javax.inject.Inject;
@@ -71,6 +72,9 @@ public class ConfigChangeTopicMDB implements MessageListener {
     
     @Inject
     private ConfigNotificationService notifService;
+
+    @Resource(lookup="java:app/AppName")
+    private String appName;
     
     @Override
     public void onMessage(Message rcvMessage) {
@@ -83,7 +87,7 @@ public class ConfigChangeTopicMDB implements MessageListener {
                 String sendingNode = msg.getStringProperty(SENDING_NODE_MSG_PROP);
                 
                 ConfigChangeEvent event = (ConfigChangeEvent)msg.getObject();
-                LOGGER.debug("Node {} received config changed event from sending node {}: {}", nodeName, sendingNode, event);
+                LOGGER.debug("Node '{}', deployment '{}' received config changed event from sending node {}: {}", nodeName, appName, sendingNode, event);
                 
                 notifService.sendLocalScopedConfigChangeNotification(event);
             } else {
