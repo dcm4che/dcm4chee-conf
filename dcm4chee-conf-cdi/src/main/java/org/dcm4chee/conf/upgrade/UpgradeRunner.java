@@ -140,7 +140,8 @@ public class UpgradeRunner {
             throw new RuntimeException(PASSIVE_UPGRADE_TIMEOUT + " property must be an integer", e);
         }
 
-        log.info("This deployment is not configured to perform the configuration upgrade. Waiting for the upgrade to be done elsewhere." +
+        log.info("This deployment ("+appName+") is not configured to perform the configuration upgrade." +
+                " Waiting for the upgrade to be performed by deployment '"+upgradeSettings.getActiveUpgradeRunnerDeployment()+"'." +
                 "\nTimeout: "+configuredTimeout+" sec" +
                 "\nExpected configuration version: "+ upgradeSettings.getUpgradeToVersion());
 
@@ -149,7 +150,7 @@ public class UpgradeRunner {
             try {
                 ConfigurationMetadata configurationMetadata = loadConfigurationMetadata();
 
-                if (configurationMetadata.getVersion().equals(upgradeSettings.getUpgradeToVersion())) {
+                if (configurationMetadata!=null && configurationMetadata.getVersion().equals(upgradeSettings.getUpgradeToVersion())) {
                     success = true;
                     break;
                 }
@@ -196,7 +197,9 @@ public class UpgradeRunner {
 
 
                     if (upgradeSettings.isDoRunAllDiscoveredUpgradeScripts()) {
-                        log.warn("Upgrade setting doRunAllDiscoveredUpgradeScripts is enabled. This mode is NOT recommended for production.");
+                        log.warn("Upgrade setting doRunAllDiscoveredUpgradeScripts is enabled." +
+                                "This means all deployed upgrade scripts will run in random order." +
+                                "This mode is NOT FOR USE IN PRODUCTION.");
 
                         // trick the runner, just copy all available scripts as if they were preconfigured
                         upgradeSettings.getUpgradeScriptsToRun().clear();
