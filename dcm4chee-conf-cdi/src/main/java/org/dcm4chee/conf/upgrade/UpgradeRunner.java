@@ -194,6 +194,18 @@ public class UpgradeRunner {
                     log.info("Config upgrade scripts specified in settings: {}", upgradeSettings.getUpgradeScriptsToRun());
                     log.info("Config upgrade scripts discovered in the deployment: {}", availableUpgradeScripts);
 
+
+                    if (upgradeSettings.isDoRunAllDiscoveredUpgradeScripts()) {
+                        log.warn("Upgrade setting doRunAllDiscoveredUpgradeScripts is enabled. This mode is NOT recommended for production.");
+
+                        // trick the runner, just copy all available scripts as if they were preconfigured
+                        upgradeSettings.getUpgradeScriptsToRun().clear();
+                        for (UpgradeScript availableUpgradeScript : availableUpgradeScripts) {
+                            upgradeSettings.getUpgradeScriptsToRun().add(availableUpgradeScript.getClass().getName());
+                        }
+
+                    }
+
                     // run all scripts
                     for (String upgradeScriptName : upgradeSettings.getUpgradeScriptsToRun()) {
 

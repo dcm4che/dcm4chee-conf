@@ -63,6 +63,12 @@ public class UpgradeSettings {
     List<String> upgradeScriptsToRun;
 
     @ConfigurableProperty(
+            description = "If set to true, all scripts from the deployment are executed in an undefined order, " +
+                    "whether they are referenced in #upgradeScriptsToRun or not.",
+            defaultValue = "false")
+    boolean doRunAllDiscoveredUpgradeScripts;
+
+    @ConfigurableProperty(
             description = "The exact name or prefix (i.e. startsWith logic) of the deployment which will run the upgrade. " +
                     "Other deployments will just wait until the version of configuration becomes equal to what is specified by #upgradeToVersion")
     String activeUpgradeRunnerDeployment;
@@ -71,6 +77,14 @@ public class UpgradeSettings {
             description = "These key/value properties are available to upgrade scripts"
     )
     Map<String, String> properties;
+
+    public boolean isDoRunAllDiscoveredUpgradeScripts() {
+        return doRunAllDiscoveredUpgradeScripts;
+    }
+
+    public void setDoRunAllDiscoveredUpgradeScripts(boolean doRunAllDiscoveredUpgradeScripts) {
+        this.doRunAllDiscoveredUpgradeScripts = doRunAllDiscoveredUpgradeScripts;
+    }
 
     public String getActiveUpgradeRunnerDeployment() {
         return activeUpgradeRunnerDeployment;
