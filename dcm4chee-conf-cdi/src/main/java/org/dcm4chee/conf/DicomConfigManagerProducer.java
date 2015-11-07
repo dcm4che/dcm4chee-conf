@@ -43,6 +43,7 @@ package org.dcm4chee.conf;
 import org.dcm4che3.conf.api.internal.DicomConfigurationManager;
 import org.dcm4che3.conf.core.api.BatchRunner;
 import org.dcm4che3.conf.core.api.BatchRunner.Batch;
+import org.dcm4che3.conf.core.api.ConfigurableClass;
 import org.dcm4che3.conf.core.api.ConfigurableClassExtension;
 import org.dcm4che3.conf.core.api.Configuration;
 import org.dcm4che3.conf.core.normalization.DefaultsAndNullFilterDecorator;
@@ -142,7 +143,7 @@ public class DicomConfigManagerProducer {
 
     public List<Class> resolveExtensionsList() {
         List<Class> list = new ArrayList<>();
-        for (ConfigurableClassExtension extension : allExtensions)
+        for (ConfigurableClassExtension extension : getAllConfigurableExtensions())
             if (!list.contains(extension.getClass()))
                 list.add(extension.getClass());
 
@@ -153,7 +154,7 @@ public class DicomConfigManagerProducer {
 
         List<ConfigurableClassExtension> extList = new ArrayList<>();
 
-        for (ConfigurableClassExtension extension : allExtensions)
+        for (ConfigurableClassExtension extension : getAllConfigurableExtensions())
             extList.add(extension);
 
         Map<Class, List<Class>> extByBaseExtMap = Extensions.getAMapOfExtensionsByBaseExtension(extList);
@@ -167,6 +168,18 @@ public class DicomConfigManagerProducer {
         }
 
         return extByBaseExtMap;
+    }
+
+    /**
+     * @return all extension classes that have a ConfigurableClass annotation
+     */
+    private List<ConfigurableClassExtension> getAllConfigurableExtensions() {
+        List<ConfigurableClassExtension> configurableExtensions = new ArrayList<>();
+        for (ConfigurableClassExtension extension : allExtensions) {
+            if (extension.getClass().getAnnotation(ConfigurableClass.class)!=null)
+                configurableExtensions.add(extension);
+        }
+        return configurableExtensions;
     }
 
 }
