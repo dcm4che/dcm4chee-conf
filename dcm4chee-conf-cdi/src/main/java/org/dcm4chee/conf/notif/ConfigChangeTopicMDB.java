@@ -39,6 +39,10 @@
 
 package org.dcm4chee.conf.notif;
 
+import org.dcm4che3.conf.core.api.ConfigChangeEvent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import javax.annotation.Resource;
 import javax.ejb.ActivationConfigProperty;
 import javax.ejb.MessageDriven;
@@ -46,10 +50,6 @@ import javax.inject.Inject;
 import javax.jms.Message;
 import javax.jms.MessageListener;
 import javax.jms.ObjectMessage;
-
-import org.dcm4che3.conf.core.api.ConfigChangeEvent;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Receives JMS messages carrying config change events and distributes 
@@ -62,7 +62,7 @@ import org.slf4j.LoggerFactory;
         @ActivationConfigProperty(propertyName = "destination", propertyValue = ConfigChangeTopicMDB.CONFIG_CHANGE_JMS_TOPIC),
         @ActivationConfigProperty(propertyName = "acknowledgeMode", propertyValue = "Auto-acknowledge")})
 public class ConfigChangeTopicMDB implements MessageListener {
-    private final static Logger LOGGER = LoggerFactory.getLogger(ConfigChangeTopicMDB.class.toString());
+    private final static Logger LOGGER = LoggerFactory.getLogger(ConfigChangeTopicMDB.class);
 
     private final static String JBOSS_NODE_NAME_SYSTEM_PROP = "jboss.node.name";
     
