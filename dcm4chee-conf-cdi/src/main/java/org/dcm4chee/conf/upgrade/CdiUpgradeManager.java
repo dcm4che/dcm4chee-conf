@@ -43,7 +43,9 @@ package org.dcm4chee.conf.upgrade;
 import org.dcm4che3.conf.api.internal.DicomConfigurationManager;
 import org.dcm4che3.conf.api.upgrade.UpgradeScript;
 import org.dcm4che3.conf.core.DefaultBeanVitalizer;
+import org.dcm4che3.conf.core.api.Configuration;
 import org.dcm4che3.conf.core.api.ConfigurationException;
+import org.dcm4che3.conf.core.normalization.DefaultsAndNullFilterDecorator;
 import org.dcm4che3.conf.core.storage.SingleJsonFileConfigurationStorage;
 import org.dcm4che3.util.StringUtils;
 import org.slf4j.Logger;
@@ -88,7 +90,8 @@ public class CdiUpgradeManager {
         if (property != null) {
             // load upgrade settings
             String filename = StringUtils.replaceSystemProperties(property);
-            SingleJsonFileConfigurationStorage singleJsonFileConfigurationStorage = new SingleJsonFileConfigurationStorage(filename);
+            Configuration singleJsonFileConfigurationStorage =
+                    new DefaultsAndNullFilterDecorator(new SingleJsonFileConfigurationStorage(filename), new ArrayList<Class>());
             Map<String, Object> configMap = singleJsonFileConfigurationStorage.getConfigurationRoot();
             UpgradeSettings upgradeSettings = new DefaultBeanVitalizer().newConfiguredInstance(configMap, UpgradeSettings.class);
             upgradeSettings.setUpgradeConfig(configMap);
