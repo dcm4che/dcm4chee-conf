@@ -43,6 +43,7 @@ package org.dcm4chee.conf.storage;
 import org.dcm4che3.conf.core.api.ConfigurationException;
 import org.dcm4che3.conf.core.normalization.DefaultsAndNullFilterDecorator;
 import org.dcm4che3.conf.core.storage.InMemoryReadOnlyConfiguration;
+import org.dcm4che3.conf.dicom.CommonDicomConfiguration;
 import org.dcm4che3.conf.dicom.CommonDicomConfigurationWithHL7;
 import org.dcm4chee.conf.DicomConfigManagerProducer;
 
@@ -73,7 +74,7 @@ public class ConfigurationIntegrityCheck {
         InMemoryReadOnlyConfiguration configuration = new InMemoryReadOnlyConfiguration(configurationRoot);
 
         CommonDicomConfigurationWithHL7 dicomConfiguration = new CommonDicomConfigurationWithHL7(
-                new DefaultsAndNullFilterDecorator(configuration, dicomConfigManagerProducer.resolveExtensionsList()),
+                new DefaultsAndNullFilterDecorator(configuration, dicomConfigManagerProducer.resolveExtensionsList(), CommonDicomConfiguration.createDefaultDicomVitalizer()),
                 dicomConfigManagerProducer.resolveExtensionsMap(false)
         );
 

@@ -49,6 +49,7 @@ import org.dcm4che3.conf.core.api.Configuration;
 import org.dcm4che3.conf.core.normalization.DefaultsAndNullFilterDecorator;
 import org.dcm4che3.conf.core.olock.HashBasedOptimisticLockingConfiguration;
 import org.dcm4che3.conf.core.util.Extensions;
+import org.dcm4che3.conf.dicom.CommonDicomConfiguration;
 import org.dcm4che3.conf.dicom.CommonDicomConfigurationWithHL7;
 import org.dcm4chee.conf.storage.ConfigurationEJB;
 import org.dcm4chee.conf.upgrade.CdiUpgradeManager;
@@ -110,7 +111,7 @@ public class DicomConfigManagerProducer {
                 });
 
         // defaults filtering
-        storage = new DefaultsAndNullFilterDecorator(storage, allExtensionClasses);
+        storage = new DefaultsAndNullFilterDecorator(storage, allExtensionClasses, CommonDicomConfiguration.createDefaultDicomVitalizer());
 
 
         final Configuration finalStorage = storage;
