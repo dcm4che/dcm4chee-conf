@@ -42,7 +42,7 @@ package org.dcm4chee.conf.notif;
 import org.dcm4che3.conf.core.api.ConfigChangeEvent;
 import org.dcm4che3.conf.core.api.ConfigurationException;
 import org.dcm4che3.conf.core.api.InternalConfigChangeEvent;
-import org.dcm4che3.conf.core.api.internal.ConfigurationManager;
+import org.dcm4chee.conf.storage.ConfigurationEJB;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,7 +67,7 @@ public class ConfigNotificationService {
     private ConfigChangeTopicBroker clusterBroker;
     
     @Inject
-    private ConfigurationManager configurationManager;
+    private ConfigurationEJB configurationEJB;
     
     /**
      * Send config change event to all listeners registered within the cluster
@@ -79,6 +79,7 @@ public class ConfigNotificationService {
     
     /**
      * Send config change event to all listeners registered within the node
+     *
      * @param changeEvent
      */
     public void sendLocalScopedConfigChangeNotification(ConfigChangeEvent changeEvent) {
@@ -95,7 +96,7 @@ public class ConfigNotificationService {
     private void invalidateConfigCache() {
         try {
             // TODO: can optimize by refreshing only the changed paths
-            configurationManager.getConfigurationStorage().refreshNode("/");
+            configurationEJB.refreshNode("/");
             LOGGER.info("Configuration cache updated");
         } catch (ConfigurationException e) {
             LOGGER.error("Error while re-loading the configuration from the backend into the cache",e);

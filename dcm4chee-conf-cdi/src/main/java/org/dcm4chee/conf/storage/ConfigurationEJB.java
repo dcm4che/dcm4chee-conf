@@ -99,10 +99,15 @@ public class ConfigurationEJB extends DelegatingConfiguration implements Transac
                 System.getProperties(),
                 Configuration.CONF_STORAGE_SYSTEM_PROP, ConfigStorageType.JSON_FILE.name().toLowerCase()
         );
-        log.info("Using configuration storage '{}'", storageType);
+        log.info("Creating dcm4che configuration Singleton EJB. Resolving underlying configuration storage '{}' ...", storageType);
 
         // resolve the corresponding implementation
-        Configuration storage = availableConfigStorage.select(new ConfigStorageAnno(storageType)).get();
+        Configuration storage = null;
+        try {
+            storage = availableConfigStorage.select(new ConfigStorageAnno(storageType)).get();
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Unable to initialize dcm4che configuration storage '"+storageType+"'", e);
+        }
 
         // decorate with config notification
         configNotificationDecorator.setDelegate(storage);
@@ -114,6 +119,7 @@ public class ConfigurationEJB extends DelegatingConfiguration implements Transac
         storage = txAwareCache;
 
         delegate = storage;
+        log.info("dcm4che configuration singleton EJB created");
     }
 
     public void persistNode(String path, Map<String, Object> configNode, Class configurableClass) throws ConfigurationException {

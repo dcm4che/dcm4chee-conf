@@ -55,13 +55,13 @@ import java.util.List;
  * @author Roman K
  */
 @Provider
-public class ConfigExceptionHandler implements ExceptionMapper<ConfigurationException>
+public class ConfigExceptionHandler implements ExceptionMapper<Exception>
 {
     public static final Logger log = LoggerFactory.getLogger(ConfigExceptionHandler.class);
 
     @Override
     @Produces({ MediaType.APPLICATION_JSON })
-    public Response toResponse(ConfigurationException exception)
+    public Response toResponse(Exception exception)
     {
         log.info("A problem in Configuration GUI", exception);
         return Response.status(Response.Status.BAD_REQUEST).entity(getNiceErrorMessageList(exception)).build();
