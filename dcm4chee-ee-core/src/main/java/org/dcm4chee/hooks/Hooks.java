@@ -40,8 +40,6 @@
 
 package org.dcm4chee.hooks;
 
-import java.util.Iterator;
-import java.util.List;
 
 /**
  * <p>Hooks are a simple mechanism to allow extensibility for dcm4chee functionality.

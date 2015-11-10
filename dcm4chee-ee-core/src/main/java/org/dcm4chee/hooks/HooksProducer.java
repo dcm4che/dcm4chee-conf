@@ -40,47 +40,30 @@
 
 package org.dcm4chee.hooks;
 
-import javax.enterprise.context.spi.CreationalContext;
+import java.util.Collection;
+import java.util.Iterator;
+
 import javax.enterprise.inject.Produces;
-import javax.enterprise.inject.spi.Bean;
 import javax.enterprise.inject.spi.BeanManager;
 import javax.enterprise.inject.spi.InjectionPoint;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
+import javax.inject.Inject;
 
 /**
  * @author Roman K
  */
-@SuppressWarnings("unchecked")
 public class HooksProducer {
 
+    @Inject
+    private HooksManager hooksManager;
+    
     @Produces
-    Hooks resolveHooks(InjectionPoint injectionPoint, BeanManager beanManager) {
-
-        ParameterizedType type = (ParameterizedType) injectionPoint.getType();
-        Type hookType = type.getActualTypeArguments()[0];
-        final Set<Bean<?>> beans = beanManager.getBeans(hookType);
-
-        final List hookList = new ArrayList();
-
-        for (Bean<?> bean : beans) {
-
-            CreationalContext dependentScopeCreationalContext = beanManager.createCreationalContext(null);
-            Object o = bean.create(dependentScopeCreationalContext);
-            hookList.add(o);
-        }
-
-        // TODO: caching
-        // TODO: configuration for ordering, disabling
+    public Hooks resolveHooks(InjectionPoint injectionPoint, BeanManager beanManager) {
+        final Collection<Object> activeOrderedHooks = hooksManager.getOrderedActiveHooks(injectionPoint, beanManager);
 
         return new Hooks() {
             @Override
             public Iterator iterator() {
-                return hookList.iterator();
+                return activeOrderedHooks.iterator();
             }
         };
     }
