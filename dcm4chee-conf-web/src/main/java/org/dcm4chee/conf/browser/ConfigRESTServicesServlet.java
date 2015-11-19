@@ -81,6 +81,7 @@ public class ConfigRESTServicesServlet {
     public class DeviceJSON {
 
         public String deviceName;
+        public String deviceDescription;
         public Collection<String> appEntities;
         public Collection<String> deviceExtensions;
         public boolean manageable;
@@ -176,6 +177,7 @@ public class ConfigRESTServicesServlet {
 
             DeviceJSON jd = new DeviceJSON();
             jd.deviceName = deviceName;
+            jd.deviceDescription = d.getDescription();
             jd.manageable = false;
             jd.appEntities = d.getApplicationAETitles();
 

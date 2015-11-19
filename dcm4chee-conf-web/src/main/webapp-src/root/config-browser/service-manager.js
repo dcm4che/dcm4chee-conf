@@ -72,14 +72,16 @@ angular.module('dcm4che.config.manager', ['dcm4che.appCommon', 'dcm4che.config.c
             device = device || $scope.selectedDevice;
             var configToSave = angular.copy(device.config);
             appHttp.post("data/config/device/" + device.deviceName, configToSave, function (data, status) {
-                device.lastPersistedConfig = configToSave;
-
-                checkModified();
 
                 appNotifications.showNotification({
                     level: "success",
                     text: "Configuration successfully saved",
                     details: [data, status]
+                });
+
+                // reload this device config right away to populate the updated olock hashes
+                $scope.loadDeviceConfig(device, function(){
+                    checkModified();
                 });
 
             }, function (data, status) {
@@ -148,7 +150,10 @@ angular.module('dcm4che.config.manager', ['dcm4che.appCommon', 'dcm4che.config.c
             $scope.devices = ConfigEditorService.devices;
             $scope.deviceNames = _.pluck($scope.devices, 'deviceName');
 
-            if ($scope.devices.length > 0)
+            if (_.contains($scope.deviceNames, "dcm4chee-arc"))
+                $scope.selectedDeviceName = "dcm4chee-arc";
+
+            if ($scope.selectedDeviceName==null &&  $scope.devices.length > 0)
                 $scope.selectedDeviceName = $scope.devices[0].deviceName;
 
             $scope.addDeviceExtDropdown = ConfigEditorService.makeAddExtensionDropDown('selectedDevice.config', 'Device');
@@ -258,6 +263,7 @@ angular.module('dcm4che.config.manager', ['dcm4che.appCommon', 'dcm4che.config.c
             selectedDevice: null,
             devices: [],
             deviceRefs: [],
+            aeRefs: [],
 
             extensionsPropertyForClass: {
                 "Device":"deviceExtensions",
@@ -313,6 +319,17 @@ angular.module('dcm4che.config.manager', ['dcm4che.appCommon', 'dcm4che.config.c
                             ref: "/dicomConfigurationRoot/dicomDevicesRoot/*[dicomDeviceName='" + device.deviceName.replace("'", "&apos;") + "']"
                         }
                     });
+
+                    conf.aeRefs = _.chain(conf.devices)
+                        .pluck('appEntities')
+                        .flatten()
+                        .map(function(aeName) {
+                            return {
+                                name: aeName,
+                                ref: "/dicomConfigurationRoot/dicomDevicesRoot/*/dicomNetworkAE[dicomAETitle='"+aeName.replace("'", "&apos;")+"']"
+                            }
+                        })
+                        .value();
 
                     appHttp.get("data/config/schemas", null, function (data) {
                         conf.schemas = data;

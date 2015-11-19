@@ -113,6 +113,12 @@
                     ng-options="option.ref as option.name for option in editor.connectionRefs"
                     ng-change="ConfigEditorService.checkModified()">
             </select>
+            <select class="form-control"
+                    ng-if="schema.referencedClass=='ApplicationEntity'"
+                    ng-model="parentnode[index]"
+                    ng-options="option.ref as option.name for option in ConfigEditorService.aeRefs"
+                    ng-change="ConfigEditorService.checkModified()">
+            </select>
         </div>
 
 

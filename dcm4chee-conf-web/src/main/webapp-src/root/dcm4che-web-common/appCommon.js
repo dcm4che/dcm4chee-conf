@@ -5,15 +5,16 @@ appCommon.factory('appConfiguration', function (customizations) {
 
 	return customizations;
 });
-appCommon.controller('NavbarController', function($scope, $http, appConfiguration) {
+appCommon.controller('NavbarController', function($scope, $http, appConfiguration, appLoadingIndicator) {
 	$scope.logoutEnabled = appConfiguration.logoutEnabled;
 	$scope.useNICETheme = appConfiguration.useNICETheme;
 
-    $scope.logout = function () {
-        $http({method:"POST", url:"data/logout"}).success(function(response, status) {
-            window.location.reload();
-        });
-    };
+	$scope.appLoadingIndicator = appLoadingIndicator;
+	$scope.logout = function () {
+		$http({method:"POST", url:"data/logout"}).success(function(response, status) {
+			window.location.reload();
+		});
+	};
 
 });
 

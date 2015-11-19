@@ -29,12 +29,16 @@
             <button type="button" class="btn btn-default"
                     ng-model="selectedDeviceName"
                     data-html="1"
-                    ng-options="deviceName for deviceName in deviceNames"
+                    ng-options="device.deviceName
+                             as (((device.deviceDescription==null)?'':(' <big><span class=\'label label-default\'>'+device.deviceDescription+'</span></big> '))+device.deviceName)
+                             for device
+                             in devices"
                     data-placeholder="Select device ..."
                     bs-select>
                 Device <span class="caret"></span>
             </button>
-            <a href="" class="btn btn-default" ng-click="deviceManagerSpan = !deviceManagerSpan">Device add/delete...</a>
+            <a href="" class="btn btn-default" ng-click="deviceManagerSpan = !deviceManagerSpan">Device
+                add/delete...</a>
             <span>
                 <a href=""
                    ng-click="reconfigureDevice()"

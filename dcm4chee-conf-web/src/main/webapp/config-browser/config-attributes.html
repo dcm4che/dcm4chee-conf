@@ -113,6 +113,12 @@
                     ng-options="option.ref as option.name for option in editor.connectionRefs"
                     ng-change="ConfigEditorService.checkModified()">
             </select>
+            <select class="form-control"
+                    ng-if="schema.referencedClass=='ApplicationEntity'"
+                    ng-model="parentnode[index]"
+                    ng-options="option.ref as option.name for option in ConfigEditorService.aeRefs"
+                    ng-change="ConfigEditorService.checkModified()">
+            </select>
         </div>
 
 
@@ -141,9 +147,6 @@
         <!-- Maps with primitives -->
         <div ng-if="(schema.class === 'Map' && schema.properties['*'].type !== 'object')"
              ng-controller="CollectionController">
-
-
-            {{confignode}}
 
             <table class="table table-regular table-bordered table-hover">
                 <tr ng-repeat="(k, node) in confignode track by k">
