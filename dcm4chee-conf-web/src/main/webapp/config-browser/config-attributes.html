@@ -142,6 +142,9 @@
         <div ng-if="(schema.class === 'Map' && schema.properties['*'].type !== 'object')"
              ng-controller="CollectionController">
 
+
+            {{confignode}}
+
             <table class="table table-regular table-bordered table-hover">
                 <tr ng-repeat="(k, node) in confignode track by k">
 
@@ -153,6 +156,7 @@
                     <!-- edit key -->
                     <td ng-show="editedIndex==k" ng-init="newkey = k">
                         <input focus-on="{{k}}"
+                               ng-blur="saveMapKey(k,newkey); ConfigEditorService.checkModified()"
                                ng-model="newkey"
                                ng-keydown="$event.keyCode == 13 ? saveMapKey(k,newkey) : null;ConfigEditorService.checkModified()"/>
                     </td>

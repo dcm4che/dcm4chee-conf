@@ -153,6 +153,7 @@
                     <!-- edit key -->
                     <td ng-show="editedIndex==k" ng-init="newkey = k">
                         <input focus-on="{{k}}"
+                               ng-blur="saveMapKey(k,newkey); ConfigEditorService.checkModified()"
                                ng-model="newkey"
                                ng-keydown="$event.keyCode == 13 ? saveMapKey(k,newkey) : null;ConfigEditorService.checkModified()"/>
                     </td>
