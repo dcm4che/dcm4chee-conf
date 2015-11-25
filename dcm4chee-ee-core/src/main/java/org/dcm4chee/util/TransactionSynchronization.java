@@ -16,7 +16,7 @@ public class TransactionSynchronization {
 
     private static final ThreadLocal<List<Runnable>> toRunOnCommit = new ThreadLocal<>();
 
-    @Resource(lookup="java:jboss/TransactionManager")
+    @Resource(lookup = "java:jboss/TransactionManager")
     private TransactionManager tmManager;
 
     @Resource(lookup = "java:comp/TransactionSynchronizationRegistry")
@@ -30,11 +30,22 @@ public class TransactionSynchronization {
         return tmManager;
     }
 
+    /**
+     * @return {@link Status} of ongoing transaction (works also if no transaction is bound to the thread currently)
+     */
+    public int getStatus() {
+        try {
+            return tmManager.getStatus();
+        } catch (SystemException e) {
+            throw new RuntimeException("Error while inquiring transaction status", e);
+        }
+    }
 
     /**
      * Executes r once (and only if) the current transaction was successfully committed.
      * For multiple calls, the order of execution is preserved.
      * If called without a transaction - simply executes r right away
+     *
      * @param r what to execute
      */
     public void afterSuccessfulCommit(final Runnable r) {
@@ -73,7 +84,7 @@ public class TransactionSynchronization {
                         try {
                             runnable.run();
                         } catch (Exception e) {
-                            LOG.error("Error while executing a callback after transaction commit",e);
+                            LOG.error("Error while executing a callback after transaction commit", e);
                         }
                     }
                 }
