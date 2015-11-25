@@ -103,19 +103,19 @@
         <div ng-if="(schema.type === 'string' && schema.class==='Reference')">
             <select class="form-control"
                     ng-if="schema.referencedClass=='Device'"
-                    ng-model="parentnode[index]"
+                    ng-model="parentnode[index]['_.ref']"
                     ng-options="option.ref as option.name for option in ConfigEditorService.deviceRefs"
                     ng-change="ConfigEditorService.checkModified()">
             </select>
             <select class="form-control"
                     ng-if="schema.referencedClass=='Connection'"
-                    ng-model="parentnode[index]"
+                    ng-model="parentnode[index]['_.ref']"
                     ng-options="option.ref as option.name for option in editor.connectionRefs"
                     ng-change="ConfigEditorService.checkModified()">
             </select>
             <select class="form-control"
                     ng-if="schema.referencedClass=='ApplicationEntity'"
-                    ng-model="parentnode[index]"
+                    ng-model="parentnode[index]['_.ref']"
                     ng-options="option.ref as option.name for option in ConfigEditorService.aeRefs"
                     ng-change="ConfigEditorService.checkModified()">
             </select>

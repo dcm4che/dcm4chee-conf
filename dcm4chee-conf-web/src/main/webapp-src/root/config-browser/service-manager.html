@@ -86,7 +86,14 @@
                                     <li ng-repeat="(aeName, ae) in selectedDevice.config.dicomNetworkAE"
                                         ng-class="(selectedConfigNode.node == ae ? 'active' : '')">
                                         <a href=""
-                                           ng-click="selectConfigNode(ae,ConfigEditorService.schemas.device.properties.dicomNetworkAE.properties['*'], selectedDevice.config.dicomNetworkAE, ConfigEditorService.schemas.device.properties.dicomNetworkAE)">{{aeName}}</a>
+                                           ng-click="selectConfigNode(
+                                                ae,
+                                                ConfigEditorService.schemas.device.properties.dicomNetworkAE.properties['*'],
+                                                selectedDevice.config.dicomNetworkAE,
+                                                ConfigEditorService.schemas.device.properties.dicomNetworkAE,
+                                                aeName)">
+                                            {{aeName}}
+                                        </a>
                                     </li>
                                 </ul>
                             </li>

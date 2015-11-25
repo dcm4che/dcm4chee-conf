@@ -184,7 +184,7 @@ angular.module('dcm4che.config.manager', ['dcm4che.appCommon', 'dcm4che.config.c
                 $scope.editor.connectionRefs = $scope.selectedDevice ? _.map($scope.selectedDevice.config.dicomConnection, function (connection) {
                     return {
                         name: connection.cn + "," + connection.dcmProtocol + "(" + connection.dicomHostname + ":" + connection.dicomPort + ")",
-                        ref: "/dicomConfigurationRoot/dicomDevicesRoot/*[dicomDeviceName='" + $scope.selectedDevice.config.dicomDeviceName.replace("'", "&apos;") + "']/dicomConnection[cn='" + connection.cn.replace("'", "&apos;") + "']"
+                        ref: "//*[_.uuid='" + connection['_.uuid'] + "']"
                     };
                 }) : {};
 
@@ -316,17 +316,17 @@ angular.module('dcm4che.config.manager', ['dcm4che.appCommon', 'dcm4che.config.c
                     conf.deviceRefs = _.map(conf.devices, function (device) {
                         return {
                             name: device.deviceName,
-                            ref: "/dicomConfigurationRoot/dicomDevicesRoot/*[dicomDeviceName='" + device.deviceName.replace("'", "&apos;") + "']"
+                            ref: "//*[_.uuid='" + device.deviceUuid + "']"
                         }
                     });
 
                     conf.aeRefs = _.chain(conf.devices)
                         .pluck('appEntities')
                         .flatten()
-                        .map(function(aeName) {
+                        .map(function(ae) {
                             return {
-                                name: aeName,
-                                ref: "/dicomConfigurationRoot/dicomDevicesRoot/*/dicomNetworkAE[dicomAETitle='"+aeName.replace("'", "&apos;")+"']"
+                                name: ae.name,
+                                ref: "//*[_.uuid='" + ae.uuid + "']"
                             }
                         })
                         .value();

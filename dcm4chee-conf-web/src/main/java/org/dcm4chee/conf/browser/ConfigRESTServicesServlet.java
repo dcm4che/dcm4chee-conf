@@ -8,10 +8,7 @@ import org.dcm4che3.conf.core.api.internal.BeanVitalizer;
 import org.dcm4che3.conf.core.api.internal.ConfigTypeAdapter;
 import org.dcm4che3.conf.dicom.CommonDicomConfiguration;
 import org.dcm4che3.conf.dicom.DicomPath;
-import org.dcm4che3.net.AEExtension;
-import org.dcm4che3.net.ConnectionExtension;
-import org.dcm4che3.net.Device;
-import org.dcm4che3.net.DeviceExtension;
+import org.dcm4che3.net.*;
 import org.dcm4che3.net.hl7.HL7ApplicationExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,6 +16,7 @@ import org.slf4j.LoggerFactory;
 import javax.enterprise.event.Event;
 import javax.inject.Inject;
 import javax.ws.rs.*;
+import javax.ws.rs.Path;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -78,14 +76,19 @@ public class ConfigRESTServicesServlet {
     }
 
 
-    public class DeviceJSON {
+    public static class DeviceJSON {
 
         public String deviceName;
         public String deviceDescription;
-        public Collection<String> appEntities;
+        public String deviceUuid;
+        public Collection<AppEntityJSON> appEntities;
         public Collection<String> deviceExtensions;
         public boolean manageable;
 
+        public static class AppEntityJSON {
+            public String name;
+            public String uuid;
+        }
     }
 
     public static class SchemasJSON {
@@ -178,8 +181,16 @@ public class ConfigRESTServicesServlet {
             DeviceJSON jd = new DeviceJSON();
             jd.deviceName = deviceName;
             jd.deviceDescription = d.getDescription();
+            jd.deviceUuid = d.getUuid();
             jd.manageable = false;
-            jd.appEntities = d.getApplicationAETitles();
+            jd.appEntities = new ArrayList<>();
+
+            for (ApplicationEntity applicationEntity : d.getApplicationEntities()) {
+                DeviceJSON.AppEntityJSON ae = new DeviceJSON.AppEntityJSON();
+                ae.name = applicationEntity.getAETitle();
+                ae.uuid = applicationEntity.getUuid();
+                jd.appEntities.add(ae);
+            }
 
             jd.deviceExtensions = new ArrayList<String>();
             for (DeviceExtension de : d.listDeviceExtensions()) {
