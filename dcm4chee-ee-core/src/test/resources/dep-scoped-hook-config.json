@@ -1,0 +1,11 @@
+{
+  "hooks": {
+    "org.dcm4chee.hooks.HookA": {
+      "hookImplementations": [
+        {
+          "hookClassName": "org.dcm4chee.hooks.DepScopedHook"
+        }
+      ]
+    }
+  }
+}

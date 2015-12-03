@@ -42,10 +42,11 @@ public class HooksManager {
         Type hookType = type.getActualTypeArguments()[0];
         Class<?> hookTypeClass = (Class<?>)hookType;
         
-        Collection<Object> hooks = activeHooksMap.get(hookTypeClass);
+//        Collection<Object> hooks = activeHooksMap.get(hookTypeClass);
+        Collection<Object> hooks = null;
         if (hooks == null) {
             hooks = resolveHooks(injectionPoint, beanManager);
-            activeHooksMap.putIfAbsent(hookTypeClass, hooks);
+//            activeHooksMap.putIfAbsent(hookTypeClass, hooks);
         }
 
         return (Collection<T>)hooks;
@@ -85,7 +86,7 @@ public class HooksManager {
                 if (priority == null)
                     throw new RuntimeException("Hook configuration not found for hook implementation " + hookClass.getName() + " of hookType " + hookTypeClass.getName());
 
-                Object hook = createBeanInstance(hookBean, beanManager);
+                Object hook = getBeanInstance(hookBean, hookType, beanManager);
                 
                 resolvedHooks.put(priority, hook);
                 LOG.debug("Configuring the hook {} with priority {}.", hookType, priority);
@@ -95,9 +96,13 @@ public class HooksManager {
         return resolvedHooks.values();
     }
     
-    private static Object createBeanInstance(Bean<?> bean, BeanManager beanManager) {
+    private static Object getBeanInstance(Bean<?> bean, Type beanType, BeanManager beanManager) {
+    
         CreationalContext dependentScopeCreationalContext = beanManager.createCreationalContext(null);
-        return bean.create(dependentScopeCreationalContext);
+        Object beanInstance = beanManager.getReference(bean, beanType, dependentScopeCreationalContext);
+        
+//        Object beanInstance = bean.create(dependentScopeCreationalContext);
+        return beanInstance;
     }
 
     private boolean isHookEnabled(Class<?> hookType, Class<?> hookClazz) {
