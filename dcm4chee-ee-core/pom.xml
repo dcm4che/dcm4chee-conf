@@ -52,9 +52,10 @@
     <version>1.1.0-SNAPSHOT</version>
   </parent>
   <description>
-	This package contains core Java EE related functionality shared by dcm4chee components, such as archive/xds/arr/etc.
-	This package itself should not depend on any such specific components. 
-	Please only include here the core functionality, i.e. such as would go into dcm4che library but is bound to Java EE.
+    This package contains core Java EE related functionality shared by dcm4chee components, such as
+    archive/xds/arr/etc.
+    This package itself should not depend on any such specific components.
+    Please only include here the core functionality, i.e. such as would go into dcm4che library but is bound to Java EE.
   </description>
   <properties>
     <arquillian.version>1.1.5.Final</arquillian.version>
@@ -63,7 +64,7 @@
     <weld.version>1.1.23.Final</weld.version>
     <jboss-javaee-6.0.version>3.0.2.Final</jboss-javaee-6.0.version>
   </properties>
-   <dependencyManagement>
+  <dependencyManagement>
     <dependencies>
       <dependency>
         <groupId>org.jboss.shrinkwrap.resolver</groupId>
@@ -139,6 +140,18 @@
         <filtering>true</filtering>
       </resource>
     </resources>
+    <plugins>
+      <plugin>
+        <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <archive>
+            <manifestEntries>
+              <Dependencies>org.infinispan</Dependencies>
+            </manifestEntries>
+          </archive>
+        </configuration>
+      </plugin>
+    </plugins>
   </build>
   <profiles>
     <profile>
@@ -156,6 +169,12 @@
           <groupId>org.jboss.arquillian.container</groupId>
           <artifactId>arquillian-weld-ee-embedded-1.1</artifactId>
           <scope>test</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.infinispan</groupId>
+          <artifactId>infinispan-core</artifactId>
+          <version>5.2.1.Final</version>
+          <scope>provided</scope>
         </dependency>
       </dependencies>
     </profile>
