@@ -39,41 +39,25 @@
 
 package org.dcm4chee.hooks;
 
-import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
-
-import org.junit.Assert;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.Target;
+import java.lang.annotation.RetentionPolicy;
 
 /**
+ * Specifies a constraint on the number of active hook implementations allowed for an injection point.
+ * 
+ * If the limits specified are violated then an {@link IllegalArgumentException} is thrown at runtime.
+ * 
  * @author Alexander Hoermandinger <alexander.hoermandinger@agfa.com>
- *
  */
-@ApplicationScoped
-public class ServiceWithAppScopedHooks {
+
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.FIELD)
+public @interface Limit {
     
-    @Inject
-    @Limit(min=1)
-    private Hooks<HookA> hooksA;
+    int min() default Integer.MIN_VALUE;
+
+    int max() default Integer.MAX_VALUE;
     
-    @Inject
-    private Hooks<HookA> hooksA1;
-    
-    @Inject
-    private HookA hookA2;
-    
-    public void callHooked() {
-        int expectedCallCount = 0;
-        for(HookA hookA : hooksA) {
-            int actualCallCount = hookA.callCount();
-            Assert.assertEquals(++expectedCallCount, actualCallCount);
-        }
-        
-        for(HookA hookA : hooksA1) {
-            int actualCallCount = hookA.callCount();
-            Assert.assertEquals(++expectedCallCount, actualCallCount);
-        }
-        
-        int actualCallCount = hookA2.callCount();
-        Assert.assertEquals(++expectedCallCount, actualCallCount);
-    }
 }

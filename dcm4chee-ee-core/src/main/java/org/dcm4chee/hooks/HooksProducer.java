@@ -40,6 +40,10 @@
 
 package org.dcm4chee.hooks;
 
+import static java.lang.String.format;
+
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.Collection;
 import java.util.Iterator;
 
@@ -59,6 +63,21 @@ public class HooksProducer {
     @Produces
     public Hooks resolveHooks(InjectionPoint injectionPoint, BeanManager beanManager) {
         final Collection<Object> activeOrderedHooks = hooksManager.getOrderedActiveHooks(injectionPoint, beanManager);
+        
+        Limit hookMultiplicity = injectionPoint.getAnnotated().getAnnotation(Limit.class);
+        if(hookMultiplicity != null) {
+            int nrOfActiveHooks = activeOrderedHooks.size();
+            
+            if((nrOfActiveHooks < hookMultiplicity.min()) || (nrOfActiveHooks > hookMultiplicity.max())) {
+                throw new IllegalArgumentException(
+                        format("Number of configured active hooks (%s) does not match specified limit [min = %s, max = %s] for hook interface '%s'",
+                                nrOfActiveHooks,
+                                hookMultiplicity.min(), 
+                                hookMultiplicity.max(),        
+                                getHookTypeName(injectionPoint) ));
+            }
+        }
+        
 
         return new Hooks() {
             @Override
@@ -66,6 +85,13 @@ public class HooksProducer {
                 return activeOrderedHooks.iterator();
             }
         };
+    }
+    
+    private static String getHookTypeName(InjectionPoint injectionPoint) {
+        ParameterizedType type = (ParameterizedType)injectionPoint.getType();
+        Type hookType = type.getActualTypeArguments()[0];
+        Class<?> hookTypeClass = (Class<?>)hookType;
+        return hookTypeClass.getName();
     }
 
 }
