@@ -39,7 +39,6 @@
 
 package org.dcm4chee.hooks;
 
-import java.io.File;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Paths;
