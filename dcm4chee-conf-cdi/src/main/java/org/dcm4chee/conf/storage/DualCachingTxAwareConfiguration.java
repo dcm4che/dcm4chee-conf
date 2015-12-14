@@ -186,12 +186,12 @@ public class DualCachingTxAwareConfiguration extends DelegatingConfiguration imp
         if (txInfo.isPartOfModifyingTransaction())
             return searchEager(liteXPathExpression, getWriterConfigurationCache());
 
-        readCacheLock.writeLock().lock();
+        readCacheLock.readLock().lock();
         try {
             // fully iterate and make copies of all returned results to ensure the consistency and isolation
             return searchEager(liteXPathExpression, readerConfigurationCache);
         } finally {
-            readCacheLock.writeLock().unlock();
+            readCacheLock.readLock().unlock();
         }
     }
 
