@@ -195,20 +195,6 @@ public class UpgradeRunner {
                     log.info("Config upgrade scripts specified in settings: {}", upgradeSettings.getUpgradeScriptsToRun());
                     log.info("Config upgrade scripts discovered in the deployment: {}", availableUpgradeScripts);
 
-
-                    if (upgradeSettings.isDoRunAllDiscoveredUpgradeScripts()) {
-                        log.warn("Upgrade setting doRunAllDiscoveredUpgradeScripts is enabled." +
-                                "This means all deployed upgrade scripts will run in random order." +
-                                "This mode is NOT FOR USE IN PRODUCTION.");
-
-                        // trick the runner, just copy all available scripts as if they were preconfigured
-                        upgradeSettings.getUpgradeScriptsToRun().clear();
-                        for (UpgradeScript availableUpgradeScript : availableUpgradeScripts) {
-                            upgradeSettings.getUpgradeScriptsToRun().add(availableUpgradeScript.getClass().getName());
-                        }
-
-                    }
-
                     // run all scripts
                     for (String upgradeScriptName : upgradeSettings.getUpgradeScriptsToRun()) {
 
@@ -267,8 +253,13 @@ public class UpgradeRunner {
                             }
                         }
 
-                        if (!found)
-                            throw new ConfigurationException("Upgrade script '" + upgradeScriptName + "' not found in the deployment");
+                        if (!found) {
+                            if (upgradeSettings.isIgnoreMissingUpgradeScripts()) {
+                                log.warn("Missing update script '"+upgradeScriptName+"' ignored! DISABLE 'IgnoreMissingUpgradeScripts' SETTING FOR PRODUCTION ENVIRONMENT.");
+                            } else {
+                                throw new ConfigurationException("Upgrade script '" + upgradeScriptName + "' not found in the deployment");
+                            }
+                        }
                     }
 
                     // update version

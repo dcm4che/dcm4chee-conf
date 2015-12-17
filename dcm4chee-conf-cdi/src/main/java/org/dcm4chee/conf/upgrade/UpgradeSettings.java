@@ -63,10 +63,9 @@ public class UpgradeSettings {
     List<String> upgradeScriptsToRun;
 
     @ConfigurableProperty(
-            description = "If set to true, all scripts from the deployment are executed in an undefined order, " +
-                    "whether they are referenced in #upgradeScriptsToRun or not.",
+            description = "If set to true, any missing script referenced in #upgradeScriptsToRun will be ignored, otherwise an error will be reported.",
             defaultValue = "false")
-    boolean doRunAllDiscoveredUpgradeScripts;
+    boolean ignoreMissingUpgradeScripts;
 
     @ConfigurableProperty(
             description = "The exact name or prefix (i.e. startsWith logic) of the deployment which will run the upgrade. " +
@@ -78,12 +77,12 @@ public class UpgradeSettings {
     )
     Map<String, String> properties;
 
-    public boolean isDoRunAllDiscoveredUpgradeScripts() {
-        return doRunAllDiscoveredUpgradeScripts;
+    public boolean isIgnoreMissingUpgradeScripts() {
+        return ignoreMissingUpgradeScripts;
     }
 
-    public void setDoRunAllDiscoveredUpgradeScripts(boolean doRunAllDiscoveredUpgradeScripts) {
-        this.doRunAllDiscoveredUpgradeScripts = doRunAllDiscoveredUpgradeScripts;
+    public void setIgnoreMissingUpgradeScripts(boolean ignoreMissingUpgradeScripts) {
+        this.ignoreMissingUpgradeScripts = ignoreMissingUpgradeScripts;
     }
 
     public String getActiveUpgradeRunnerDeployment() {
