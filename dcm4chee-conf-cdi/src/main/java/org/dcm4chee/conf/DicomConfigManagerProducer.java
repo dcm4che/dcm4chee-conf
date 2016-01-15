@@ -115,6 +115,15 @@ public class DicomConfigManagerProducer {
 
 
         final Configuration finalStorage = storage;
+
+        // Quick fix, need to refactor later
+        // otherwise integrity check is performed before the upgrade
+        if (storage.nodeExists("/dicomConfigurationRoot")) {
+            configurationWithHL7 = new CommonDicomConfigurationWithHL7(
+                    finalStorage,
+                    resolveExtensionsMap(true)
+            );
+        } else
         // run in a batch to ensure we don't lock the ongoing transaction by accident if we init the config
         providedConfigStorage.runBatch(new Batch() {
             @Override
