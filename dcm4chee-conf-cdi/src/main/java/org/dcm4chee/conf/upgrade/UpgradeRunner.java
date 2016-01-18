@@ -140,17 +140,17 @@ public class UpgradeRunner {
             throw new RuntimeException(PASSIVE_UPGRADE_TIMEOUT + " property must be an integer", e);
         }
 
-        log.info("This deployment ("+appName+") is not configured to perform the configuration upgrade." +
-                " Waiting for the upgrade to be performed by deployment '"+upgradeSettings.getActiveUpgradeRunnerDeployment()+"'." +
-                "\nTimeout: "+configuredTimeout+" sec" +
-                "\nExpected configuration version: "+ upgradeSettings.getUpgradeToVersion());
+        log.info("This deployment (" + appName + ") is not configured to perform the configuration upgrade." +
+                " Waiting for the upgrade to be performed by deployment '" + upgradeSettings.getActiveUpgradeRunnerDeployment() + "'." +
+                "\nTimeout: " + configuredTimeout + " sec" +
+                "\nExpected configuration version: " + upgradeSettings.getUpgradeToVersion());
 
         boolean success = false;
         while (timeout > 0) {
             try {
                 ConfigurationMetadata configurationMetadata = loadConfigurationMetadata();
 
-                if (configurationMetadata!=null && configurationMetadata.getVersion().equals(upgradeSettings.getUpgradeToVersion())) {
+                if (configurationMetadata != null && configurationMetadata.getVersion().equals(upgradeSettings.getUpgradeToVersion())) {
                     success = true;
                     break;
                 }
@@ -245,7 +245,11 @@ public class UpgradeRunner {
                                 UpgradeScript.UpgradeContext upgradeContext = new UpgradeScript.UpgradeContext(
                                         fromVersion, toVersion, props, scriptConfig, configuration, dicomConfigurationManager, upgradeScriptMetadata);
 
-                                script.upgrade(upgradeContext);
+                                try {
+                                    script.upgrade(upgradeContext);
+                                } catch (Exception e) {
+                                    throw new ConfigurationException("Error while running upgrade script '" + script.getClass().getName() + "', version '" + currentscriptVersion + "'", e);
+                                }
 
                                 // set last executed version from the annotation of the upgrade script if present
                                 upgradeScriptMetadata.setLastVersionExecuted(currentscriptVersion);
@@ -255,7 +259,7 @@ public class UpgradeRunner {
 
                         if (!found) {
                             if (upgradeSettings.isIgnoreMissingUpgradeScripts()) {
-                                log.warn("Missing update script '"+upgradeScriptName+"' ignored! DISABLE 'IgnoreMissingUpgradeScripts' SETTING FOR PRODUCTION ENVIRONMENT.");
+                                log.warn("Missing update script '" + upgradeScriptName + "' ignored! DISABLE 'IgnoreMissingUpgradeScripts' SETTING FOR PRODUCTION ENVIRONMENT.");
                             } else {
                                 throw new ConfigurationException("Upgrade script '" + upgradeScriptName + "' not found in the deployment");
                             }
@@ -267,8 +271,8 @@ public class UpgradeRunner {
 
                     // persist updated metadata
                     persistConfigurationMetadata(configMetadata);
-                } catch (ConfigurationException e) {
-                    throw new RuntimeException("Error while running the upgrade", e);
+                } catch (Exception e) {
+                    throw new RuntimeException("Error while running the configuration upgrade", e);
                 }
             }
         });
