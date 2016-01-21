@@ -73,6 +73,8 @@ public class DicomConfigManagerProducer {
 
     private final static Logger log = LoggerFactory.getLogger(DicomConfigManagerProducer.class);
 
+    private static final String DISABLE_OLOCK_PROP = "org.dcm4che.conf.olock.disabled";
+
     @EJB
     private ConfigurationEJB providedConfigStorage;
 
@@ -95,20 +97,24 @@ public class DicomConfigManagerProducer {
 
         List<Class> allExtensionClasses = resolveExtensionsList();
 
-        // olocking
-        Configuration storage = new HashBasedOptimisticLockingConfiguration(
-                providedConfigStorage,
-                allExtensionClasses,
+        Configuration storage = providedConfigStorage;
 
-                // make sure that OLocking will perform the access to the config within a single transaction (if the tx is not yet provided by the caller)
-                // and use the writer cache when it will first read from storage
-                // so just re-use ConfigurationEJB
-                new BatchRunner() {
-                    @Override
-                    public void runBatch(Batch batch) {
-                        providedConfigStorage.runWithRequiresTxWithLock(batch);
-                    }
-                });
+        // olocking
+        if (System.getProperty(DISABLE_OLOCK_PROP) == null) {
+            storage = new HashBasedOptimisticLockingConfiguration(
+                    providedConfigStorage,
+                    allExtensionClasses,
+
+                    // make sure that OLocking will perform the access to the config within a single transaction (if the tx is not yet provided by the caller)
+                    // and use the writer cache when it will first read from storage
+                    // so just re-use ConfigurationEJB
+                    new BatchRunner() {
+                        @Override
+                        public void runBatch(Batch batch) {
+                            providedConfigStorage.runWithRequiresTxWithLock(batch);
+                        }
+                    });
+        }
 
         // defaults filtering
         storage = new DefaultsAndNullFilterDecorator(storage, allExtensionClasses, CommonDicomConfiguration.createDefaultDicomVitalizer());
@@ -124,16 +130,16 @@ public class DicomConfigManagerProducer {
                     resolveExtensionsMap(true)
             );
         } else
-        // run in a batch to ensure we don't lock the ongoing transaction by accident if we init the config
-        providedConfigStorage.runBatch(new Batch() {
-            @Override
-            public void run() {
-                DicomConfigManagerProducer.this.configurationWithHL7 = new CommonDicomConfigurationWithHL7(
-                        finalStorage,
-                        resolveExtensionsMap(true)
-                );
-            }
-        });
+            // run in a batch to ensure we don't lock the ongoing transaction by accident if we init the config
+            providedConfigStorage.runBatch(new Batch() {
+                @Override
+                public void run() {
+                    DicomConfigManagerProducer.this.configurationWithHL7 = new CommonDicomConfigurationWithHL7(
+                            finalStorage,
+                            resolveExtensionsMap(true)
+                    );
+                }
+            });
 
         if (upgradeManagerInstance.isUnsatisfied()) {
             log.info("Dicom configuration upgrade is not configured for this deployment, skipping");
@@ -186,7 +192,7 @@ public class DicomConfigManagerProducer {
     private List<ConfigurableClassExtension> getAllConfigurableExtensions() {
         List<ConfigurableClassExtension> configurableExtensions = new ArrayList<>();
         for (ConfigurableClassExtension extension : allExtensions) {
-            if (extension.getClass().getAnnotation(ConfigurableClass.class)!=null)
+            if (extension.getClass().getAnnotation(ConfigurableClass.class) != null)
                 configurableExtensions.add(extension);
         }
         return configurableExtensions;
