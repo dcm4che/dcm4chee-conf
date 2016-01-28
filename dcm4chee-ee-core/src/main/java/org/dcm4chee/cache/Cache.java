@@ -48,4 +48,7 @@ import java.util.concurrent.ConcurrentMap;
  * @author Roman K
  */
 public interface Cache<K, V> extends ConcurrentMap<K, V> {
+
+
+    boolean lock(K... keys);
 }

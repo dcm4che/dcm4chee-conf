@@ -52,8 +52,14 @@ public class InfinispanWrapper<K,V> implements Cache<K,V> {
 
     private org.infinispan.Cache<K,V> delegate;
 
+
     public InfinispanWrapper(org.infinispan.Cache<K, V> delegate) {
         this.delegate = delegate;
+    }
+
+    @Override
+    public boolean lock(K... keys) {
+        return delegate.getAdvancedCache().lock(keys);
     }
 
     @Override
