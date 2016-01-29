@@ -50,5 +50,11 @@ import java.util.concurrent.ConcurrentMap;
 public interface Cache<K, V> extends ConcurrentMap<K, V> {
 
 
+    /**
+     * temporary for quick testing
+     * @return
+     */
+    org.infinispan.Cache getInfinispanCache();
+
     boolean lock(K... keys);
 }

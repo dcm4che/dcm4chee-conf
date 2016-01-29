@@ -53,6 +53,11 @@ public class InfinispanWrapper<K,V> implements Cache<K,V> {
     private org.infinispan.Cache<K,V> delegate;
 
 
+    @Override
+    public org.infinispan.Cache getInfinispanCache() {
+        return delegate;
+    }
+
     public InfinispanWrapper(org.infinispan.Cache<K, V> delegate) {
         this.delegate = delegate;
     }
