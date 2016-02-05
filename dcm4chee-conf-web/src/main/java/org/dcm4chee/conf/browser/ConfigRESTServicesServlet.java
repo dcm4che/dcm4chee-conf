@@ -221,14 +221,14 @@ public class ConfigRESTServicesServlet {
     @Path("/exportFullConfiguration")
     @Produces(MediaType.APPLICATION_JSON)
     public Map<String, Object> getFullConfig() throws ConfigurationException {
-        return configurationManager.getConfigurationStorage().getConfigurationRoot();
+        return (Map<String, Object>) configurationManager.getConfigurationStorage().getConfigurationNode(DicomPath.ConfigRoot.path(), null);
     }
 
     @POST
     @Path("/importFullConfiguration")
     @Consumes(MediaType.APPLICATION_JSON)
     public void setFullConfig(Map<String, Object> config) throws ConfigurationException {
-        configurationManager.getConfigurationStorage().persistNode("/", config, CommonDicomConfiguration.DicomConfigurationRootNode.class);
+        configurationManager.getConfigurationStorage().persistNode(DicomPath.ConfigRoot.path(), config, null);
         fireConfigUpdateNotificationIfNecessary();
     }
 
