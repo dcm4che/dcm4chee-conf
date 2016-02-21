@@ -89,6 +89,9 @@ public class ConfigurationEJB extends DelegatingConfiguration implements Transac
     @Inject
     TransactionSynchronization txSync;
 
+    @Inject
+    TransactionalConfiguration infinispanCache;
+
     private TransactionalConfiguration txAwareCache;
 
 
@@ -109,13 +112,8 @@ public class ConfigurationEJB extends DelegatingConfiguration implements Transac
             throw new IllegalArgumentException("Unable to initialize dcm4che configuration storage '"+storageType+"'", e);
         }
 
-        // decorate with config notification
-        configNotificationDecorator.setDelegate(storage);
-        storage = configNotificationDecorator;
-
         // decorate with cache
-        txAwareCache = new DualCachingTxAwareConfiguration(storage);
-        txAwareCache.init(this);
+        txAwareCache = infinispanCache;
         storage = txAwareCache;
 
         delegate = storage;

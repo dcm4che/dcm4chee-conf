@@ -65,13 +65,6 @@
     </dependencyManagement>
     <dependencies>
         <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>4.12</version>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
             <groupId>org.dcm4che</groupId>
             <artifactId>dcm4che-conf-dicom</artifactId>
             <version>${dcm4che.version}</version>
