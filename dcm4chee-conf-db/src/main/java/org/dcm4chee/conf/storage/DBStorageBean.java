@@ -41,7 +41,7 @@ package org.dcm4chee.conf.storage;
 
 import org.codehaus.jackson.map.ObjectMapper;
 import org.dcm4che3.conf.core.api.BatchRunner.Batch;
-import org.dcm4che3.conf.core.util.SimpleConfigNodeUtil;
+import org.dcm4che3.conf.core.Nodes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -84,7 +84,7 @@ public class DBStorageBean {
                     new HashMap() :
                     fromBytes(configNodeEntity.getContent());
             String path = configNodeEntity.getPath();
-            map = SimpleConfigNodeUtil.replaceNode(map, loadedNode, SimpleConfigNodeUtil.fromSimpleEscapedPath(path));
+            map = Nodes.replaceNode(map, loadedNode, Nodes.fromSimpleEscapedPath(path));
         }
 
         return map;
@@ -168,19 +168,19 @@ public class DBStorageBean {
             // if less than level, allow bulk delete of x/y/*
             if (pathItemsForDB.size() < SemiSerializedDBConfigStorage.level) {
                 query = em.createQuery("DELETE FROM ConfigNodeEntity n WHERE n.path like ?1");
-                query.setParameter(1, SimpleConfigNodeUtil.toSimpleEscapedPath(pathItemsForDB) + "%");
+                query.setParameter(1, Nodes.toSimpleEscapedPath(pathItemsForDB) + "%");
             }
             // otherwise must be equals
             else {
                 query = em.createQuery("DELETE FROM ConfigNodeEntity n WHERE n.path=?1");
-                query.setParameter(1, SimpleConfigNodeUtil.toSimpleEscapedPath(pathItemsForDB));
+                query.setParameter(1, Nodes.toSimpleEscapedPath(pathItemsForDB));
             }
             query.executeUpdate();
         } else
             try {
                 ConfigNodeEntity node = getConfigNodeEntityForDBPath(pathItemsForDB);
                 Map<String, Object> map = fromBytes(node.getContent());
-                SimpleConfigNodeUtil.removeNode(map, restPathItems);
+                Nodes.removeNode(map, restPathItems);
                 node.setContent(toBytes(map));
                 em.merge(node);
             } catch (NoResultException e) {
@@ -189,7 +189,7 @@ public class DBStorageBean {
     }
 
     public void modifyNode(List<String> pathItemsForDB, List<String> restPathItems, Map<String, Object> configNode) {
-        String dbPath = SimpleConfigNodeUtil.toSimpleEscapedPath(pathItemsForDB);
+        String dbPath = Nodes.toSimpleEscapedPath(pathItemsForDB);
 
         ConfigNodeEntity node;
         try {
@@ -199,7 +199,7 @@ public class DBStorageBean {
             // its ok, create new
             node = new ConfigNodeEntity();
             node.setPath(dbPath);
-            Map<String, Object> map = SimpleConfigNodeUtil.replaceNode(new HashMap<String, Object>(), configNode, restPathItems);
+            Map<String, Object> map = Nodes.replaceNode(new HashMap<String, Object>(), configNode, restPathItems);
             node.setContent(toBytes(map));
             em.persist(node);
 
@@ -210,7 +210,7 @@ public class DBStorageBean {
 
         // merge
         Map<String, Object> map = fromBytes(node.getContent());
-        map = SimpleConfigNodeUtil.replaceNode(map, configNode, restPathItems);
+        map = Nodes.replaceNode(map, configNode, restPathItems);
         node.setContent(toBytes(map));
         em.merge(node);
     }
@@ -218,7 +218,7 @@ public class DBStorageBean {
     public boolean nodeExists(List<String> pathItemsForDB, List<String> restPathItems) {
         try {
             ConfigNodeEntity node = getConfigNodeEntityForDBPath(pathItemsForDB);
-            return SimpleConfigNodeUtil.nodeExists(fromBytes(node.getContent()), restPathItems);
+            return Nodes.nodeExists(fromBytes(node.getContent()), restPathItems);
         } catch (NoResultException e) {
             return false;
         }
@@ -241,7 +241,7 @@ public class DBStorageBean {
     }
 
     private ConfigNodeEntity getConfigNodeEntityForDBPath(List<String> pathItemsForDB) {
-        String dbPath = SimpleConfigNodeUtil.toSimpleEscapedPath(pathItemsForDB);
+        String dbPath = Nodes.toSimpleEscapedPath(pathItemsForDB);
 
         Query query = em.createQuery("SELECT n FROM ConfigNodeEntity n WHERE n.path=?1");
         query.setParameter(1, dbPath);

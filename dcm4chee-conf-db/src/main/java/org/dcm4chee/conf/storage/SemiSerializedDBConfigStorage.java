@@ -41,7 +41,7 @@ package org.dcm4chee.conf.storage;
 
 import org.dcm4che3.conf.core.api.Configuration;
 import org.dcm4che3.conf.core.api.ConfigurationException;
-import org.dcm4che3.conf.core.util.ConfigNodeUtil;
+import org.dcm4che3.conf.core.Nodes;
 import org.dcm4che3.conf.core.util.SplittedPath;
 import org.dcm4che3.conf.dicom.DicomPath;
 import org.slf4j.Logger;
@@ -105,7 +105,7 @@ public class SemiSerializedDBConfigStorage implements Configuration {
 
         // since some paths are not trivial, e.g. references, just use the root because it will be cached
         // [speedup-spot] still could be optimized for many cases
-        return ConfigNodeUtil.getNode(getConfigurationRoot(), path);
+        return Nodes.getNode(getConfigurationRoot(), path);
     }
 
     @Override
@@ -113,7 +113,7 @@ public class SemiSerializedDBConfigStorage implements Configuration {
         if (path.equals(DicomPath.ConfigRoot.path()))
             return !db.isEmpty();
 
-        SplittedPath splittedPath = new SplittedPath(path, level).calc();
+        SplittedPath splittedPath = new SplittedPath(path, level);
 
         // no need to store those
         if (splittedPath.getTotalDepth() <= level) throw new RuntimeException("Unexpected path " + path);
@@ -125,7 +125,7 @@ public class SemiSerializedDBConfigStorage implements Configuration {
     @Override
     public void persistNode(String path, Map<String, Object> configNode, Class configurableClass) throws ConfigurationException {
 
-        SplittedPath splittedPath = new SplittedPath(path, level).calc();
+        SplittedPath splittedPath = new SplittedPath(path, level);
         int i = splittedPath.getTotalDepth();
         List<String> pathItemsForDB = splittedPath.getOuterPathItems();
         List<String> restPathItems = splittedPath.getInnerPathitems();
@@ -171,14 +171,14 @@ public class SemiSerializedDBConfigStorage implements Configuration {
 
     @Override
     public void removeNode(String path) throws ConfigurationException {
-        SplittedPath splittedPath = new SplittedPath(path, level).calc();
+        SplittedPath splittedPath = new SplittedPath(path, level);
         db.removeNode(splittedPath.getOuterPathItems(), splittedPath.getInnerPathitems());
     }
 
     @Override
     public Iterator search(String liteXPathExpression) throws IllegalArgumentException, ConfigurationException {
         log.warn("Using DB configuration storage without caching. This is not intended usage and will result in very poor performance");
-        return ConfigNodeUtil.search(getConfigurationRoot(), liteXPathExpression);
+        return Nodes.search(getConfigurationRoot(), liteXPathExpression);
     }
 
     @Override

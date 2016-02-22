@@ -72,7 +72,7 @@ import java.util.Map;
 @Singleton
 @ConcurrencyManagement(ConcurrencyManagementType.BEAN)
 @Local(ConfigurationEJB.class)
-public class ConfigurationEJB extends DelegatingConfiguration implements TransactionalConfiguration.TxInfo {
+public class ConfigurationEJB extends DelegatingConfiguration  {
 
     public static final Logger log = LoggerFactory.getLogger(ConfigurationEJB.class);
 
@@ -81,18 +81,13 @@ public class ConfigurationEJB extends DelegatingConfiguration implements Transac
     private Instance<Configuration> availableConfigStorage;
 
     @Inject
-    private ConfigNotificationDecorator configNotificationDecorator;
-
-    @Inject
     private ConfigurationIntegrityCheck integrityCheck;
 
     @Inject
     TransactionSynchronization txSync;
 
     @Inject
-    TransactionalConfiguration infinispanCache;
-
-    private TransactionalConfiguration txAwareCache;
+    InfinispanCachingConfiguration infinispanCache;
 
 
     @PostConstruct
@@ -113,8 +108,9 @@ public class ConfigurationEJB extends DelegatingConfiguration implements Transac
         }
 
         // decorate with cache
-        txAwareCache = infinispanCache;
-        storage = txAwareCache;
+        infinispanCache.setDelegate(storage);
+        infinispanCache.reloadFromBackend();
+        storage = infinispanCache;
 
         delegate = storage;
         log.info("dcm4che configuration singleton EJB created");
@@ -160,17 +156,12 @@ public class ConfigurationEJB extends DelegatingConfiguration implements Transac
 
                     @Override
                     public void afterCompletion(int i) {
-                        afterCommit(i);
                     }
                 });
             } catch (RollbackException | SystemException e) {
                 throw new RuntimeException("Error when trying to register a pre-commit hook for config change transaction", e);
             }
         }
-    }
-
-    private void afterCommit(int i) {
-        txAwareCache.afterCommit(i);
     }
 
     private void beforeCommit() {
@@ -181,8 +172,6 @@ public class ConfigurationEJB extends DelegatingConfiguration implements Transac
 
         } catch (ConfigurationException e) {
             throw new IllegalArgumentException("Configuration integrity violated", e);
-        } finally {
-            txAwareCache.beforeCommit();
         }
     }
 
@@ -190,11 +179,6 @@ public class ConfigurationEJB extends DelegatingConfiguration implements Transac
     public void lock() {
         super.lock();
         registerTxHooks();
-    }
-
-    @Override
-    public boolean isPartOfModifyingTransaction() {
-        return txSync.getSynchronizationRegistry().getResource(ConfigurationEJB.class) != null;
     }
 
     /**

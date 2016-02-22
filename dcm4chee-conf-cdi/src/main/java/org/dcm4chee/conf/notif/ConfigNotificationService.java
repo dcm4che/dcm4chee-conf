@@ -84,23 +84,12 @@ public class ConfigNotificationService {
      */
     public void sendLocalScopedConfigChangeNotification(ConfigChangeEvent changeEvent) {
         LOGGER.debug("Sending config changed notification CDI event");
-        invalidateConfigCache();
 
         // first fire the internal event that should only be handled by the (archive/ARR) Device itself
         internalEvent.fire(new InternalConfigChangeEvent());
 
         // then everybody else gets notified
         event.fire(changeEvent);
-    }
-    
-    private void invalidateConfigCache() {
-        try {
-            // TODO: can optimize by refreshing only the changed paths
-            configurationEJB.refreshNode("/");
-            LOGGER.info("Configuration cache updated");
-        } catch (ConfigurationException e) {
-            LOGGER.error("Error while re-loading the configuration from the backend into the cache",e);
-        }
     }
 
 }
