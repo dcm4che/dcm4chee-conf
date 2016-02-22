@@ -79,7 +79,7 @@ public class InfinispanCachingConfiguration extends DelegatingConfiguration {
             Nodes.replaceNode(
                     root,
                     (Map) stringObjectEntry.getValue(),
-                    Nodes.getPathItems(stringObjectEntry.getKey())
+                    Nodes.fromSimpleEscapedPath(stringObjectEntry.getKey())
             );
         }
 

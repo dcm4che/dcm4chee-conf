@@ -68,8 +68,6 @@ public class UpgradeRunner {
     private static Logger log = LoggerFactory
             .getLogger(UpgradeRunner.class);
 
-    public static final String METADATA_ROOT_PATH = "/dicomConfigurationRoot/metadataRoot/versioning";
-
     private Collection<UpgradeScript> availableUpgradeScripts;
     private DicomConfigurationManager dicomConfigurationManager;
     private UpgradeSettings upgradeSettings;
@@ -114,7 +112,7 @@ public class UpgradeRunner {
     private ConfigurationMetadata loadConfigurationMetadata() {
         Object metadataNode = dicomConfigurationManager
                 .getConfigurationStorage()
-                .getConfigurationNode(METADATA_ROOT_PATH, ConfigurationMetadata.class);
+                .getConfigurationNode(DicomConfigurationManager.METADATA_ROOT_PATH, ConfigurationMetadata.class);
         ConfigurationMetadata configurationMetadata = null;
         if (metadataNode != null)
             configurationMetadata = new DefaultBeanVitalizer().newConfiguredInstance((Map<String, Object>) metadataNode, ConfigurationMetadata.class);
@@ -125,7 +123,7 @@ public class UpgradeRunner {
         dicomConfigurationManager
                 .getConfigurationStorage()
                 .persistNode(
-                        METADATA_ROOT_PATH,
+                        DicomConfigurationManager.METADATA_ROOT_PATH,
                         new DefaultBeanVitalizer().createConfigNodeFromInstance(metadata),
                         ConfigurationMetadata.class
                 );

@@ -40,13 +40,10 @@
 
 package org.dcm4chee.conf.storage;
 
-import org.dcm4che3.conf.core.api.ConfigurationException;
 import org.dcm4che3.conf.core.storage.SingleJsonFileConfigurationStorage;
-import org.dcm4che3.conf.dicom.ldap.LdapConfigurationStorage;
 
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
 
 /**
  * @author Roman K
@@ -64,16 +61,4 @@ public class CdiDefaultConfigStorageWrappers {
 
     }
 
-    @ApplicationScoped
-    @ConfigurationStorage("ldap")
-    public static class CdiLdapConfigurationStorage extends LdapConfigurationStorage {
-        @PostConstruct
-        public void init() {
-            try {
-                setEnvironment(collectLDAPProps(System.getProperties()));
-            } catch (ConfigurationException e) {
-                throw new RuntimeException("Cannot load ldap config", e);
-            }
-        }
-    }
 }
