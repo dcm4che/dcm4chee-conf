@@ -207,7 +207,7 @@ public class ConfigRESTServicesServlet {
     @Path("/device/{deviceName}")
     @Produces(MediaType.APPLICATION_JSON)
     public Map<String, Object> getDeviceConfig(@PathParam(value = "deviceName") String deviceName) throws ConfigurationException {
-        return (Map<String, Object>) configurationManager.getConfigurationStorage().getConfigurationNode(DicomPath.DeviceByName.set("deviceName", deviceName).path(), Device.class);
+        return (Map<String, Object>) configurationManager.getConfigurationStorage().getConfigurationNode(DicomPath.DeviceByNameForWrite.set("deviceName", deviceName).path(), Device.class);
     }
 
     @GET
@@ -238,7 +238,7 @@ public class ConfigRESTServicesServlet {
     @Produces(MediaType.APPLICATION_JSON)
     public void deleteDevice(@PathParam(value = "deviceName") String deviceName) throws ConfigurationException {
         if (deviceName.isEmpty()) throw new ConfigurationException("Device name cannot be empty");
-        configurationManager.getConfigurationStorage().removeNode(DicomPath.DeviceByName.set("deviceName", deviceName).path());
+        configurationManager.getConfigurationStorage().removeNode(DicomPath.DeviceByNameForWrite.set("deviceName", deviceName).path());
         fireConfigUpdateNotificationIfNecessary();
     }
 
@@ -251,7 +251,7 @@ public class ConfigRESTServicesServlet {
 
         if (deviceName.isEmpty()) throw new ConfigurationException("Device name cannot be empty");
 
-        configurationManager.getConfigurationStorage().persistNode(DicomPath.DeviceByName.set("deviceName", deviceName).path(), config, Device.class);
+        configurationManager.getConfigurationStorage().persistNode(DicomPath.DeviceByNameForWrite.set("deviceName", deviceName).path(), config, Device.class);
 
         fireConfigUpdateNotificationIfNecessary();
 

@@ -1,9 +1,9 @@
 package org.dcm4chee.conf.storage;
 
 import org.dcm4che3.conf.core.DelegatingConfiguration;
+import org.dcm4che3.conf.core.Nodes;
 import org.dcm4che3.conf.core.api.Configuration;
 import org.dcm4che3.conf.core.api.ConfigurationException;
-import org.dcm4che3.conf.core.util.ConfigNodeUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,11 +59,11 @@ public class DualCachingTxAwareConfiguration extends DelegatingConfiguration imp
     public Map<String, Object> getConfigurationRoot() throws ConfigurationException {
 
         if (txInfo.isPartOfModifyingTransaction())
-            return (Map<String, Object>) ConfigNodeUtil.deepCloneNode(getWriterConfigurationCache());
+            return (Map<String, Object>) Nodes.deepCloneNode(getWriterConfigurationCache());
 
         readCacheLock.readLock().lock();
         try {
-            return (Map<String, Object>) ConfigNodeUtil.deepCloneNode(readerConfigurationCache);
+            return (Map<String, Object>) Nodes.deepCloneNode(readerConfigurationCache);
         } finally {
             readCacheLock.readLock().unlock();
         }
@@ -92,20 +92,20 @@ public class DualCachingTxAwareConfiguration extends DelegatingConfiguration imp
     }
 
     Object getConfigurationNodeFromCache(String path, Map<String, Object> writerConfigurationCache) {
-        Object node = ConfigNodeUtil.getNode(writerConfigurationCache, path);
+        Object node = Nodes.getNode(writerConfigurationCache, path);
         if (node == null) return null;
-        return ConfigNodeUtil.deepCloneNode(node);
+        return Nodes.deepCloneNode(node);
     }
 
     @Override
     public boolean nodeExists(String path) throws ConfigurationException {
 
         if (txInfo.isPartOfModifyingTransaction())
-            ConfigNodeUtil.nodeExists(getWriterConfigurationCache(), path);
+            Nodes.nodeExists(getWriterConfigurationCache(), path);
 
         readCacheLock.readLock().lock();
         try {
-            return ConfigNodeUtil.nodeExists(readerConfigurationCache, path);
+            return Nodes.nodeExists(readerConfigurationCache, path);
         } finally {
             readCacheLock.readLock().unlock();
         }
@@ -120,7 +120,7 @@ public class DualCachingTxAwareConfiguration extends DelegatingConfiguration imp
             if (path.equals("/"))
                 writerConfigurationCache = (Map<String, Object>) newConfigurationNode;
             else
-                ConfigNodeUtil.replaceNode(getWriterConfigurationCache(), path, newConfigurationNode);
+                Nodes.replaceNode(getWriterConfigurationCache(), path, newConfigurationNode);
 
         } else {
 
@@ -129,7 +129,7 @@ public class DualCachingTxAwareConfiguration extends DelegatingConfiguration imp
                 if (path.equals("/"))
                     readerConfigurationCache = (Map<String, Object>) newConfigurationNode;
                 else
-                    ConfigNodeUtil.replaceNode(readerConfigurationCache, path, newConfigurationNode);
+                    Nodes.replaceNode(readerConfigurationCache, path, newConfigurationNode);
             } finally {
                 readCacheLock.writeLock().unlock();
             }
@@ -138,8 +138,8 @@ public class DualCachingTxAwareConfiguration extends DelegatingConfiguration imp
 
     Iterator searchEager(String liteXPathExpression, Map<String, Object> configurationRoot) {
         List l = new ArrayList();
-        final Iterator origIterator = ConfigNodeUtil.search(configurationRoot, liteXPathExpression);
-        while (origIterator.hasNext()) l.add(ConfigNodeUtil.deepCloneNode(origIterator.next()));
+        final Iterator origIterator = Nodes.search(configurationRoot, liteXPathExpression);
+        while (origIterator.hasNext()) l.add(Nodes.deepCloneNode(origIterator.next()));
         return l.iterator();
     }
 
@@ -151,7 +151,7 @@ public class DualCachingTxAwareConfiguration extends DelegatingConfiguration imp
             super.persistNode(path, configNode, configurableClass);
 
             if (!path.equals("/"))
-                ConfigNodeUtil.replaceNode(getWriterConfigurationCache(), path, configNode);
+                Nodes.replaceNode(getWriterConfigurationCache(), path, configNode);
             else
                 writerConfigurationCache = configNode;
         } finally {
@@ -164,7 +164,7 @@ public class DualCachingTxAwareConfiguration extends DelegatingConfiguration imp
         writeCacheLock.lock();
         try {
             super.removeNode(path);
-            ConfigNodeUtil.removeNodes(getWriterConfigurationCache(), path);
+            Nodes.removeNodes(getWriterConfigurationCache(), path);
         } finally {
             writeCacheLock.unlock();
         }
