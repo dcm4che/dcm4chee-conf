@@ -72,7 +72,7 @@ import java.util.Map;
 @Singleton
 @ConcurrencyManagement(ConcurrencyManagementType.BEAN)
 @Local(ConfigurationEJB.class)
-public class ConfigurationEJB extends DelegatingConfiguration  {
+public class ConfigurationEJB extends DelegatingConfiguration {
 
     public static final Logger log = LoggerFactory.getLogger(ConfigurationEJB.class);
 
@@ -89,6 +89,8 @@ public class ConfigurationEJB extends DelegatingConfiguration  {
     @Inject
     InfinispanCachingConfiguration infinispanCache;
 
+    @Inject
+    ConfigNotificationDecorator configNotificationDecorator;
 
     @PostConstruct
     public void init() {
@@ -104,8 +106,12 @@ public class ConfigurationEJB extends DelegatingConfiguration  {
         try {
             storage = availableConfigStorage.select(new ConfigStorageAnno(storageType)).get();
         } catch (Exception e) {
-            throw new IllegalArgumentException("Unable to initialize dcm4che configuration storage '"+storageType+"'", e);
+            throw new IllegalArgumentException("Unable to initialize dcm4che configuration storage '" + storageType + "'", e);
         }
+
+        // decorate with config notifications
+        configNotificationDecorator.setDelegate(storage);
+        storage = configNotificationDecorator;
 
         // decorate with cache
         infinispanCache.setDelegate(storage);
@@ -183,6 +189,7 @@ public class ConfigurationEJB extends DelegatingConfiguration  {
 
     /**
      * To be used by whoever needs a tx with 'requires' logic
+     *
      * @param batch
      */
     public void runWithRequiresTxWithLock(Batch batch) {
