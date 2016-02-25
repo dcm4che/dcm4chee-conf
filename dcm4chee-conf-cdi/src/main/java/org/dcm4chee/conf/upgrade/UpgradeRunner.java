@@ -61,8 +61,6 @@ import java.util.Properties;
 @SuppressWarnings("unchecked")
 public class UpgradeRunner {
 
-    public static final String RUN_ALWAYS = "org.dcm4che.conf.upgrade.runAlways";
-
     public static final String PASSIVE_UPGRADE_TIMEOUT = "org.dcm4che.conf.upgrade.passiveTimeoutSec";
 
     private static Logger log = LoggerFactory
@@ -169,109 +167,109 @@ public class UpgradeRunner {
     }
 
     protected void upgradeToVersion(final String toVersion) {
-        dicomConfigurationManager.runBatch(new DicomConfiguration.DicomConfigBatch() {
-            @Override
-            public void run() {
-                try {
+        dicomConfigurationManager.runBatch(() -> {
+            try {
 
-                    Configuration configuration = dicomConfigurationManager.getConfigurationStorage();
-                    configuration.lock();
+                Configuration configuration = dicomConfigurationManager.getConfigurationStorage();
+                configuration.lock();
 
-                    // load or initialize config metadata
-                    ConfigurationMetadata configMetadata = loadConfigurationMetadata();
-                    if (configMetadata == null) {
-                        configMetadata = new ConfigurationMetadata();
-                        configMetadata.setVersion(UpgradeScript.NO_VERSION);
-                    }
-                    String fromVersion = configMetadata.getVersion();
+                // load or initialize config metadata
+                ConfigurationMetadata configMetadata = loadConfigurationMetadata();
+                if (configMetadata == null) {
+                    configMetadata = new ConfigurationMetadata();
+                }
 
-                    log.info("Dcm4che configuration init: upgrading configuration from version '{}' to version '{}'", fromVersion, toVersion);
+                if (configMetadata.getVersion()==null)
+                    configMetadata.setVersion(UpgradeScript.NO_VERSION);
 
-                    Properties props = new Properties();
-                    props.putAll(upgradeSettings.getProperties());
+                String fromVersion = configMetadata.getVersion();
 
-                    log.info("Config upgrade scripts specified in settings: {}", upgradeSettings.getUpgradeScriptsToRun());
-                    log.info("Config upgrade scripts discovered in the deployment: {}", availableUpgradeScripts);
+                log.info("Dcm4che configuration init: upgrading configuration from version '{}' to version '{}'", fromVersion, toVersion);
 
-                    // run all scripts
-                    for (String upgradeScriptName : upgradeSettings.getUpgradeScriptsToRun()) {
+                Properties props = new Properties();
+                props.putAll(upgradeSettings.getProperties());
 
-                        boolean found = false;
+                log.info("Config upgrade scripts specified in settings: {}", upgradeSettings.getUpgradeScriptsToRun());
+                log.info("Config upgrade scripts discovered in the deployment: {}", availableUpgradeScripts);
 
-                        for (UpgradeScript script : availableUpgradeScripts) {
-                            if (script.getClass().getName().startsWith(upgradeScriptName)) {
-                                found = true;
+                // run all scripts
+                for (String upgradeScriptName : upgradeSettings.getUpgradeScriptsToRun()) {
 
-                                // fetch upgradescript metadata
-                                UpgradeScript.UpgradeScriptMetadata upgradeScriptMetadata = configMetadata.getMetadataOfUpgradeScripts().get(upgradeScriptName);
-                                if (upgradeScriptMetadata == null) {
-                                    upgradeScriptMetadata = new UpgradeScript.UpgradeScriptMetadata();
-                                    configMetadata.getMetadataOfUpgradeScripts().put(upgradeScriptName, upgradeScriptMetadata);
-                                }
+                    boolean found = false;
+
+                    for (UpgradeScript script : availableUpgradeScripts) {
+                        if (script.getClass().getName().startsWith(upgradeScriptName)) {
+                            found = true;
+
+                            // fetch upgradescript metadata
+                            UpgradeScript.UpgradeScriptMetadata upgradeScriptMetadata = configMetadata.getMetadataOfUpgradeScripts().get(upgradeScriptName);
+                            if (upgradeScriptMetadata == null) {
+                                upgradeScriptMetadata = new UpgradeScript.UpgradeScriptMetadata();
+                                configMetadata.getMetadataOfUpgradeScripts().put(upgradeScriptName, upgradeScriptMetadata);
+                            }
 
 
-                                // check if the script need to be executed
-                                ScriptVersion currentScriptVersionAnno = script.getClass().getAnnotation(ScriptVersion.class);
+                            // check if the script need to be executed
+                            ScriptVersion currentScriptVersionAnno = script.getClass().getAnnotation(ScriptVersion.class);
 
-                                String currentscriptVersion;
-                                if (currentScriptVersionAnno == null) {
-                                    currentscriptVersion = UpgradeScript.NO_VERSION;
-                                    log.warn("Upgrade script '{}' does not have @ScriptVersion defined - using default '{}'",
-                                            script.getClass().getName(),
-                                            currentscriptVersion);
-                                } else {
-                                    currentscriptVersion = currentScriptVersionAnno.value();
-                                }
+                            String currentscriptVersion;
+                            if (currentScriptVersionAnno == null) {
+                                currentscriptVersion = UpgradeScript.NO_VERSION;
+                                log.warn("Upgrade script '{}' does not have @ScriptVersion defined - using default '{}'",
+                                        script.getClass().getName(),
+                                        currentscriptVersion);
+                            } else {
+                                currentscriptVersion = currentScriptVersionAnno.value();
+                            }
 
-                                if (upgradeScriptMetadata.getLastVersionExecuted() != null
-                                        && upgradeScriptMetadata.getLastVersionExecuted().compareTo(currentscriptVersion) >= 0) {
-                                    log.info("Upgrade script '{}' is skipped because current version '{}' is not newer than the last executed one ('{}')",
-                                            script.getClass().getName(),
-                                            currentscriptVersion,
-                                            upgradeScriptMetadata.getLastVersionExecuted());
-                                    continue;
-                                }
-
-                                log.info("Executing upgrade script '{}' (this version '{}', last executed version '{}')",
+                            if (upgradeScriptMetadata.getLastVersionExecuted() != null
+                                    && upgradeScriptMetadata.getLastVersionExecuted().compareTo(currentscriptVersion) >= 0) {
+                                log.info("Upgrade script '{}' is skipped because current version '{}' is not newer than the last executed one ('{}')",
                                         script.getClass().getName(),
                                         currentscriptVersion,
                                         upgradeScriptMetadata.getLastVersionExecuted());
-
-
-                                // collect pieces and prepare context
-                                Map<String, Object> scriptConfig = (Map<String, Object>) upgradeSettings.getUpgradeConfig().get(upgradeScriptName);
-                                UpgradeScript.UpgradeContext upgradeContext = new UpgradeScript.UpgradeContext(
-                                        fromVersion, toVersion, props, scriptConfig, configuration, dicomConfigurationManager, upgradeScriptMetadata);
-
-                                try {
-                                    script.upgrade(upgradeContext);
-                                } catch (Exception e) {
-                                    throw new ConfigurationException("Error while running upgrade script '" + script.getClass().getName() + "', version '" + currentscriptVersion + "'", e);
-                                }
-
-                                // set last executed version from the annotation of the upgrade script if present
-                                upgradeScriptMetadata.setLastVersionExecuted(currentscriptVersion);
-
+                                continue;
                             }
-                        }
 
-                        if (!found) {
-                            if (upgradeSettings.isIgnoreMissingUpgradeScripts()) {
-                                log.warn("Missing update script '" + upgradeScriptName + "' ignored! DISABLE 'IgnoreMissingUpgradeScripts' SETTING FOR PRODUCTION ENVIRONMENT.");
-                            } else {
-                                throw new ConfigurationException("Upgrade script '" + upgradeScriptName + "' not found in the deployment");
+                            log.info("Executing upgrade script '{}' (this version '{}', last executed version '{}')",
+                                    script.getClass().getName(),
+                                    currentscriptVersion,
+                                    upgradeScriptMetadata.getLastVersionExecuted());
+
+
+                            // collect pieces and prepare context
+                            Map<String, Object> scriptConfig = (Map<String, Object>) upgradeSettings.getUpgradeConfig().get(upgradeScriptName);
+                            UpgradeScript.UpgradeContext upgradeContext = new UpgradeScript.UpgradeContext(
+                                    fromVersion, toVersion, props, scriptConfig, configuration, dicomConfigurationManager, upgradeScriptMetadata);
+
+                            try {
+                                script.upgrade(upgradeContext);
+                            } catch (Exception e) {
+                                throw new ConfigurationException("Error while running upgrade script '" + script.getClass().getName() + "', version '" + currentscriptVersion + "'", e);
                             }
+
+                            // set last executed version from the annotation of the upgrade script if present
+                            upgradeScriptMetadata.setLastVersionExecuted(currentscriptVersion);
+
                         }
                     }
 
-                    // update version
-                    configMetadata.setVersion(toVersion);
-
-                    // persist updated metadata
-                    persistConfigurationMetadata(configMetadata);
-                } catch (Exception e) {
-                    throw new RuntimeException("Error while running the configuration upgrade", e);
+                    if (!found) {
+                        if (upgradeSettings.isIgnoreMissingUpgradeScripts()) {
+                            log.warn("Missing update script '" + upgradeScriptName + "' ignored! DISABLE 'IgnoreMissingUpgradeScripts' SETTING FOR PRODUCTION ENVIRONMENT.");
+                        } else {
+                            throw new ConfigurationException("Upgrade script '" + upgradeScriptName + "' not found in the deployment");
+                        }
+                    }
                 }
+
+                // update version
+                configMetadata.setVersion(toVersion);
+
+                // persist updated metadata
+                persistConfigurationMetadata(configMetadata);
+            } catch (Exception e) {
+                throw new RuntimeException("Error while running the configuration upgrade", e);
             }
         });
 
