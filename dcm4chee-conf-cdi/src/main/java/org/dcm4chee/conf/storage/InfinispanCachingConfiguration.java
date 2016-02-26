@@ -38,10 +38,10 @@ public class InfinispanCachingConfiguration extends DelegatingConfiguration {
         lock();
         Map<String, Object> root = delegate.getConfigurationRoot();
         cache.clear();
-        persistTopLayer(root, new ArrayList<>());
+        persistTopLayerToCache(root, new ArrayList<>());
     }
 
-    private void persistTopLayer(Map<String, Object> m, List<String> pathItems) {
+    private void persistTopLayerToCache(Map<String, Object> m, List<String> pathItems) {
 
         if (pathItems.size() == level) {
             cache.put(Nodes.toSimpleEscapedPath(pathItems), m);
@@ -50,7 +50,7 @@ public class InfinispanCachingConfiguration extends DelegatingConfiguration {
                 pathItems.add(entry.getKey());
 
                 try {
-                    persistTopLayer((Map<String, Object>) entry.getValue(), pathItems);
+                    persistTopLayerToCache((Map<String, Object>) entry.getValue(), pathItems);
                 } catch (ClassCastException e) {
                     // this should not happen, but after all ignore and let pass through
                     log.error("Unexpected node above serialization level: " + entry.getValue());
@@ -132,8 +132,8 @@ public class InfinispanCachingConfiguration extends DelegatingConfiguration {
         // fallback if requested one of top levels
         if (splittedPath.getOuterPathItems().size() < level) {
 
-            removeNode(path);
-            persistTopLayer(clonedNode, splittedPath.getOuterPathItems());
+            removeNodeFromCache(path);
+            persistTopLayerToCache(clonedNode, splittedPath.getOuterPathItems());
 
         } else if (splittedPath.getOuterPathItems().size() > level) {
 
@@ -158,9 +158,14 @@ public class InfinispanCachingConfiguration extends DelegatingConfiguration {
     @Override
     public void removeNode(String path) throws ConfigurationException {
 
+        removeNodeFromCache(path);
+
         // propagate to storage backend
         super.removeNode(path);
 
+    }
+
+    private void removeNodeFromCache(String path) {
         SplittedPath splittedPath = getSplittedPath(path);
 
         if (splittedPath == null) {
@@ -175,7 +180,7 @@ public class InfinispanCachingConfiguration extends DelegatingConfiguration {
             }
 
             log.warn("Complex xpath expression (" + path + ") used to remove nodes from configuration, this should only be used for exceptional cases as it uses a lot of resources");
-            persistTopLayer(clonedRoot, new ArrayList<>());
+            persistTopLayerToCache(clonedRoot, new ArrayList<>());
 
             return;
         }
@@ -202,7 +207,6 @@ public class InfinispanCachingConfiguration extends DelegatingConfiguration {
         } else {
             cache.remove(outerPath);
         }
-
     }
 
     private SplittedPath getSplittedPath(String path) {
