@@ -53,7 +53,7 @@ import javax.enterprise.inject.spi.InjectionPoint;
 @ApplicationScoped
 public class CacheProducer {
 
-    @Resource(lookup="java:jboss/infinispan/container/dcm4chee")
+    @Resource(lookup = "java:jboss/infinispan/container/dcm4chee")
     private EmbeddedCacheManager defaultCacheManager;
 
 
@@ -62,7 +62,12 @@ public class CacheProducer {
     @CacheByName
     Cache getCache(InjectionPoint point) {
         String cacheName = point.getAnnotated().getAnnotation(CacheByName.class).value();
-        return new InfinispanWrapper(defaultCacheManager.getCache(cacheName, false));
+        org.infinispan.Cache<Object, Object> cache = defaultCacheManager.getCache(cacheName, false);
+
+        if (cache == null)
+            throw new IllegalArgumentException("Infinispan cache '" + cacheName + "' not found in dcm4chee cache container");
+
+        return new InfinispanWrapper(cache);
     }
 
 }
