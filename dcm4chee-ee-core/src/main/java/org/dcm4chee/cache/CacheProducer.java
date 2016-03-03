@@ -46,6 +46,9 @@ import javax.annotation.Resource;
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Produces;
 import javax.enterprise.inject.spi.InjectionPoint;
+import javax.naming.Context;
+import javax.naming.InitialContext;
+import javax.naming.NamingException;
 
 /**
  * @author Roman K
@@ -53,19 +56,27 @@ import javax.enterprise.inject.spi.InjectionPoint;
 @ApplicationScoped
 public class CacheProducer {
 
-    @Resource(lookup = "java:jboss/infinispan/container/dcm4chee")
-    private EmbeddedCacheManager defaultCacheManager;
-
+    private static final String container = System.getProperty("org.dcm4che.infinispan.container", "dcm4chee");
 
     @SuppressWarnings("unchecked")
     @Produces
     @CacheByName
     Cache getCache(InjectionPoint point) {
-        String cacheName = point.getAnnotated().getAnnotation(CacheByName.class).value();
-        org.infinispan.Cache<Object, Object> cache = defaultCacheManager.getCache(cacheName, false);
 
-        if (cache == null)
-            throw new IllegalArgumentException("Infinispan cache '" + cacheName + "' not found in dcm4chee cache container");
+        String cacheName = point.getAnnotated().getAnnotation(CacheByName.class).value();
+
+        org.infinispan.Cache<Object, Object> cache;
+        try {
+            Context ic = new InitialContext();
+            EmbeddedCacheManager defaultCacheManager = (EmbeddedCacheManager) ic.lookup("java:jboss/infinispan/container/" + container);
+            cache = defaultCacheManager.getCache(cacheName, false);
+        } catch (Exception e) {
+            throw new RuntimeException("Error while looking up cache '" + cacheName + "' in '" + container + "' container", e);
+        }
+
+        if (cache == null) {
+            throw new IllegalArgumentException("Infinispan cache '" + cacheName + "' not found in '" + container + "' cache container");
+        }
 
         return new InfinispanWrapper(cache);
     }
