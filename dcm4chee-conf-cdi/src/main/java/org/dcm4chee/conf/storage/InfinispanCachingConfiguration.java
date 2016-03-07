@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import java.util.*;
+import java.util.function.Consumer;
 
 @SuppressWarnings("unchecked")
 @ApplicationScoped
@@ -25,6 +26,7 @@ public class InfinispanCachingConfiguration extends DelegatingConfiguration {
     @Inject
     @CacheByName("configuration")
     private Cache<String, Map<String, Object>> cache;
+    private Consumer<Object> onFullReloadHook;
 
     public InfinispanCachingConfiguration() {
     }
@@ -39,6 +41,7 @@ public class InfinispanCachingConfiguration extends DelegatingConfiguration {
         Map<String, Object> root = delegate.getConfigurationRoot();
         cache.clear();
         persistTopLayerToCache(root, new ArrayList<>());
+        if (onFullReloadHook != null) onFullReloadHook.accept(root);
     }
 
     private void persistTopLayerToCache(Map<String, Object> m, List<String> pathItems) {
@@ -221,7 +224,7 @@ public class InfinispanCachingConfiguration extends DelegatingConfiguration {
 
         SplittedPath splittedPath = getSplittedPath(path);
 
-        if (splittedPath==null)
+        if (splittedPath == null)
             throw new IllegalArgumentException("Path '" + path + "' is not valid");
 
         String outerPath = Nodes.toSimpleEscapedPath(splittedPath.getOuterPathItems());
@@ -248,5 +251,12 @@ public class InfinispanCachingConfiguration extends DelegatingConfiguration {
         ArrayList<Object> objects = new ArrayList<>();
         Nodes.search(getWrappedRoot(), liteXPathExpression).forEachRemaining((e) -> objects.add(Nodes.deepCloneNode(e)));
         return objects.iterator();
+    }
+
+    /**
+     * @param hook Consumer that takes the full configuration tree as an arg
+     */
+    public void onFullReload(Consumer<Object> hook) {
+        this.onFullReloadHook = hook;
     }
 }
