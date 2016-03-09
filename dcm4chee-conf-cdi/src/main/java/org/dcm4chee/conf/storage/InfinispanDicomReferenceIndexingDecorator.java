@@ -33,7 +33,8 @@ public class InfinispanDicomReferenceIndexingDecorator extends DicomReferenceInd
     /**
      * Resilient method for initializing the index - in case the config already has duplicate UUIDs on init
      */
-    public void addReferablesFromRootToIndexNotFailingOnDuplicates(Object configNode) {
+    public void clearIndexAndAddReferablesFromRootNotFailingOnDuplicates(Object configNode) {
+        uuidIndex.clear();
         super.addReferablesToIndex(new ArrayList<>(), configNode);
     }
 

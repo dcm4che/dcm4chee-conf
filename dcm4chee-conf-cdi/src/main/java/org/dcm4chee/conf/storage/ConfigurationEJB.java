@@ -118,7 +118,7 @@ public class ConfigurationEJB extends DelegatingConfiguration {
 
         // decorate with cache
         infinispanCache.setDelegate(storage);
-        infinispanCache.onFullReload(indexingDecorator::addReferablesFromRootToIndexNotFailingOnDuplicates);
+        infinispanCache.onFullReload(indexingDecorator::clearIndexAndAddReferablesFromRootNotFailingOnDuplicates);
         infinispanCache.reloadFromBackend();
         storage = infinispanCache;
 
