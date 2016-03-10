@@ -40,6 +40,7 @@ public class DefaultConfigFactory {
 
         builder.registerDeviceExtension(ArchiveDeviceExtension.class);
         builder.registerDeviceExtension(StorageDeviceExtension.class);
+        builder.registerDeviceExtension(ExternalDeviceExtension.class);
         builder.registerAEExtension(ArchiveAEExtension.class);
         builder.registerHL7ApplicationExtension(ArchiveHL7ApplicationExtension.class);
 
