@@ -86,7 +86,7 @@ public class InfinispanCachingConfiguration extends DelegatingConfiguration {
 
     @Override
     public Map<String, Object> getConfigurationRoot() throws ConfigurationException {
-        return getWrappedRoot();
+        return (Map<String, Object>) Nodes.deepCloneNode(getWrappedRoot());
     }
 
     @Override
