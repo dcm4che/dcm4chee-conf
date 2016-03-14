@@ -118,13 +118,13 @@ public class ConfigurationEJB extends DelegatingConfiguration {
 
         // decorate with cache
         infinispanCache.setDelegate(storage);
-        infinispanCache.onFullReload(indexingDecorator::clearIndexAndAddReferablesFromRootNotFailingOnDuplicates);
+//        infinispanCache.onFullReload(indexingDecorator::clearIndexAndAddReferablesFromRootNotFailingOnDuplicates);
         infinispanCache.reloadFromBackend();
         storage = infinispanCache;
 
         // decorate with reference indexing/resolution
-        indexingDecorator.setDelegate(storage);
-        storage = indexingDecorator;
+//        indexingDecorator.setDelegate(storage);
+//        storage = indexingDecorator;
 
         delegate = storage;
         log.info("dcm4che configuration singleton EJB created");
