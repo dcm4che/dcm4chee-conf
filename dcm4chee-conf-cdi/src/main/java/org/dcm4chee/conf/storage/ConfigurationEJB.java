@@ -141,6 +141,12 @@ public class ConfigurationEJB extends DelegatingConfiguration {
     }
 
     @Override
+    public void refreshNode(String path) throws ConfigurationException {
+        lock();
+        super.refreshNode(path);
+    }
+
+    @Override
     @TransactionAttribute(TransactionAttributeType.REQUIRES_NEW)
     public void runBatch(Batch batch) {
         lock();

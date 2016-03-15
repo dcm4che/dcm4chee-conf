@@ -35,6 +35,8 @@ public class InfinispanCachingConfiguration extends DelegatingConfiguration {
         this.delegate = delegate;
     }
 
+    // TODO: convert to refresh, decouple from indexing
+    // since refresh is still relevant due to the possibility of hacking config from db directly
     public void reloadFromBackend() {
 
         lock();
