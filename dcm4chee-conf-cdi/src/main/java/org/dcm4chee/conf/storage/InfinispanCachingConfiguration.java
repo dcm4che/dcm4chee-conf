@@ -15,6 +15,17 @@ import javax.inject.Inject;
 import java.util.*;
 import java.util.function.Consumer;
 
+/**
+ * IMPORTANT:
+ * Infinispan behaves bad when used in sync/replicated mode and does not properly remove entries when 'remove' is called:
+ * after commit the entries indeed get removed, however during the transaction if one tries to 'get' an entry that was
+ * 'remove'd in this transaction - the latest value will be returned instead of null.
+ * <p/>
+ * To handle this correctly, we set the entry to 'new HashMap()' (empty node - to be able to reason about it during the transaction)
+ * and remove all such entries before committing (so it gets actually removed).
+ *
+ * Therefore we treat empty nodes on serialization level just like non-existing entries.
+ */
 @SuppressWarnings("unchecked")
 @ApplicationScoped
 public class InfinispanCachingConfiguration extends DelegatingConfiguration {
@@ -75,6 +86,10 @@ public class InfinispanCachingConfiguration extends DelegatingConfiguration {
         // for now it's not so critical since most conf calls will go directly to certain entries
 
         for (Map.Entry<String, Map<String, Object>> stringObjectEntry : cache.entrySet()) {
+
+            // see the comment on top
+            if (stringObjectEntry.getValue().isEmpty()) continue;
+
             Nodes.replaceNode(
                     root,
                     (Map) stringObjectEntry.getValue(), Nodes.fromSimpleEscapedPath(stringObjectEntry.getKey())
@@ -112,6 +127,9 @@ public class InfinispanCachingConfiguration extends DelegatingConfiguration {
         }
 
         Map<String, Object> node = cache.get(Nodes.toSimpleEscapedPath(splittedPath.getOuterPathItems()));
+
+        // see the comment on top
+        if (node != null && node.isEmpty()) node = null;
 
         if (splittedPath.getInnerPathitems().size() == 0)
             return node;
@@ -199,7 +217,10 @@ public class InfinispanCachingConfiguration extends DelegatingConfiguration {
                 }
             }
 
-            toDelete.forEach(cache::remove);
+            toDelete.forEach((key) -> {
+                // see comment on top
+                cache.put(key, new HashMap<>());
+            });
 
         } else if (splittedPath.getOuterPathItems().size() > level) {
 
@@ -208,7 +229,8 @@ public class InfinispanCachingConfiguration extends DelegatingConfiguration {
             cache.put(outerPath, levelNode);
 
         } else {
-            cache.remove(outerPath);
+            // see comment on top
+            cache.put(outerPath, new HashMap<>());
         }
     }
 
@@ -232,8 +254,9 @@ public class InfinispanCachingConfiguration extends DelegatingConfiguration {
         int size = splittedPath.getOuterPathItems().size();
         if (size < level) {
 
-            for (String s : cache.keySet()) {
-                if (s.startsWith(outerPath)) {
+            for (Map.Entry<String, Map<String, Object>> mapEntry : cache.entrySet()) {
+                // see comment on top
+                if (mapEntry.getKey().startsWith(outerPath) && !mapEntry.getValue().isEmpty()) {
                     return true;
                 }
             }
@@ -242,7 +265,9 @@ public class InfinispanCachingConfiguration extends DelegatingConfiguration {
             Map<String, Object> levelNode = cache.get(outerPath);
             return Nodes.nodeExists(levelNode, splittedPath.getInnerPathitems());
         } else {
-            return cache.containsKey(outerPath);
+            Map<String, Object> stringObjectMap = cache.get(outerPath);
+            // see comment on top
+            return stringObjectMap != null && !stringObjectMap.isEmpty();
         }
     }
 
@@ -258,5 +283,18 @@ public class InfinispanCachingConfiguration extends DelegatingConfiguration {
      */
     public void onFullReload(Consumer<Object> hook) {
         this.onFullReloadHook = hook;
+    }
+
+    // see comment on top
+    public void beforeCommit() {
+
+        List<String> keysForEmptyEntries = new ArrayList<>();
+        for (Map.Entry<String, Map<String, Object>> stringMapEntry : cache.entrySet()) {
+            if (stringMapEntry.getValue().isEmpty())
+                keysForEmptyEntries.add(stringMapEntry.getKey());
+        }
+
+        keysForEmptyEntries.forEach(cache::remove);
+
     }
 }

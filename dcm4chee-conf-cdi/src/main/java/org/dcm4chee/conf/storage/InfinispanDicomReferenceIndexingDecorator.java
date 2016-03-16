@@ -52,4 +52,8 @@ public class InfinispanDicomReferenceIndexingDecorator extends DicomReferenceInd
 
         return duplicateUUIDExceptions;
     }
+
+    public void beforeCommit() {
+
+    }
 }

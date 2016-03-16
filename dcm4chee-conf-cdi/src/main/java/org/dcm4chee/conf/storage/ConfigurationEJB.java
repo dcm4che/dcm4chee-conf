@@ -64,7 +64,8 @@ import java.util.Map;
  * A per-deployment configuration singleton that brings the following parts together:
  * <ul>
  * <li> Injects the proper config storage by looking up the system property
- * <li> Sets up dual cache, config notifications
+ * <li> Sets up infinispan cache, index, config notifications
+ * <li> Enforces global "one-writer-at-a-time" locking for modification ops
  * <li> Triggers integrity checks on transaction pre-commit
  * </ul>
  */
@@ -187,6 +188,11 @@ public class ConfigurationEJB extends DelegatingConfiguration {
         } catch (ConfigurationException e) {
             throw new IllegalArgumentException("Configuration integrity violated", e);
         }
+
+        // they need to clean some things up - see impl
+        indexingDecorator.beforeCommit();
+        infinispanCache.beforeCommit();
+
     }
 
     @Override
