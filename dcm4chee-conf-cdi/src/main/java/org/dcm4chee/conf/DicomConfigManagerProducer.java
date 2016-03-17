@@ -177,10 +177,16 @@ public class DicomConfigManagerProducer {
 
 
         if (doLog) {
+
+            String extensionsLog = "";
             for (Entry<Class, List<Class>> classListEntry : extByBaseExtMap.entrySet()) {
-                log.info("Extension classes of {}", classListEntry.getKey().getSimpleName());
-                for (Class aClass : classListEntry.getValue()) log.info(aClass.getName());
+                extensionsLog += "Extension classes of " + classListEntry.getKey().getSimpleName() + ":\n";
+
+                for (Class aClass : classListEntry.getValue())
+                    extensionsLog += aClass.getName() + "\n";
             }
+
+            log.info(extensionsLog);
         }
 
         return extByBaseExtMap;
