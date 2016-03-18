@@ -14,6 +14,7 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import java.util.*;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 @SuppressWarnings("unchecked")
 @ApplicationScoped
@@ -22,11 +23,11 @@ public class InfinispanCachingConfiguration extends DelegatingConfiguration {
     private static final Logger log = LoggerFactory.getLogger(DelegatingConfiguration.class);
 
     private static final int level = 3;
+    public static final String KEYSET_KEY = "#keySet";
 
     @Inject
     @CacheByName("configuration")
     private Cache<String, Map<String, Object>> cache;
-    private Consumer<Object> onFullReloadHook;
 
     public InfinispanCachingConfiguration() {
     }
@@ -35,21 +36,24 @@ public class InfinispanCachingConfiguration extends DelegatingConfiguration {
         this.delegate = delegate;
     }
 
-    // TODO: convert to refresh, decouple from indexing
-    // since refresh is still relevant due to the possibility of hacking config from db directly
-    public void reloadFromBackend() {
+    @Override
+    public void refreshNode(String path) throws ConfigurationException {
 
         lock();
+        super.refreshNode(path);
+
+        // reload fully
         Map<String, Object> root = delegate.getConfigurationRoot();
-        cache.clear();
+        clearCache();
         persistTopLayerToCache(root, new ArrayList<>());
-        if (onFullReloadHook != null) onFullReloadHook.accept(root);
+
     }
+
 
     private void persistTopLayerToCache(Map<String, Object> m, List<String> pathItems) {
 
         if (pathItems.size() == level) {
-            cache.put(Nodes.toSimpleEscapedPath(pathItems), m);
+            putIntoCache(Nodes.toSimpleEscapedPath(pathItems), m);
         } else if (pathItems.size() < level) {
             m.entrySet().forEach((entry) -> {
                 pathItems.add(entry.getKey());
@@ -67,7 +71,6 @@ public class InfinispanCachingConfiguration extends DelegatingConfiguration {
 
     }
 
-
     private Map<String, Object> getWrappedRoot() {
 
         HashMap<String, Object> root = new HashMap<>();
@@ -76,15 +79,13 @@ public class InfinispanCachingConfiguration extends DelegatingConfiguration {
         // tests show that this works in replicated mode but we need to switch to some proper API call once we move to a newer infinispan
         // for now it's not so critical since most conf calls will go directly to certain entries
 
-        for (Map.Entry<String, Map<String, Object>> stringObjectEntry : cache.entrySet()) {
-            Nodes.replaceNode(
-                    root,
-                    (Map) stringObjectEntry.getValue(), Nodes.fromSimpleEscapedPath(stringObjectEntry.getKey())
-            );
+        for (String path : getCacheKeySet()) {
+            Nodes.replaceNode(root, cache.get(path), Nodes.fromSimpleEscapedPath(path));
         }
 
         return root;
     }
+
 
     @Override
     public Map<String, Object> getConfigurationRoot() throws ConfigurationException {
@@ -121,7 +122,6 @@ public class InfinispanCachingConfiguration extends DelegatingConfiguration {
             return Nodes.getNode(node, Nodes.toSimpleEscapedPath(splittedPath.getInnerPathitems()));
     }
 
-
     @Override
     public void persistNode(String path, Map<String, Object> configNode, Class configurableClass) throws ConfigurationException {
 
@@ -144,11 +144,11 @@ public class InfinispanCachingConfiguration extends DelegatingConfiguration {
 
             Map<String, Object> levelRootNode = (Map<String, Object>) Nodes.deepCloneNode(cache.get(levelKey));
             Nodes.replaceNode(levelRootNode, Nodes.toSimpleEscapedPath(splittedPath.getInnerPathitems()), clonedNode);
-            cache.put(levelKey, levelRootNode);
+            putIntoCache(levelKey, levelRootNode);
 
         } else {
             // this should be the one used mostly
-            cache.put(levelKey, clonedNode);
+            putIntoCache(levelKey, clonedNode);
         }
 
         // propagate to backend
@@ -169,6 +169,7 @@ public class InfinispanCachingConfiguration extends DelegatingConfiguration {
         super.removeNode(path);
 
     }
+
 
     private void removeNodeFromCache(String path) {
         SplittedPath splittedPath = getSplittedPath(path);
@@ -194,23 +195,25 @@ public class InfinispanCachingConfiguration extends DelegatingConfiguration {
 
         if (splittedPath.getOuterPathItems().size() < level) {
 
-            ArrayList<String> toDelete = new ArrayList<>();
-            for (String s : cache.keySet()) {
-                if (s.startsWith(outerPath)) {
-                    toDelete.add(s);
-                }
-            }
+            ArrayList<String> toDelete = getCacheKeySet().stream()
+                    .filter(s -> s.startsWith(outerPath))
+                    .collect(Collectors.toCollection(ArrayList::new));
 
-            toDelete.forEach(cache::remove);
+            toDelete.forEach(this::removeFromCache);
 
         } else if (splittedPath.getOuterPathItems().size() > level) {
 
-            Map<String, Object> levelNode = (Map<String, Object>) Nodes.deepCloneNode(cache.get(outerPath));
+            Map<String, Object> node = cache.get(outerPath);
+
+            // if not found - nothing to delete
+            if (node==null) return;
+
+            Map<String, Object> levelNode = (Map<String, Object>) Nodes.deepCloneNode(node);
             Nodes.removeNode(levelNode, splittedPath.getInnerPathitems());
-            cache.put(outerPath, levelNode);
+            putIntoCache(outerPath, levelNode);
 
         } else {
-            cache.remove(outerPath);
+            removeFromCache(outerPath);
         }
     }
 
@@ -234,7 +237,7 @@ public class InfinispanCachingConfiguration extends DelegatingConfiguration {
         int size = splittedPath.getOuterPathItems().size();
         if (size < level) {
 
-            for (String s : cache.keySet()) {
+            for (String s : getCacheKeySet()) {
                 if (s.startsWith(outerPath)) {
                     return true;
                 }
@@ -242,6 +245,10 @@ public class InfinispanCachingConfiguration extends DelegatingConfiguration {
             return false;
         } else if (size > level) {
             Map<String, Object> levelNode = cache.get(outerPath);
+
+            // if parent node not found - no children as well
+            if (levelNode==null) return false;
+
             return Nodes.nodeExists(levelNode, splittedPath.getInnerPathitems());
         } else {
             return cache.containsKey(outerPath);
@@ -255,10 +262,50 @@ public class InfinispanCachingConfiguration extends DelegatingConfiguration {
         return objects.iterator();
     }
 
-    /**
-     * @param hook Consumer that takes the full configuration tree as an arg
-     */
-    public void onFullReload(Consumer<Object> hook) {
-        this.onFullReloadHook = hook;
+
+    ////////////////////////////////////////////////////////////////////////////
+    // Util to work with cache - including handling keyset and isolation issues
+    // Some of this logic should be thrown away as we move to a newer version of infinispan
+    ////////////////////////////////////////////////////////////////////////////
+
+    
+    
+    
+    private void putIntoCache(String key, Map<String, Object> value) {
+
+        // add key to the keyset entry
+        Map<String, Object> keysMap = cache.get(KEYSET_KEY);
+        if (keysMap == null) {
+            keysMap = new HashMap<>();
+        } else {
+            keysMap = (Map<String, Object>) Nodes.deepCloneNode(keysMap);
+        }
+
+        keysMap.put(key, new Object());
+        cache.put(KEYSET_KEY, keysMap);
+
+        cache.put(key, value);
+    }
+
+    private Set<String> getCacheKeySet() {
+        Map<String, Object> keyMap = cache.get(KEYSET_KEY);
+        if (keyMap == null)
+            keyMap = Collections.emptyMap();
+        return keyMap.keySet();
+    }
+
+    private void removeFromCache(String key) {
+        Map<String, Object> keysMap = cache.get(KEYSET_KEY);
+        if (keysMap != null) {
+            keysMap = (Map<String, Object>) Nodes.deepCloneNode(keysMap);
+            cache.put(KEYSET_KEY, keysMap);
+        }
+
+        cache.remove(key);
+    }
+
+    private void clearCache() {
+        cache.clear();
+        cache.put(KEYSET_KEY, new HashMap<>());
     }
 }
