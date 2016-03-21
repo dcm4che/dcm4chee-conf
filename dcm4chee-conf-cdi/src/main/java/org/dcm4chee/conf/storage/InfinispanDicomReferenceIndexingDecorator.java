@@ -49,11 +49,12 @@ public class InfinispanDicomReferenceIndexingDecorator extends DicomReferenceInd
 
     @Override
     public void refreshNode(String path) throws ConfigurationException {
+
+        Object oldRoot = delegate.getConfigurationNode("/", null);
+        removeOldReferablesFromIndex(oldRoot);
+
         delegate.refreshNode(path);
-
         Object root = delegate.getConfigurationNode("/", null);
-
-        uuidIndex.clear();
 
         // Don't fail on initializing/refreshing the index - in this case the config already has duplicate UUIDs and we can do nothing about it
         super.addReferablesToIndex(new ArrayList<>(), root);
