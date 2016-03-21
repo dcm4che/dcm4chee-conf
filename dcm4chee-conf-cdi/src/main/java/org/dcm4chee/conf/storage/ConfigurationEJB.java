@@ -195,6 +195,8 @@ public class ConfigurationEJB extends DelegatingConfiguration {
         } catch (ConfigurationException e) {
             throw new IllegalArgumentException("Configuration integrity violated", e);
         }
+
+        indexingDecorator.beforeCommit();
     }
 
     @Override
