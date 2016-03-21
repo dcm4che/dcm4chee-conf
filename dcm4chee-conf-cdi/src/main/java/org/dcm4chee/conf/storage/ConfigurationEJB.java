@@ -64,7 +64,8 @@ import java.util.Map;
  * A per-deployment configuration singleton that brings the following parts together:
  * <ul>
  * <li> Injects the proper config storage by looking up the system property
- * <li> Sets up dual cache, config notifications
+ * <li> Sets up infinispan cache, index, config notifications
+ * <li> Enforces global "one-writer-at-a-time" locking for modification ops
  * <li> Triggers integrity checks on transaction pre-commit
  * </ul>
  */
@@ -92,6 +93,9 @@ public class ConfigurationEJB extends DelegatingConfiguration {
     @Inject
     ConfigNotificationDecorator configNotificationDecorator;
 
+    @Inject
+    InfinispanDicomReferenceIndexingDecorator indexingDecorator;
+
     @PostConstruct
     public void init() {
         // detect user setting (system property) for config backend type
@@ -115,13 +119,11 @@ public class ConfigurationEJB extends DelegatingConfiguration {
 
         // decorate with cache
         infinispanCache.setDelegate(storage);
-//        infinispanCache.onFullReload(indexingDecorator::clearIndexAndAddReferablesFromRootNotFailingOnDuplicates);
         storage = infinispanCache;
 
         // decorate with reference indexing/resolution
-//        indexingDecorator.setDelegate(storage);
-//        storage = indexingDecorator;
-
+        indexingDecorator.setDelegate(storage);
+        storage = indexingDecorator;
 
         // bootstrap
         storage.refreshNode("/");

@@ -42,13 +42,18 @@ package org.dcm4chee.conf.storage;
 
 import org.dcm4che3.conf.core.api.Configuration;
 import org.dcm4che3.conf.core.api.ConfigurationException;
+import org.dcm4che3.conf.core.api.DuplicateUUIDException;
 import org.dcm4che3.conf.core.normalization.DefaultsAndNullFilterDecorator;
 import org.dcm4che3.conf.core.storage.InMemoryReadOnlyConfiguration;
 import org.dcm4che3.conf.dicom.CommonDicomConfiguration;
 import org.dcm4che3.conf.dicom.CommonDicomConfigurationWithHL7;
+import org.dcm4che3.conf.dicom.DicomReferenceIndexingDecorator;
 import org.dcm4chee.conf.DicomConfigManagerProducer;
 
 import javax.inject.Inject;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -75,7 +80,7 @@ public class ConfigurationIntegrityCheck {
         Configuration storage = new InMemoryReadOnlyConfiguration(configurationRoot);
 
         // TODO: maybe we should re-use existing infinispan index not to stress the heap too much
-//        storage = new IndexingDecoratorWithInit(storage, configurationRoot);
+        storage = new IndexingDecoratorWithInit(storage, configurationRoot);
         storage = new DefaultsAndNullFilterDecorator(storage, dicomConfigManagerProducer.resolveExtensionsList(), CommonDicomConfiguration.createDefaultDicomVitalizer());
 
         CommonDicomConfigurationWithHL7 dicomConfiguration = new CommonDicomConfigurationWithHL7(
@@ -88,14 +93,14 @@ public class ConfigurationIntegrityCheck {
 
     }
 
-//    private static class IndexingDecoratorWithInit extends DicomReferenceIndexingDecorator {
-//        public IndexingDecoratorWithInit(Configuration storage, Map<String, Object> configurationRootToIndex) {
-//            super(storage, new HashMap<>());
-//            List<DuplicateUUIDException> duplicateUUIDExceptions = addReferablesToIndex(new ArrayList<>(), configurationRootToIndex);
-//
-//            if (!duplicateUUIDExceptions.isEmpty())
-//                throw duplicateUUIDExceptions.get(0);
-//        }
-//
-//    }
+    private static class IndexingDecoratorWithInit extends DicomReferenceIndexingDecorator {
+        public IndexingDecoratorWithInit(Configuration storage, Map<String, Object> configurationRootToIndex) {
+            super(storage, new HashMap<>());
+            List<DuplicateUUIDException> duplicateUUIDExceptions = addReferablesToIndex(new ArrayList<>(), configurationRootToIndex);
+
+            if (!duplicateUUIDExceptions.isEmpty())
+                throw duplicateUUIDExceptions.get(0);
+        }
+
+    }
 }
