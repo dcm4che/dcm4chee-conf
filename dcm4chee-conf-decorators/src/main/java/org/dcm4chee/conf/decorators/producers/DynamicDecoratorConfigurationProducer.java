@@ -29,11 +29,16 @@ public class DynamicDecoratorConfigurationProducer {
         DynamicDecoratorsConfig dynamicDecorators = new DefaultBeanVitalizer().newConfiguredInstance((Map<String, Object>) storage
                 .getConfigurationNode("/", null), DynamicDecoratorsConfig.class);
 
+
+        String decoratorsLog = "";
         for (Map.Entry<String, DynamicDecoratorsConfig.DynamicDecoratoredServiceConfig> entry : dynamicDecorators.getDecoratedServices().entrySet()) {
-            LOG.info("Dynamic decorators for service {}:", entry.getKey());
+            decoratorsLog+="\nConfigured dynamic decorators for service " + entry.getKey() +":\n";
             for (DynamicDecoratorsConfig.DynamicDecoratorConfig dynamicDecoratorConfig : entry.getValue().getDecorators())
-                LOG.info("Found dynamic decorator {} in configuration.", dynamicDecoratorConfig.getDecoratorClassName());
+                decoratorsLog+=dynamicDecoratorConfig.getDecoratorClassName()+"\n";
         }
+
+        decoratorsLog += "\n";
+        LOG.info(decoratorsLog);
 
         return dynamicDecorators;
     }
