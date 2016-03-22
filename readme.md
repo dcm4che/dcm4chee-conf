@@ -57,10 +57,8 @@ Once a transaction succeeds, reader cache is updated.
 On transaction commit, configuration integrity check is performed.
 
 In a cluster setup, each node maintains a separate cache. As already mentioned, writer cache is exclusive, and, additionally, modifying the config acquires a cluster-wide db-based 
-pessimistic lock. If the modification succeeds, other nodes are notified with JMS (see Config change notifications), so whenever a node receives the notification, it updates its cache by 
-re-loading the configuration from the db. This is done in an async manner, which means that for a certain period (likely to be ~ few seconds) the configuration caches throughout the
-nodes will be inconsistent. This however does not hinder the consistency of optimistic locking, since whenever the writing transaction starts, it acquires a global lock and fetches the most recent 
-config from the db.        
+pessimistic lock. If the modification succeeds, the cache is synchronously updated on other nodes (max consistency), and the nodes are then notified with JMS (see Config change notifications) 
+so they can perform some actions upon config updates.   
 
 ## Batching
 
