@@ -87,7 +87,7 @@ public class ConfigChangeTopicMDB implements MessageListener {
                 String sendingNode = msg.getStringProperty(SENDING_NODE_MSG_PROP);
                 
                 ConfigChangeEvent event = (ConfigChangeEvent)msg.getObject();
-                LOGGER.debug("Node '{}', deployment '{}' received config changed event from sending node {}: {}", nodeName, appName, sendingNode, event);
+                LOGGER.info("Node '{}', deployment '{}' received config changed event from sending node {}: {}", nodeName, appName, sendingNode, event);
                 
                 notifService.sendLocalScopedConfigChangeNotification(event);
             } else {
