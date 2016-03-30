@@ -54,18 +54,18 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Forwards configuration change events to all cluster nodes via JMS.
- * 
+ *
  * @author Alexander Hoermandinger <alexander.hoermandinger@agfa.com>
  */
 public class ConfigChangeTopicBroker {
-	private static final Logger LOGGER = LoggerFactory.getLogger(ConfigChangeTopicBroker.class);
-	
-	@Resource(mappedName = "java:/ConnectionFactory")
+    private static final Logger LOGGER = LoggerFactory.getLogger(ConfigChangeTopicBroker.class);
+
+    @Resource(mappedName = "java:/ConnectionFactory")
     private ConnectionFactory connectionFactory;
 
     @Resource(mappedName = ConfigChangeTopicMDB.QUALIFIED_CONFIG_CHANGE_JMS_TOPIC)
     private Topic topic;
-    
+
     public void forwardToClusterNodes(ConfigChangeEvent event) {
         try {
             Connection connection = null;
@@ -76,10 +76,12 @@ public class ConfigChangeTopicBroker {
                 connection.start();
 
                 ObjectMessage msg = session.createObjectMessage(event);
-                
+
                 // attach name of sending node -> allows to filter on receiver side
                 msg.setStringProperty(ConfigChangeTopicMDB.SENDING_NODE_MSG_PROP,
                         ConfigChangeTopicMDB.getNodeName());
+
+                LOGGER.info("Sending cluster-wide config change notification (changed paths " + event.getChangedPaths() + ")");
 
                 messageProducer.send(msg);
             } finally {
