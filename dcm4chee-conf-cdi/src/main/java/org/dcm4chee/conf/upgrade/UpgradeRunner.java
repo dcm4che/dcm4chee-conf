@@ -146,7 +146,8 @@ public class UpgradeRunner {
             try {
                 ConfigurationMetadata configurationMetadata = loadConfigurationMetadata();
 
-                if (configurationMetadata != null && configurationMetadata.getVersion().equals(upgradeSettings.getUpgradeToVersion())) {
+                if (configurationMetadata != null && configurationMetadata.getVersion() != null && 
+                        configurationMetadata.getVersion().equals(upgradeSettings.getUpgradeToVersion())) {
                     success = true;
                     break;
                 }
