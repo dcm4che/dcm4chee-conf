@@ -31,6 +31,9 @@ dcm4cheApp.config(
             }).when('/service-manager', {
                 templateUrl: customizations.customConfigIndexPage ? customizations.customConfigIndexPage : 'config-browser/service-manager.html',
                 controller: 'ServiceManagerCtrl'
+            }).when('/versions', {
+                templateUrl: 'dcm4che-web-common/versions.html',
+                controller: 'VersionsController'
             }).otherwise({
                 redirectTo: '/service-manager'
             });

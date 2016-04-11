@@ -15,7 +15,8 @@ angular.module('dcm4che.appCommon.customizations', [/* ${extraAngularModulesList
 
         appName: "Configuration manager",
         logoutEnabled: true,
-        useNICETheme: false
+        useNICETheme: false,
+        mainVersionKey: "dcm4chee-conf"
 
         /**/
 

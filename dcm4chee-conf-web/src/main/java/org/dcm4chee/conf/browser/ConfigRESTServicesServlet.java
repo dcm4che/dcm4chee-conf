@@ -10,10 +10,12 @@ import org.dcm4che3.conf.dicom.CommonDicomConfiguration;
 import org.dcm4che3.conf.dicom.DicomPath;
 import org.dcm4che3.net.*;
 import org.dcm4che3.net.hl7.HL7ApplicationExtension;
+import org.dcm4chee.util.SoftwareVersionProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.enterprise.event.Event;
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 import javax.ws.rs.*;
 import javax.ws.rs.Path;
@@ -156,6 +158,9 @@ public class ConfigRESTServicesServlet {
     @Inject
     Event<ConfigChangeEvent> configChangeEvent;
 
+    @Inject
+    Instance<SoftwareVersionProvider> versionProviderInstance;
+
     private void fireConfigUpdateNotificationIfNecessary() throws ConfigurationException {
         // fire only if notifications are disabled by a property. Normally they should not be, except special cases like IT testing
         if (!Boolean.valueOf(System.getProperty(NOTIFICATIONS_ENABLED_PROPERTY, "true"))) {
@@ -297,6 +302,30 @@ public class ConfigRESTServicesServlet {
         BeanVitalizer vitalizer = configurationManager.getVitalizer();
         return vitalizer.lookupDefaultTypeAdapter(clazz).getSchema(new AnnotatedConfigurableProperty(clazz), vitalizer);
     }
+
+
+    /**
+     * For troubleshooting purposes - returns all the versions of software components defined in the deployment
+     */
+    @GET
+    @Path("/versions")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Map<String,String> getVersions() {
+
+        if (versionProviderInstance.isUnsatisfied()) {
+            log.warn("No versions provider defined");
+        }
+
+        Map<String,String> allVersions = new HashMap<>();
+
+        for (SoftwareVersionProvider softwareVersionProvider : versionProviderInstance) {
+            allVersions.putAll(softwareVersionProvider.getAllVersions());
+        }
+
+        return allVersions;
+
+    }
+
 
     /***
      * this method is just left for backwards-compatibility

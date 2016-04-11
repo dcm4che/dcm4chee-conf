@@ -5,16 +5,44 @@ appCommon.factory('appConfiguration', function (customizations) {
 
 	return customizations;
 });
-appCommon.controller('NavbarController', function($scope, $http, appConfiguration, appLoadingIndicator) {
+appCommon.controller('NavbarController', function($scope, appHttp, $http, appNotifications, appConfiguration, appLoadingIndicator) {
 	$scope.logoutEnabled = appConfiguration.logoutEnabled;
 	$scope.useNICETheme = appConfiguration.useNICETheme;
-
 	$scope.appLoadingIndicator = appLoadingIndicator;
 	$scope.logout = function () {
 		$http({method:"POST", url:"data/logout"}).success(function(response, status) {
 			window.location.reload();
 		});
 	};
+
+
+	// load versions
+	$scope.mainVersionKey = appConfiguration.mainVersionKey;
+	appHttp.get("data/config/versions", null, function(data,response){
+		$scope.versions = data;
+	}, function (data, status) {
+		appNotifications.showNotification({
+			level: "warning",
+			text: "Could not load component versions list",
+			details: [data, status]
+		})
+	});
+
+});
+
+appCommon.controller('VersionsController', function($scope, appHttp, $http, appNotifications, appConfiguration, appLoadingIndicator) {
+
+	// load versions
+	$scope.mainVersionKey = appConfiguration.mainVersionKey;
+	appHttp.get("data/config/versions", null, function(data,response){
+		$scope.versions = data;
+	}, function (data, status) {
+		appNotifications.showNotification({
+			level: "warning",
+			text: "Could not load component versions list",
+			details: [data, status]
+		})
+	});
 
 });
 
