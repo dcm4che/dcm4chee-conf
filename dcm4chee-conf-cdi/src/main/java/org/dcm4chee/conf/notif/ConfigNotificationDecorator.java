@@ -124,8 +124,8 @@ public class ConfigNotificationDecorator extends DelegatingConfiguration {
             try {
                 tx.registerSynchronization(container);
             } catch (Exception e) {
-                
-            } 
+                throw new RuntimeException("Unexpected error - unable to register tx hook", e);
+            }
             transactionMap.put(transactionId, container);
         }
         
