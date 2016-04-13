@@ -1,8 +1,5 @@
 angular.module('dcm4che.config.manager', ['dcm4che.appCommon', 'dcm4che.config.core']
-).controller('ServiceManagerCtrl', function ($scope, $timeout, $confirm, appHttp, appNotifications, ConfigEditorService) {
-
-        // modification tracking
-        var modifiedChecksTriggered = 0;
+).controller('ServiceManagerCtrl', function ($scope, $confirm, appHttp, appNotifications, ConfigEditorService) {
 
         $scope.switchToAdvancedView = function () {
             $scope.advancedView = true;
@@ -12,17 +9,7 @@ angular.module('dcm4che.config.manager', ['dcm4che.appCommon', 'dcm4che.config.c
             $scope.selectedDevice.isModified = !angular.equals($scope.selectedDevice.lastPersistedConfig, $scope.selectedDevice.config);
         }
 
-        $scope.$on('configurationChanged', function () {
-            modifiedChecksTriggered++;
-
-            var delay = 500;
-
-            $timeout(function () {
-                if (modifiedChecksTriggered == 1) checkModified();
-                modifiedChecksTriggered--;
-            }, delay);
-        });
-
+        $scope.$on('configurationChanged', checkModified);
 
         $scope.configuration = {};
 
@@ -80,7 +67,7 @@ angular.module('dcm4che.config.manager', ['dcm4che.appCommon', 'dcm4che.config.c
                 });
 
                 // reload this device config right away to populate the updated olock hashes
-                $scope.loadDeviceConfig(device, function(){
+                $scope.loadDeviceConfig(device, function () {
                     checkModified();
                 });
 
@@ -153,7 +140,7 @@ angular.module('dcm4che.config.manager', ['dcm4che.appCommon', 'dcm4che.config.c
             if (_.contains($scope.deviceNames, "dcm4chee-arc"))
                 $scope.selectedDeviceName = "dcm4chee-arc";
 
-            if ($scope.selectedDeviceName==null &&  $scope.devices.length > 0)
+            if ($scope.selectedDeviceName == null && $scope.devices.length > 0)
                 $scope.selectedDeviceName = $scope.devices[0].deviceName;
 
             $scope.addDeviceExtDropdown = ConfigEditorService.makeAddExtensionDropDown('selectedDevice.config', 'Device');
@@ -173,8 +160,9 @@ angular.module('dcm4che.config.manager', ['dcm4che.appCommon', 'dcm4che.config.c
             }
         );
 
-    }
-).controller('DeviceEditorController', function ($scope, appHttp, appNotifications, ConfigEditorService) {
+    })
+
+    .controller('DeviceEditorController', function ($scope, appHttp, appNotifications, ConfigEditorService) {
         $scope.ConfigEditorService = ConfigEditorService;
         $scope.editor = {
             options: null
@@ -206,8 +194,9 @@ angular.module('dcm4che.config.manager', ['dcm4che.appCommon', 'dcm4che.config.c
                 options: options
             };
         };
-    }
-).controller('DeleteTopLevelElementController', function ($scope, $confirm, ConfigEditorService) {
+    })
+
+    .controller('DeleteTopLevelElementController', function ($scope, $confirm, ConfigEditorService) {
 
         $scope.deleteCurrentElement = function () {
             $confirm("Do you really want to delete this " + $scope.selectedConfigNode.schema.class + "?").then(
@@ -235,10 +224,105 @@ angular.module('dcm4che.config.manager', ['dcm4che.appCommon', 'dcm4che.config.c
                 }
             );
         };
-    }
-)
-// 'global' service
-    .factory("ConfigEditorService", function ($rootScope, appNotifications, appHttp) {
+    })
+
+    .controller('RawConfigEditor', function ($scope, appHttp, appNotifications) {
+
+        appHttp.get("data/config/exportFullConfiguration/", null, function (data, status) {
+
+            $scope.fullConfig = JSON.stringify(data, null, '  ');
+
+        }, function (data, status) {
+            appNotifications.showNotification({
+                level: "danger",
+                text: "Could not load full config",
+                details: [data, status]
+            })
+        });
+
+        $scope.saveFullConfig = function () {
+            try {
+                JSON.parse($scope.fullConfig)
+            } catch (e) {
+                appNotifications.showNotification({
+                    level: "danger",
+                    text: "Cannot parse JSON",
+                    details: ["Check JSON syntax", 0]
+                });
+
+            }
+        }
+
+    })
+
+    .controller('TransferCapabilitiesEditor', function ($scope, appHttp, appNotifications, ConfigEditorService) {
+
+        $scope.ConfigEditorService = ConfigEditorService;
+        $scope.editor = {
+            options: null
+        };
+
+        ConfigEditorService.load(function () {
+
+        });
+
+        appHttp.get("data/config/transferCapabilities/", null, function (data, status) {
+
+            $scope.tcConfig = data;
+            $scope.lastTcConfig = angular.copy(data);
+
+        }, function (data, status) {
+            appNotifications.showNotification({
+                level: "danger",
+                text: "Could not load transfer capabilities",
+                details: [data, status]
+            })
+        });
+
+
+
+        $scope.saveTcConfig = function () {
+
+            var tccconfig2Persist = angular.copy($scope.tcConfig);
+
+            appHttp.post("data/config/transferCapabilities/", tccconfig2Persist, function (data, status) {
+
+                $scope.lastTcConfig = tccconfig2Persist;
+
+                checkModified();
+
+                appNotifications.showNotification({
+                    level: "success",
+                    text: "Transfer capabilities saved",
+                    details: [data, status]
+                })
+
+
+            }, function (data, status) {
+                appNotifications.showNotification({
+                    level: "danger",
+                    text: "Could not save transfer capabilities",
+                    details: [data, status]
+                })
+            });
+
+        };
+
+        $scope.cancelChangesTcConfig = function() {
+            $scope.tcConfig = angular.copy($scope.lastTcConfig);
+            checkModified();
+        };
+
+        var checkModified = function() {
+            $scope.isTcConfigModified = !angular.equals($scope.tcConfig, $scope.lastTcConfig);
+        };
+
+        $scope.$on('configurationChanged', checkModified);
+
+    })
+
+    // 'global' service
+    .factory("ConfigEditorService", function ($rootScope, appNotifications, appHttp, $timeout) {
 
         var hasType = function (schema, type) {
             if (!schema) return false;
@@ -248,6 +332,8 @@ angular.module('dcm4che.config.manager', ['dcm4che.appCommon', 'dcm4che.config.c
             else
                 return schema.type == type;
         };
+
+        var modifiedChecksTriggered = 0;
 
         var conf = {
 
@@ -266,10 +352,10 @@ angular.module('dcm4che.config.manager', ['dcm4che.appCommon', 'dcm4che.config.c
             aeRefs: [],
 
             extensionsPropertyForClass: {
-                "Device":"deviceExtensions",
-                "ApplicationEntity":"aeExtensions",
-                "HL7Application":"hl7AppExtensions",
-                "Connection":"connectionExtensions"
+                "Device": "deviceExtensions",
+                "ApplicationEntity": "aeExtensions",
+                "HL7Application": "hl7AppExtensions",
+                "Connection": "connectionExtensions"
             },
 
             schemas: {},
@@ -323,7 +409,7 @@ angular.module('dcm4che.config.manager', ['dcm4che.appCommon', 'dcm4che.config.c
                     conf.aeRefs = _.chain(conf.devices)
                         .pluck('appEntities')
                         .flatten()
-                        .map(function(ae) {
+                        .map(function (ae) {
                             return {
                                 name: ae.name,
                                 ref: "//*[_.uuid='" + ae.uuid + "']"
@@ -388,7 +474,16 @@ angular.module('dcm4che.config.manager', ['dcm4che.appCommon', 'dcm4che.config.c
             },
 
             checkModified: function () {
-                $rootScope.$broadcast('configurationChanged');
+
+                modifiedChecksTriggered++;
+
+                var delay = 500;
+
+                $timeout(function () {
+                    if (modifiedChecksTriggered == 1) $rootScope.$broadcast('configurationChanged');
+                    modifiedChecksTriggered--;
+                }, delay);
+
             }
         };
 

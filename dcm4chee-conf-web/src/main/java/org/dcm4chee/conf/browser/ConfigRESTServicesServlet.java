@@ -98,6 +98,8 @@ public class ConfigRESTServicesServlet {
         public SchemasJSON() {
         }
 
+        public Map<String, Object> tcgroups;
+
         public Map<String, Object> device;
 
         /**
@@ -222,6 +224,15 @@ public class ConfigRESTServicesServlet {
         return (Map<String, Object>) configurationManager.getConfigurationStorage().getConfigurationNode(DicomPath.TCGroups.path(), TCConfiguration.class);
     }
 
+
+    @POST
+    @Path("/transferCapabilities")
+    @Produces(MediaType.APPLICATION_JSON)
+    public void setTransferCapabilitiesConfig(Map<String, Object> config) throws ConfigurationException {
+        configurationManager.getConfigurationStorage().persistNode(DicomPath.TCGroups.path(), config, TCConfiguration.class);
+        fireConfigUpdateNotificationIfNecessary();
+    }
+
     @GET
     @Path("/exportFullConfiguration")
     @Produces(MediaType.APPLICATION_JSON)
@@ -271,6 +282,7 @@ public class ConfigRESTServicesServlet {
 
         SchemasJSON schemas = new SchemasJSON();
         schemas.device = getSchemaForConfigurableClass(Device.class);
+        schemas.tcgroups = getSchemaForConfigurableClass(TCConfiguration.class);
         schemas.extensions = new HashMap<>();
 
         HashMap<String, Map> deviceExtensions = new HashMap<String, Map>();

@@ -28,14 +28,29 @@ dcm4cheApp.config(
             when('/step/:stepNum', {
                 templateUrl: 'xds-browser/xds-browser.html',
                 controller: 'XdsBrowserCtrl'
-            }).when('/service-manager', {
-                templateUrl: customizations.customConfigIndexPage ? customizations.customConfigIndexPage : 'config-browser/service-manager.html',
+            }).when('/devices/:device', {
+                templateUrl: 'config-browser/devices.html',
                 controller: 'ServiceManagerCtrl'
+            }).when('/devices', {
+                templateUrl: 'config-browser/devices.html',
+                controller: 'ServiceManagerCtrl'
+            }).when('/xds-config', {
+                templateUrl: 'xds-config/xds-config.html',
+                controller: 'ServiceManagerCtrl'
+            }).when('/raw-editor', {
+                templateUrl: 'config-browser/raw-editor.html',
+                controller: 'RawConfigEditor'
+            }).when('/transfer-capabilities', {
+                templateUrl: 'config-browser/transfer-capabilities.html',
+                controller: 'TransferCapabilitiesEditor'
             }).when('/versions', {
                 templateUrl: 'dcm4che-web-common/versions.html',
                 controller: 'VersionsController'
-            }).otherwise({
-                redirectTo: '/service-manager'
+            })
+
+
+            .otherwise({
+                redirectTo: '/devices'
             });
     });
 
