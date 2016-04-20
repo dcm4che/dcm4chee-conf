@@ -1,8 +1,10 @@
 package org.dcm4chee.conf.decorators.producers;
 
+import org.dcm4che3.conf.ConfigurationSettingsLoader;
 import org.dcm4che3.conf.core.DefaultBeanVitalizer;
 import org.dcm4che3.conf.core.api.ConfigurationException;
 import org.dcm4che3.conf.core.storage.SingleJsonFileConfigurationStorage;
+import org.dcm4che3.util.StringUtils;
 import org.dcm4chee.conf.decorators.ConfiguredDynamicDecorators;
 import org.dcm4chee.conf.decorators.DynamicDecoratorsConfig;
 import org.slf4j.Logger;
@@ -44,8 +46,12 @@ public class DynamicDecoratorConfigurationProducer {
     }
 
     private String getPath() {
-        return System.getProperty("org.dcm4che.conf.dynamic.decorator.config",
-                "../standalone/configuration/dcm4chee-arc/dynamic-decorators.json");
+        String fileName = ConfigurationSettingsLoader.getPropertyWithNotice(
+                System.getProperties(),
+                "org.dcm4che.conf.dynamic.decorator.config",
+                "${jboss.server.config.dir}/dcm4chee-arc/dynamic-decorators.json");
+
+        return StringUtils.replaceSystemProperties(fileName);
     }
 
 }
