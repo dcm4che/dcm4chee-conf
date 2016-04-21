@@ -38,10 +38,6 @@
 
     <properties>
         <serviceManager.enabled>true</serviceManager.enabled>
-        <browser.security.enabled.l/>
-        <browser.security.enabled.r/>
-        <config.classifier/>
-        <security.classifier/>
 
 	<!-- default is usage with dcm4che archive -->
         <classifier>arc</classifier>
@@ -54,33 +50,9 @@
     </properties>
     <profiles>
         <profile>
-            <id>secure</id>
-        </profile>
-        <profile>
-            <id>xds-asb</id>
-            <properties>
-                <config.classifier>-xds-asb</config.classifier>
-                <classifier>xds-asb</classifier>
-            </properties>
-        </profile>
-
-        <profile>
             <id>asb</id>
             <properties>
-                <config.classifier>-csp-asb</config.classifier>
                 <classifier>csp-asb</classifier>
-
-                <!-- TEMPORARILY UN-SECURED -->
-                <browser.security.enabled.l>&lt;!--</browser.security.enabled.l>
-                <browser.security.enabled.r>--&gt;</browser.security.enabled.r>
-            </properties>
-        </profile>
-
-        <profile>
-            <id>xds</id>
-            <properties>
-                <config.classifier>-xds</config.classifier>
-                <classifier>xds</classifier>
             </properties>
         </profile>
 
@@ -148,15 +120,6 @@
                     </plugin>
                 </plugins>
             </build>
-        </profile>
-        <profile>
-            <id>security-disabled</id>
-            <activation><activeByDefault>true</activeByDefault></activation>
-            <properties>
-                <security.classifier>-unsecure</security.classifier>
-                <browser.security.enabled.l>&lt;!--</browser.security.enabled.l>
-                <browser.security.enabled.r>--&gt;</browser.security.enabled.r>
-            </properties>
         </profile>
     </profiles>
     <dependencies>
@@ -228,15 +191,12 @@
         <!--</dependency>-->
     </dependencies>
     <build>
-        <filters>
-            <filter>browser${config.classifier}.properties</filter>
-        </filters>
         <plugins>
             <plugin>
                 <artifactId>maven-war-plugin</artifactId>
                 <version>2.1.1</version>
                 <configuration>
-                    <classifier>${classifier}${security.classifier}</classifier>
+                    <classifier>${classifier}</classifier>
                     <webResources>
                         <resource>
                             <directory>src/main/webapp</directory>

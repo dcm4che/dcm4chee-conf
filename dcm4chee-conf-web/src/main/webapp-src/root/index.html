@@ -25,6 +25,7 @@
     <link rel="stylesheet" href="dcm4che-web-common/css/dcm4chee.css">
     <link rel="stylesheet" href="3rdparty/angular-strap/bootstrap-additions.css">
     <link rel="stylesheet" href="3rdparty/bootstrap/css/bootstrap.css">
+	<link rel="stylesheet" href="xds-config/xds-config.css"> 
 
     <script src="app.js"></script>
     <script src="dcm4che-web-common/appCommon.js"></script>
@@ -42,6 +43,10 @@
     <script src="config-browser/service-manager.js"></script>
     <script src="config-browser/confignode.js"></script>
     <script src="config.js"></script>
+
+	<script type="text/javascript" src="xds-config/xds-config.js"></script>
+
+
 
     <link ng-if="appConfiguration.useNICETheme" rel="stylesheet" href="3rdparty/bootstrap/css/nice.1.9.css">
 
@@ -102,7 +107,7 @@
 
 
         <div class="navbar-group navbar-left" ng-if="appConfiguration.xdsBrowser">
-            <a class="btn navbar-btn btn-primary" href="#/service-manager">Configuration</a>
+            <a class="btn navbar-btn btn-primary" href="/config#/devices">General Config</a>
             <a ng-show="appConfiguration.xdsBrowser" class="btn navbar-btn btn-primary" href="#/step/0">Registry
                 browser</a>
         </div>
@@ -138,8 +143,6 @@
     </div>
 </div>
 
-<!-- Injected by maven -->
-<!-- ${extraScripts} -->
 
 </body>
 </html>
