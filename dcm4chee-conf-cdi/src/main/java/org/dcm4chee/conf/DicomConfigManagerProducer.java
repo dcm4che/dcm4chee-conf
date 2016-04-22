@@ -211,7 +211,7 @@ public class DicomConfigManagerProducer {
             String simpleName = configurableExtension.getClass().getSimpleName();
             String fullName = configurableExtension.getClass().getName();
             boolean simpleNameExisted = !simpleNames.add(simpleName);
-            boolean fullNameExisted = fullNames.add(fullName);
+            boolean fullNameExisted = !fullNames.add(fullName);
 
 
             if (simpleNameExisted && !fullNameExisted) {
