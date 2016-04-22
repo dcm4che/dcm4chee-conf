@@ -53,7 +53,9 @@ import java.util.Map;
 @ConfigurableClass
 public class ConfigurationMetadata {
 
-    @ConfigurableProperty
+    @ConfigurableProperty(
+            label = "Global configuration version"
+    )
     private String version;
 
     @ConfigurableProperty

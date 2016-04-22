@@ -10,6 +10,8 @@ import org.dcm4che3.conf.dicom.CommonDicomConfiguration;
 import org.dcm4che3.conf.dicom.DicomPath;
 import org.dcm4che3.net.*;
 import org.dcm4che3.net.hl7.HL7ApplicationExtension;
+import org.dcm4chee.conf.upgrade.ConfigurationMetadata;
+import org.dcm4chee.conf.upgrade.UpgradeRunner;
 import org.dcm4chee.util.SoftwareVersionProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -99,6 +101,7 @@ public class ConfigRESTServicesServlet {
         }
 
         public Map<String, Object> tcgroups;
+        public Map<String, Object> metadata;
 
         public Map<String, Object> device;
 
@@ -233,6 +236,24 @@ public class ConfigRESTServicesServlet {
         fireConfigUpdateNotificationIfNecessary();
     }
 
+
+    @GET
+    @Path("/metadata")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Map<String, Object> getMetadata() throws ConfigurationException {
+        return (Map<String, Object>) configurationManager.getConfigurationStorage().getConfigurationNode(DicomConfigurationManager.METADATA_ROOT_PATH, ConfigurationMetadata.class);
+    }
+
+
+    @POST
+    @Path("/metadata")
+    @Produces(MediaType.APPLICATION_JSON)
+    public void setMetadata(Map<String, Object> config) throws ConfigurationException {
+        configurationManager.getConfigurationStorage().persistNode(DicomConfigurationManager.METADATA_ROOT_PATH, config, ConfigurationMetadata.class);
+        fireConfigUpdateNotificationIfNecessary();
+    }
+
+
     @GET
     @Path("/exportFullConfiguration")
     @Produces(MediaType.APPLICATION_JSON)
@@ -283,6 +304,7 @@ public class ConfigRESTServicesServlet {
         SchemasJSON schemas = new SchemasJSON();
         schemas.device = getSchemaForConfigurableClass(Device.class);
         schemas.tcgroups = getSchemaForConfigurableClass(TCConfiguration.class);
+        schemas.metadata = getSchemaForConfigurableClass(ConfigurationMetadata.class);
         schemas.extensions = new HashMap<>();
 
         HashMap<String, Map> deviceExtensions = new HashMap<String, Map>();

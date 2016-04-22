@@ -279,8 +279,6 @@ angular.module('dcm4che.config.manager', ['dcm4che.appCommon', 'dcm4che.config.c
             })
         });
 
-
-
         $scope.saveTcConfig = function () {
 
             var tccconfig2Persist = angular.copy($scope.tcConfig);
@@ -315,6 +313,70 @@ angular.module('dcm4che.config.manager', ['dcm4che.appCommon', 'dcm4che.config.c
 
         var checkModified = function() {
             $scope.isTcConfigModified = !angular.equals($scope.tcConfig, $scope.lastTcConfig);
+        };
+
+        $scope.$on('configurationChanged', checkModified);
+
+    })
+
+    .controller('MetadataEditor', function ($scope, appHttp, appNotifications, ConfigEditorService) {
+
+        $scope.ConfigEditorService = ConfigEditorService;
+        $scope.editor = {
+            options: null
+        };
+
+        ConfigEditorService.load(function () {
+
+        });
+
+        appHttp.get("data/config/metadata/", null, function (data, status) {
+
+            $scope.metadataConfig = data;
+            $scope.lastMetadataConfig = angular.copy(data);
+
+        }, function (data, status) {
+            appNotifications.showNotification({
+                level: "danger",
+                text: "Could not metadata",
+                details: [data, status]
+            })
+        });
+
+        $scope.saveMetadataConfig = function () {
+
+            var metadata2Persist = angular.copy($scope.metadataConfig);
+
+            appHttp.post("data/config/metadata/", metadata2Persist, function (data, status) {
+
+                $scope.lastMetadataConfig = metadata2Persist;
+
+                checkModified();
+
+                appNotifications.showNotification({
+                    level: "success",
+                    text: "Metadata saved",
+                    details: [data, status]
+                })
+
+
+            }, function (data, status) {
+                appNotifications.showNotification({
+                    level: "danger",
+                    text: "Could not save metadata",
+                    details: [data, status]
+                })
+            });
+
+        };
+
+        $scope.cancelChangesMetadataConfig = function() {
+            $scope.metadataConfig = angular.copy($scope.lastMetadataConfig);
+            checkModified();
+        };
+
+        var checkModified = function() {
+            $scope.isMetadataConfigModified = !angular.equals($scope.metadataConfig, $scope.lastMetadataConfig);
         };
 
         $scope.$on('configurationChanged', checkModified);

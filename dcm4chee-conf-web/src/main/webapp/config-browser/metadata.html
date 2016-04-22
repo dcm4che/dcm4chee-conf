@@ -1,0 +1,37 @@
+<div ng-show="!enableMetadataEdit">
+    <h2>Upgrade script metadata</h2>
+    <table class="table table-hover">
+        <thead>
+            <tr ng-repeat="(component,scriptMetadata) in metadataConfig.metadataOfUpgradeScripts">
+                <th>Upgrade script class</th>
+                <th>Last version executed</th>
+            </tr>
+        </thead>
+        <tr ng-repeat="(component,scriptMetadata) in metadataConfig.metadataOfUpgradeScripts">
+            <td>{{component}}</td>
+            <td>{{scriptMetadata.lastVersionExecuted}}</td>
+        </tr>
+    </table>
+
+    <button class="btn btn-danger" ng-click="enableMetadataEdit = true">Modify metadata
+        (DANGER AREA)
+    </button>
+</div>
+<div ng-show="enableMetadataEdit">
+    <div confignode="metadataConfig"
+         schema="ConfigEditorService.schemas.metadata"
+         options="{legend:'Metadata - DANGER AREA - only change values if you know what you are doing'}">
+    </div>
+
+    <a ng-show="isMetadataConfigModified" href=""
+       ng-click="saveMetadataConfig()"
+       class="btn btn-success ">Save</a>
+    <a ng-show="isMetadataConfigModified" href=""
+       ng-click="cancelChangesMetadataConfig()"
+       class="btn btn-danger ">Cancel</a>
+
+    Here you can manually modify the metadata, e.g. to rapidly test upgrade scripts.
+    <b>Changing these values might lead to a destructive behaviour of the configuration upgrade procedure. Use with
+        extreme care.</b>
+</div>
+

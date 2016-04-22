@@ -43,13 +43,13 @@ dcm4cheApp.config(
             }).when('/transfer-capabilities', {
                 templateUrl: 'config-browser/transfer-capabilities.html',
                 controller: 'TransferCapabilitiesEditor'
+            }).when('/metadata', {
+                templateUrl: 'config-browser/metadata.html',
+                controller: 'MetadataEditor'
             }).when('/versions', {
                 templateUrl: 'dcm4che-web-common/versions.html',
                 controller: 'VersionsController'
-            })
-
-
-            .otherwise({
+            }).otherwise({
                 redirectTo: '/devices'
             });
     });
