@@ -61,10 +61,9 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Instance;
 import javax.enterprise.inject.Produces;
 import javax.inject.Inject;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
 /**
  * @Roman K
@@ -203,6 +202,24 @@ public class DicomConfigManagerProducer {
             if (extension.getClass().getAnnotation(ConfigurableClass.class) != null)
                 configurableExtensions.add(extension);
         }
+
+        // make sure simple class names are unique
+        HashSet<String> simpleNames = new HashSet<>();
+        for (ConfigurableClassExtension configurableExtension : configurableExtensions) {
+
+            String simpleName = configurableExtension.getClass().getSimpleName();
+            boolean notExisted = simpleNames.add(simpleName);
+            if (!notExisted) {
+                // we have a duplicate, let's find out all occurrences
+                List<ConfigurableClassExtension> conflicting = configurableExtensions.stream()
+                        .filter((ext) -> ext.getClass().getSimpleName().equals(simpleName))
+                        .collect(Collectors.toList());
+
+                throw new IllegalArgumentException("Simple class names of configurable extensions MUST be unique. This rule was violated by classes:\n" +
+                        conflicting);
+            }
+        }
+
         return configurableExtensions;
     }
 
