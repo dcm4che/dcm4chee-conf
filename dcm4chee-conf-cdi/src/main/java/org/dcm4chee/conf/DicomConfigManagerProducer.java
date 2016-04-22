@@ -205,18 +205,28 @@ public class DicomConfigManagerProducer {
 
         // make sure simple class names are unique
         HashSet<String> simpleNames = new HashSet<>();
+        HashSet<String> fullNames = new HashSet<>();
         for (ConfigurableClassExtension configurableExtension : configurableExtensions) {
 
             String simpleName = configurableExtension.getClass().getSimpleName();
-            boolean notExisted = simpleNames.add(simpleName);
-            if (!notExisted) {
+            String fullName = configurableExtension.getClass().getName();
+            boolean simpleNameExisted = !simpleNames.add(simpleName);
+            boolean fullNameExisted = fullNames.add(fullName);
+
+
+            if (simpleNameExisted && !fullNameExisted) {
                 // we have a duplicate, let's find out all occurrences
                 List<ConfigurableClassExtension> conflicting = configurableExtensions.stream()
                         .filter((ext) -> ext.getClass().getSimpleName().equals(simpleName))
                         .collect(Collectors.toList());
 
-                throw new IllegalArgumentException("Simple class names of configurable extensions MUST be unique. This rule was violated by classes:\n" +
-                        conflicting);
+                throw new IllegalArgumentException("Simple class names of configurable extensions MUST be unique. This rule was violated by classes:\n" + conflicting);
+
+            } else if (simpleNameExisted && fullNameExisted) {
+                // if fullname existed as well, it means we have a class with the same name
+                // could happen when deploying duplicate libs, etc, so not as critical, just print a warning
+
+                log.warn("Found duplicate configurable extension class: "+ fullName);
             }
         }
 
