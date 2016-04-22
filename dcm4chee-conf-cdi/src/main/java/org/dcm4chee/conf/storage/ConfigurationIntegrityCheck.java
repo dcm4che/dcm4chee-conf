@@ -47,14 +47,12 @@ import org.dcm4che3.conf.core.normalization.DefaultsAndNullFilterDecorator;
 import org.dcm4che3.conf.core.storage.InMemoryReadOnlyConfiguration;
 import org.dcm4che3.conf.dicom.CommonDicomConfiguration;
 import org.dcm4che3.conf.dicom.CommonDicomConfigurationWithHL7;
+import org.dcm4che3.conf.dicom.DicomPath;
 import org.dcm4che3.conf.dicom.DicomReferenceIndexingDecorator;
 import org.dcm4chee.conf.DicomConfigManagerProducer;
 
 import javax.inject.Inject;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * @author Roman K
@@ -74,11 +72,23 @@ public class ConfigurationIntegrityCheck {
         if (System.getProperty(DISABLE_INTEGRITY_CHECK_PROPERTY) != null)
             return;
 
-        // temporarily just 'materialize' full config
-        // TODO later will be replaced with proper referential consistency analysis
 
         Configuration storage = new InMemoryReadOnlyConfiguration(configurationRoot);
 
+        // make sure AEs are unique
+        Set<String> aes = new HashSet<>();
+        storage.search(DicomPath.AllAETitles.path()).forEachRemaining((ae) -> {
+
+            if (!(ae instanceof String))
+                throw new IllegalArgumentException("AE titles must be string");
+
+            if (!aes.add((String) ae)) {
+                throw new ConfigurationException("Found duplicate AE title: " + ae);
+            }
+        });
+
+        // temporarily just 'materialize' full config
+        // TODO later will be replaced with proper referential consistency analysis
         // TODO: maybe we should re-use existing infinispan index not to stress the heap too much
         storage = new IndexingDecoratorWithInit(storage, configurationRoot);
         storage = new DefaultsAndNullFilterDecorator(storage, dicomConfigManagerProducer.resolveExtensionsList(), CommonDicomConfiguration.createDefaultDicomVitalizer());
