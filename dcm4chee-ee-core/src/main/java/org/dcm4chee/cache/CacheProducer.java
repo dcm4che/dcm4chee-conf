@@ -41,6 +41,8 @@
 package org.dcm4chee.cache;
 
 import org.infinispan.manager.EmbeddedCacheManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Resource;
 import javax.enterprise.context.ApplicationScoped;
@@ -57,7 +59,10 @@ import javax.naming.NamingException;
 public class CacheProducer {
 
     private static final String container = System.getProperty("org.dcm4che.infinispan.container", "dcm4chee");
+    private static final int maxRetries = Integer.parseInt(System.getProperty("org.dcm4chee.cache.maxRetries", "10"));
 
+    private static final Logger LOG = LoggerFactory.getLogger(CacheProducer.class);
+    
     @SuppressWarnings("unchecked")
     @Produces
     @CacheByName
@@ -66,19 +71,27 @@ public class CacheProducer {
         String cacheName = point.getAnnotated().getAnnotation(CacheByName.class).value();
 
         org.infinispan.Cache<Object, Object> cache;
-        try {
-            Context ic = new InitialContext();
-            EmbeddedCacheManager defaultCacheManager = (EmbeddedCacheManager) ic.lookup("java:jboss/infinispan/container/" + container);
-            cache = defaultCacheManager.getCache(cacheName, false);
-        } catch (Exception e) {
-            throw new RuntimeException("Error while looking up cache '" + cacheName + "' in '" + container + "' container", e);
+        RuntimeException exception = null;
+        for (int i=0 ; i < maxRetries ; ) {
+            exception = null;
+            try {
+                Context ic = new InitialContext();
+                EmbeddedCacheManager defaultCacheManager = (EmbeddedCacheManager) ic.lookup("java:jboss/infinispan/container/" + container);
+                cache = defaultCacheManager.getCache(cacheName, false);
+                if (cache != null) {
+                    return new InfinispanWrapper(cache);
+                }
+            } catch (Exception e) {
+                exception = new RuntimeException("Error while looking up cache '" + cacheName + "' in '" + container + "' container", e);
+            }
+            LOG.info("Infinispan cache '{}' not ready! Retry [{}/{}] in 500ms", new Object[]{cacheName, ++i, maxRetries});
+            try {
+                Thread.currentThread().sleep(500);
+            } catch (InterruptedException ie) {}
         }
-
-        if (cache == null) {
-            throw new IllegalArgumentException("Infinispan cache '" + cacheName + "' not found in '" + container + "' cache container");
-        }
-
-        return new InfinispanWrapper(cache);
+        if (exception != null)
+            throw exception;
+        throw new IllegalArgumentException("Infinispan cache '" + cacheName + "' not found in '" + container + "' cache container");
     }
 
 }
