@@ -125,10 +125,11 @@ public class ConfigurationEJB extends DelegatingConfiguration {
         indexingDecorator.setDelegate(storage);
         storage = indexingDecorator;
 
-        // bootstrap
-        storage.refreshNode("/");
-
         delegate = storage;
+
+        // bootstrap
+        delegate.refreshNode("/");
+
         log.info("dcm4che configuration singleton EJB created");
     }
 

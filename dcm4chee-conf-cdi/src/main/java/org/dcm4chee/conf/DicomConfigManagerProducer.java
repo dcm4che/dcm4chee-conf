@@ -68,6 +68,7 @@ import java.util.stream.Collectors;
 /**
  * @Roman K
  */
+@ApplicationScoped
 public class DicomConfigManagerProducer {
 
     private final static Logger log = LoggerFactory.getLogger(DicomConfigManagerProducer.class);
@@ -83,6 +84,10 @@ public class DicomConfigManagerProducer {
     @Inject
     private Instance<CdiUpgradeManager> upgradeManagerInstance;
 
+    /**
+     * To avoid logging warning multiple times
+     */
+    private boolean loggedWarnings = false;
 
     // temp workaround just for closure
     private CommonDicomConfigurationWithHL7 configurationWithHL7;
@@ -226,9 +231,11 @@ public class DicomConfigManagerProducer {
                 // if fullname existed as well, it means we have a class with the same name
                 // could happen when deploying duplicate libs, etc, so not as critical, just print a warning
 
-                log.warn("Found duplicate configurable extension class: "+ fullName);
+                if (!loggedWarnings) log.warn("Found duplicate configurable extension class: " + fullName);
             }
         }
+
+        loggedWarnings = true;
 
         return configurableExtensions;
     }
