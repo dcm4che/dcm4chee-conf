@@ -15,6 +15,9 @@ import javax.inject.Inject;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * To workaround the limitation of infinispan (at least 5.x) we maintain the keyset inside a special entry {@link KEYSET_KEY}
+ */
 @SuppressWarnings("unchecked")
 @ApplicationScoped
 public class InfinispanCachingConfiguration extends DelegatingConfiguration {
@@ -74,8 +77,7 @@ public class InfinispanCachingConfiguration extends DelegatingConfiguration {
 
         HashMap<String, Object> root = new HashMap<>();
 
-        // TODO: cache.entrySet is not really threadsafe..
-        // tests show that this works in replicated mode but we need to switch to some proper API call once we move to a newer infinispan
+        // TODO: we need to switch to some proper API call once we move to a newer infinispan
         // for now it's not so critical since most conf calls will go directly to certain entries
 
         for (String path : getCacheKeySet()) {
