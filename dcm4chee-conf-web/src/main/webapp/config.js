@@ -1,6 +1,5 @@
-angular.module('dcm4che.appCommon.customizations', [/* ${extraAngularModulesList} */])
+angular.module('dcm4che.appCommon.customizations', ['dcm4che.config.xds'])
     .constant('customizations', {
-
 
         // This file customizes the app's behavior. Possible values:
         // appName: "XDS administration",
@@ -10,15 +9,10 @@ angular.module('dcm4che.appCommon.customizations', [/* ${extraAngularModulesList
         // logoutEnabled: true,
         // useNICETheme: false
 
-        //  populated with maven filtering!
-        // ${webManagerConfig}
-
         appName: "Configuration manager",
         logoutEnabled: true,
         useNICETheme: false,
         mainVersionKey: "dcm4chee-conf"
-
-        /**/
 
     }
 );
