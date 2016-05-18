@@ -1,3 +1,24 @@
+# Architecture
+
+    Upgrade enguine
+    DicomConfiguration( conf.merge(device) )
+        
+    Typesafe layer (Vitalizer, from/to configurable instance)
+    Defaults
+    ->ExtensionMergingConfiguration
+    Hash-based optimistic locking 
+    
+    ConfigurationEJB
+    
+    Infinispan
+    Reference indexing
+    
+    Integrity check
+    Notifications
+    
+    Storage (DB, json file)
+
+
 # How to access (read/write) configuration / implement dedicated APIs
 
 To access the dicom configuration, inject a `DicomConfiguration` bean with CDI like

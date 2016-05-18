@@ -103,6 +103,9 @@ public class DicomConfigManagerProducer {
 
         Configuration storage = providedConfigStorage;
 
+        //// TODO: wrap into ExtensionMergingConfiguration
+
+
         // olocking
         if (System.getProperty(DISABLE_OLOCK_PROP) == null) {
             storage = new HashBasedOptimisticLockingConfiguration(
