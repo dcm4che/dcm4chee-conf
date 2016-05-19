@@ -1,22 +1,23 @@
 # Architecture
 
-    Upgrade enguine
+
+    Upgrade engine
     DicomConfiguration( conf.merge(device) )
         
     Typesafe layer (Vitalizer, from/to configurable instance)
-    Defaults
-    ->ExtensionMergingConfiguration
-    Hash-based optimistic locking 
-    
     ConfigurationEJB
-    
-    Infinispan
-    Reference indexing
-    
-    Integrity check
-    Notifications
-    
-    Storage (DB, json file)
+            |
+      t     |    Defaults filter
+      r     |   Hash-based optimistic locking 
+      a     |    ->ExtensionMergingConfiguration
+      n     |   
+      s     |   Infinispan reference index
+      a     |   Infinispan cache
+      c     |   
+      t     |   Storage (DB, json file)
+            |-----
+            \   (pre-commit)Integrity check
+            \   (post-commit)Notifications
 
 
 # How to access (read/write) configuration / implement dedicated APIs

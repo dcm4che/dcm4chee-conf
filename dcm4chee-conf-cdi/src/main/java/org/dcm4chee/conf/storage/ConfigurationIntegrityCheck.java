@@ -49,6 +49,7 @@ import org.dcm4che3.conf.dicom.CommonDicomConfiguration;
 import org.dcm4che3.conf.dicom.CommonDicomConfigurationWithHL7;
 import org.dcm4che3.conf.dicom.DicomPath;
 import org.dcm4che3.conf.dicom.DicomReferenceIndexingDecorator;
+import org.dcm4chee.conf.ConfigurableExtensionsResolver;
 import org.dcm4chee.conf.DicomConfigManagerProducer;
 
 import javax.inject.Inject;
@@ -65,6 +66,8 @@ public class ConfigurationIntegrityCheck {
     @Inject
     DicomConfigManagerProducer dicomConfigManagerProducer;
 
+    @Inject
+    ConfigurableExtensionsResolver extensionsResolver;
 
     public void performCheck(Map<String, Object> configurationRoot) throws ConfigurationException {
 
@@ -91,11 +94,11 @@ public class ConfigurationIntegrityCheck {
         // TODO later will be replaced with proper referential consistency analysis
         // TODO: maybe we should re-use existing infinispan index not to stress the heap too much
         storage = new IndexingDecoratorWithInit(storage, configurationRoot);
-        storage = new DefaultsAndNullFilterDecorator(storage, dicomConfigManagerProducer.resolveExtensionsList(), CommonDicomConfiguration.createDefaultDicomVitalizer());
+        storage = new DefaultsAndNullFilterDecorator(storage, extensionsResolver.resolveExtensionsList(), CommonDicomConfiguration.createDefaultDicomVitalizer());
 
         CommonDicomConfigurationWithHL7 dicomConfiguration = new CommonDicomConfigurationWithHL7(
                 storage,
-                dicomConfigManagerProducer.resolveExtensionsMap(false)
+                extensionsResolver.resolveExtensionsMap(false)
         );
 
         for (String deviceName : dicomConfiguration.listDeviceNames())

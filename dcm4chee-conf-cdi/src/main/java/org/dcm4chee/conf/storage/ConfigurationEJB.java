@@ -44,6 +44,10 @@ import org.dcm4che3.conf.ConfigurationSettingsLoader;
 import org.dcm4che3.conf.core.DelegatingConfiguration;
 import org.dcm4che3.conf.core.api.Configuration;
 import org.dcm4che3.conf.core.api.ConfigurationException;
+import org.dcm4che3.conf.core.normalization.DefaultsAndNullFilterDecorator;
+import org.dcm4che3.conf.core.olock.HashBasedOptimisticLockingConfiguration;
+import org.dcm4che3.conf.dicom.CommonDicomConfiguration;
+import org.dcm4chee.conf.ConfigurableExtensionsResolver;
 import org.dcm4chee.conf.notif.ConfigNotificationDecorator;
 import org.dcm4chee.conf.storage.ConfigurationStorage.ConfigStorageAnno;
 import org.dcm4chee.util.TransactionSynchronization;
@@ -51,50 +55,73 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.Resource;
 import javax.ejb.*;
 import javax.enterprise.inject.Any;
 import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
-import javax.transaction.RollbackException;
-import javax.transaction.Synchronization;
-import javax.transaction.SystemException;
+import javax.transaction.*;
+import java.util.List;
 import java.util.Map;
 
 /**
- * A per-deployment configuration singleton that brings the following parts together:
+ * A per-deployment configuration singleton that brings the config framework parts together:
  * <ul>
  * <li> Injects the proper config storage by looking up the system property
- * <li> Sets up infinispan cache, index, config notifications
- * <li> Enforces global "one-writer-at-a-time" locking for modification ops
+ * <li> Sets up infinispan cache, reference index
+ * <li> Enforces global "one-writer-at-a-time" locking for modification ops and tx demarcation
+ * <li> Enables hash-based optimistic locking</li>
+ * <li> Enables defaults filtering</li>
  * <li> Triggers integrity checks on transaction pre-commit
+ * <li> Triggers config notifications on post-commit
  * </ul>
+ * <p>Manages tx demarcation as follows:
+ * <ul>
+ * <li> runBatch always executes the batch in a new transaction with a special marker
+ * <li> if any of state-modifying methods is called outside of a batch tx - executes it in a new transaction
+ * <li> if any of state-modifying methods is called within a marked batch tx - executes it as is, i.e. without any extra wrappers
+ * </ul>
+ * </p>
  */
 @SuppressWarnings("unchecked")
 @Singleton
 @ConcurrencyManagement(ConcurrencyManagementType.BEAN)
+@TransactionManagement(TransactionManagementType.BEAN)
 @Local(ConfigurationEJB.class)
 public class ConfigurationEJB extends DelegatingConfiguration {
 
     public static final Logger log = LoggerFactory.getLogger(ConfigurationEJB.class);
+
+    private static final String DISABLE_OLOCK_PROP = "org.dcm4che.conf.olock.disabled";
+
+    // components
+
+    @Inject
+    InfinispanCachingConfigurationDecorator infinispanCachingConfigurationDecorator;
+
+    @Inject
+    InfinispanDicomReferenceIndexingDecorator indexingDecorator;
 
     @Inject
     @Any
     private Instance<Configuration> availableConfigStorage;
 
     @Inject
+    ConfigNotificationDecorator configNotificationDecorator;
+
+    @Inject
     private ConfigurationIntegrityCheck integrityCheck;
+
+    // util
+
+    @Resource
+    UserTransaction utx;
 
     @Inject
     TransactionSynchronization txSync;
 
     @Inject
-    InfinispanCachingConfiguration infinispanCache;
-
-    @Inject
-    ConfigNotificationDecorator configNotificationDecorator;
-
-    @Inject
-    InfinispanDicomReferenceIndexingDecorator indexingDecorator;
+    ConfigurableExtensionsResolver extensionsProvider;
 
     @PostConstruct
     public void init() {
@@ -118,12 +145,27 @@ public class ConfigurationEJB extends DelegatingConfiguration {
         storage = configNotificationDecorator;
 
         // decorate with cache
-        infinispanCache.setDelegate(storage);
-        storage = infinispanCache;
+        infinispanCachingConfigurationDecorator.setDelegate(storage);
+        storage = infinispanCachingConfigurationDecorator;
 
         // decorate with reference indexing/resolution
         indexingDecorator.setDelegate(storage);
         storage = indexingDecorator;
+
+        //// TODO: wrap into ExtensionMergingConfiguration
+
+        List<Class> allExtensionClasses = extensionsProvider.resolveExtensionsList();
+
+        // olocking
+        if (System.getProperty(DISABLE_OLOCK_PROP) == null) {
+            storage = new HashBasedOptimisticLockingConfiguration(
+                    storage,
+                    allExtensionClasses);
+        }
+
+        // defaults filtering
+        storage = new DefaultsAndNullFilterDecorator(storage, allExtensionClasses, CommonDicomConfiguration.createDefaultDicomVitalizer());
+
 
         delegate = storage;
 
@@ -133,32 +175,60 @@ public class ConfigurationEJB extends DelegatingConfiguration {
         log.info("dcm4che configuration singleton EJB created");
     }
 
+    @Override
     public void persistNode(String path, Map<String, Object> configNode, Class configurableClass) throws ConfigurationException {
-        lock();
-        super.persistNode(path, configNode, configurableClass);
+
+        Runnable r = () -> delegate.persistNode(path, configNode, configurableClass);
+
+        if (isBatchTx())
+            runInOngoingTx(r);
+        else
+            runInNewTx(r, "Transaction handling issue while persisting config @ " + path);
+
     }
 
+    @Override
     public void removeNode(String path) throws ConfigurationException {
-        lock();
-        super.removeNode(path);
+
+        Runnable r = () -> delegate.removeNode(path);
+
+        if (isBatchTx())
+            runInOngoingTx(r);
+        else
+            runInNewTx(r, "Transaction handling issue while removing node @ " + path);
+
     }
 
     @Override
     public void refreshNode(String path) throws ConfigurationException {
-        lock();
-        super.refreshNode(path);
+
+        Runnable r = () -> delegate.refreshNode(path);
+
+        if (isBatchTx())
+            runInOngoingTx(r);
+        else
+            runInNewTx(r, "Transaction handling issue while refreshing node @ " + path);
     }
 
     @Override
-    @TransactionAttribute(TransactionAttributeType.REQUIRES_NEW)
+    public void lock() {
+        log.warn("Unexpected call to lock(). Locking is handled automatically on a lower layer and should not be called explicitly", new IllegalStateException());
+        delegate.lock();
+    }
+
+    @Override
     public void runBatch(Batch batch) {
-        lock();
-        super.runBatch(batch);
+        runInNewTx(
+                () -> {
+                    markBatchTx();
+
+                    // run directly here - we are inside a tx for sure - no need to delegate
+                    batch.run();
+                }, "Failed to run configuration batch");
     }
 
     /**
-     * Ensures that integrity checking will be done before committing the transaction,
-     * and reader cache will be modified after
+     * Ensures that integrity checking will be done before committing the transaction
      */
     private void registerTxHooks() {
 
@@ -200,20 +270,36 @@ public class ConfigurationEJB extends DelegatingConfiguration {
         indexingDecorator.beforeCommit();
     }
 
-    @Override
-    public void lock() {
-        super.lock();
-        registerTxHooks();
+
+    private boolean isBatchTx() {
+        return txSync.getStatus() != Status.STATUS_NO_TRANSACTION
+                && txSync.getSynchronizationRegistry().getResource(Batch.class) != null;
+    }
+
+    private void markBatchTx() {
+        txSync.getSynchronizationRegistry().putResource(Batch.class, new Object());
+    }
+
+    private void runInNewTx(Runnable r, String message) {
+        try {
+            utx.begin();
+            delegate.lock();
+            registerTxHooks();
+
+            r.run();
+            utx.commit();
+        } catch (RollbackException | HeuristicRollbackException | HeuristicMixedException e) {
+            throw new EJBException(message, e);
+        } catch (SystemException | NotSupportedException e) {
+            throw new RuntimeException(message, e);
+        }
     }
 
     /**
-     * To be used by whoever needs a tx with 'requires' logic
-     *
-     * @param batch
+     * to make the stack trace easier to read
      */
-    public void runWithRequiresTxWithLock(Batch batch) {
-        lock();
-        batch.run();
+    private void runInOngoingTx(Runnable r) {
+        r.run();
     }
 
 }

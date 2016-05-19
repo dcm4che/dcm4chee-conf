@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
  */
 @SuppressWarnings("unchecked")
 @ApplicationScoped
-public class InfinispanCachingConfiguration extends DelegatingConfiguration {
+public class InfinispanCachingConfigurationDecorator extends DelegatingConfiguration {
 
     private static final Logger log = LoggerFactory.getLogger(DelegatingConfiguration.class);
 
@@ -31,7 +31,7 @@ public class InfinispanCachingConfiguration extends DelegatingConfiguration {
     @CacheByName("configuration")
     private Cache<String, Map<String, Object>> cache;
 
-    public InfinispanCachingConfiguration() {
+    public InfinispanCachingConfigurationDecorator() {
     }
 
     public void setDelegate(Configuration delegate) {

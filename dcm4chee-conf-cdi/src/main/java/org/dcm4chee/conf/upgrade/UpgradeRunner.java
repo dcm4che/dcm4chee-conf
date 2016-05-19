@@ -172,7 +172,6 @@ public class UpgradeRunner {
             try {
 
                 Configuration configuration = dicomConfigurationManager.getConfigurationStorage();
-                configuration.lock();
 
                 // load or initialize config metadata
                 ConfigurationMetadata configMetadata = loadConfigurationMetadata();

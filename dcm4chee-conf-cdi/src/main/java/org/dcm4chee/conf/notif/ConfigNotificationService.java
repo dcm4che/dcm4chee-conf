@@ -66,9 +66,6 @@ public class ConfigNotificationService {
     @Inject
     private ConfigChangeTopicBroker clusterBroker;
     
-    @Inject
-    private ConfigurationEJB configurationEJB;
-    
     /**
      * Send config change event to all listeners registered within the cluster
      * @param changeEvent

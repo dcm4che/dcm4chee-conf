@@ -41,15 +41,8 @@
 package org.dcm4chee.conf;
 
 import org.dcm4che3.conf.api.internal.DicomConfigurationManager;
-import org.dcm4che3.conf.core.api.BatchRunner;
-import org.dcm4che3.conf.core.api.BatchRunner.Batch;
-import org.dcm4che3.conf.core.api.ConfigurableClass;
 import org.dcm4che3.conf.core.api.ConfigurableClassExtension;
 import org.dcm4che3.conf.core.api.Configuration;
-import org.dcm4che3.conf.core.normalization.DefaultsAndNullFilterDecorator;
-import org.dcm4che3.conf.core.olock.HashBasedOptimisticLockingConfiguration;
-import org.dcm4che3.conf.core.util.Extensions;
-import org.dcm4che3.conf.dicom.CommonDicomConfiguration;
 import org.dcm4che3.conf.dicom.CommonDicomConfigurationWithHL7;
 import org.dcm4chee.conf.storage.ConfigurationEJB;
 import org.dcm4chee.conf.upgrade.CdiUpgradeManager;
@@ -61,9 +54,6 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Instance;
 import javax.enterprise.inject.Produces;
 import javax.inject.Inject;
-import java.util.*;
-import java.util.Map.Entry;
-import java.util.stream.Collectors;
 
 /**
  * @Roman K
@@ -73,7 +63,6 @@ public class DicomConfigManagerProducer {
 
     private final static Logger log = LoggerFactory.getLogger(DicomConfigManagerProducer.class);
 
-    private static final String DISABLE_OLOCK_PROP = "org.dcm4che.conf.olock.disabled";
 
     @EJB
     private ConfigurationEJB providedConfigStorage;
@@ -84,13 +73,8 @@ public class DicomConfigManagerProducer {
     @Inject
     private Instance<CdiUpgradeManager> upgradeManagerInstance;
 
-    /**
-     * To avoid logging warning multiple times
-     */
-    private boolean loggedWarnings = false;
-
-    // temp workaround just for closure
-    private CommonDicomConfigurationWithHL7 configurationWithHL7;
+    @Inject
+    ConfigurableExtensionsResolver extensionsProvider;
 
 
     @Produces
@@ -99,54 +83,17 @@ public class DicomConfigManagerProducer {
 
         log.info("Constructing DicomConfiguration ...");
 
-        List<Class> allExtensionClasses = resolveExtensionsList();
 
         Configuration storage = providedConfigStorage;
 
-        //// TODO: wrap into ExtensionMergingConfiguration
-
-
-        // olocking
-        if (System.getProperty(DISABLE_OLOCK_PROP) == null) {
-            storage = new HashBasedOptimisticLockingConfiguration(
-                    providedConfigStorage,
-                    allExtensionClasses,
-
-                    // make sure that OLocking will perform the access to the config within a single transaction (if the tx is not yet provided by the caller)
-                    // and use the writer cache when it will first read from storage
-                    // so just re-use ConfigurationEJB
-                    new BatchRunner() {
-                        @Override
-                        public void runBatch(Batch batch) {
-                            providedConfigStorage.runWithRequiresTxWithLock(batch);
-                        }
-                    });
-        }
-
-        // defaults filtering
-        storage = new DefaultsAndNullFilterDecorator(storage, allExtensionClasses, CommonDicomConfiguration.createDefaultDicomVitalizer());
-
-
         final Configuration finalStorage = storage;
 
-        // Quick fix, need to refactor later
-        // otherwise integrity check is performed before the upgrade
-        if (storage.nodeExists("/dicomConfigurationRoot")) {
-            configurationWithHL7 = new CommonDicomConfigurationWithHL7(
-                    finalStorage,
-                    resolveExtensionsMap(true)
-            );
-        } else
-            // run in a batch to ensure we don't lock the ongoing transaction by accident if we init the config
-            providedConfigStorage.runBatch(new Batch() {
-                @Override
-                public void run() {
-                    DicomConfigManagerProducer.this.configurationWithHL7 = new CommonDicomConfigurationWithHL7(
-                            finalStorage,
-                            resolveExtensionsMap(true)
-                    );
-                }
-            });
+        // the init might create a root node, but it will be done in separate tx, in this case the integrity check should succeed
+        // if the config is not empty, there will be no modification, and therefore the integrity check will not happen at this point, but only after the upgrade
+        CommonDicomConfigurationWithHL7 configurationWithHL7 = new CommonDicomConfigurationWithHL7(
+                finalStorage,
+                extensionsProvider.resolveExtensionsMap(true)
+        );
 
         if (upgradeManagerInstance.isUnsatisfied()) {
             log.info("Dicom configuration upgrade is not configured for this deployment, skipping");
@@ -164,83 +111,5 @@ public class DicomConfigManagerProducer {
     }
 
 
-    public List<Class> resolveExtensionsList() {
-        List<Class> list = new ArrayList<>();
-        for (ConfigurableClassExtension extension : getAllConfigurableExtensions())
-            if (!list.contains(extension.getClass()))
-                list.add(extension.getClass());
-
-        return list;
-    }
-
-    public Map<Class, List<Class>> resolveExtensionsMap(boolean doLog) {
-
-        List<ConfigurableClassExtension> extList = new ArrayList<>();
-
-        for (ConfigurableClassExtension extension : getAllConfigurableExtensions())
-            extList.add(extension);
-
-        Map<Class, List<Class>> extByBaseExtMap = Extensions.getAMapOfExtensionsByBaseExtension(extList);
-
-
-        if (doLog) {
-
-            String extensionsLog = "";
-            for (Entry<Class, List<Class>> classListEntry : extByBaseExtMap.entrySet()) {
-                extensionsLog += "\nExtension classes of " + classListEntry.getKey().getSimpleName() + ":\n";
-
-                for (Class aClass : classListEntry.getValue())
-                    extensionsLog += aClass.getName() + "\n";
-            }
-
-            extensionsLog += "\n";
-
-            log.info(extensionsLog);
-        }
-
-        return extByBaseExtMap;
-    }
-
-    /**
-     * @return all extension classes that have a ConfigurableClass annotation
-     */
-    private List<ConfigurableClassExtension> getAllConfigurableExtensions() {
-        List<ConfigurableClassExtension> configurableExtensions = new ArrayList<>();
-        for (ConfigurableClassExtension extension : allExtensions) {
-            if (extension.getClass().getAnnotation(ConfigurableClass.class) != null)
-                configurableExtensions.add(extension);
-        }
-
-        // make sure simple class names are unique
-        HashSet<String> simpleNames = new HashSet<>();
-        HashSet<String> fullNames = new HashSet<>();
-        for (ConfigurableClassExtension configurableExtension : configurableExtensions) {
-
-            String simpleName = configurableExtension.getClass().getSimpleName();
-            String fullName = configurableExtension.getClass().getName();
-            boolean simpleNameExisted = !simpleNames.add(simpleName);
-            boolean fullNameExisted = !fullNames.add(fullName);
-
-
-            if (simpleNameExisted && !fullNameExisted) {
-                // we have a duplicate, let's find out all occurrences
-                List<ConfigurableClassExtension> conflicting = configurableExtensions.stream()
-                        .filter((ext) -> ext.getClass().getSimpleName().equals(simpleName))
-                        .collect(Collectors.toList());
-
-                throw new IllegalArgumentException("Simple class names of configurable extensions MUST be unique. This rule was violated by classes:\n" + conflicting);
-
-            } else if (simpleNameExisted && fullNameExisted) {
-                // if fullname existed as well, it means we have a class with the same name
-                // could happen when deploying duplicate libs, etc, so not as critical, just print a warning
-
-                if (!loggedWarnings) log.warn("Found duplicate configurable extension class: " + fullName);
-            }
-        }
-
-        loggedWarnings = true;
-
-        return configurableExtensions;
-    }
 
 }
