@@ -23,6 +23,9 @@ public class ConfigDBStorageTests extends ConfigEETestsIT {
     @ConfigurationStorage("db_blobs")
     Configuration dbBlobsStorage;
 
+    @Inject
+    ConfigurableExtensionsResolver configurableExtensionsResolver;
+
     @Deployment(name = "ConfigDBStorageTests")
     public static WebArchive createDeployment() {
         WebArchive war = ShrinkWrap.create(WebArchive.class, "ConfigDBStorageTests.war");
@@ -37,7 +40,7 @@ public class ConfigDBStorageTests extends ConfigEETestsIT {
 
     @Override
     public DicomConfigurationManager getConfig() throws ConfigurationException {
-        return new CommonDicomConfigurationWithHL7(dbBlobsStorage, dicomConfigManagerProducer.resolveExtensionsMap(true));
+        return new CommonDicomConfigurationWithHL7(dbBlobsStorage, configurableExtensionsResolver.resolveExtensionsMap(true));
     }
 
     @Override

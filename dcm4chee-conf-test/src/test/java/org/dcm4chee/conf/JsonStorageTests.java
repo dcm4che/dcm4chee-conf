@@ -23,6 +23,11 @@ public class JsonStorageTests extends ConfigEETestsIT {
     @ConfigurationStorage("json_file")
     Configuration jsonStorage;
 
+
+    @Inject
+    ConfigurableExtensionsResolver configurableExtensionsResolver;
+
+
     @Deployment(name = "JsonStorageTests")
     public static WebArchive createDeployment() {
         WebArchive war = ShrinkWrap.create(WebArchive.class, "JsonStorageTests.war");
@@ -37,7 +42,7 @@ public class JsonStorageTests extends ConfigEETestsIT {
 
     @Override
     public DicomConfigurationManager getConfig() throws ConfigurationException {
-        return new CommonDicomConfigurationWithHL7(jsonStorage, dicomConfigManagerProducer.resolveExtensionsMap(true));
+        return new CommonDicomConfigurationWithHL7(jsonStorage, configurableExtensionsResolver.resolveExtensionsMap(true));
     }
 
     @Override
