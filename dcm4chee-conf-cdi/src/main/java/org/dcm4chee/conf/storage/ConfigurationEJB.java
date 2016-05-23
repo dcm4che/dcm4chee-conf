@@ -86,8 +86,8 @@ import java.util.Map;
 @SuppressWarnings("unchecked")
 @Singleton
 @ConcurrencyManagement(ConcurrencyManagementType.BEAN)
-@TransactionManagement(TransactionManagementType.BEAN)
 @Local(ConfigurationEJB.class)
+@TransactionAttribute(TransactionAttributeType.SUPPORTS)
 public class ConfigurationEJB extends DelegatingConfiguration {
 
     public static final Logger log = LoggerFactory.getLogger(ConfigurationEJB.class);
@@ -112,6 +112,9 @@ public class ConfigurationEJB extends DelegatingConfiguration {
     @Inject
     private ConfigurationIntegrityCheck integrityCheck;
 
+    @EJB
+    ConfigurationEJB self;
+
     // util
 
     @Resource
@@ -124,6 +127,7 @@ public class ConfigurationEJB extends DelegatingConfiguration {
     ConfigurableExtensionsResolver extensionsProvider;
 
     @PostConstruct
+    @TransactionAttribute(TransactionAttributeType.REQUIRED)
     public void init() {
         // detect user setting (system property) for config backend type
         String storageType = ConfigurationSettingsLoader.getPropertyWithNotice(
@@ -133,7 +137,7 @@ public class ConfigurationEJB extends DelegatingConfiguration {
         log.info("Creating dcm4che configuration Singleton EJB. Resolving underlying configuration storage '{}' ...", storageType);
 
         // resolve the corresponding implementation
-        Configuration storage = null;
+        Configuration storage;
         try {
             storage = availableConfigStorage.select(new ConfigStorageAnno(storageType)).get();
         } catch (Exception e) {
@@ -183,7 +187,7 @@ public class ConfigurationEJB extends DelegatingConfiguration {
         if (isBatchTx())
             runInOngoingTx(r);
         else
-            runInNewTx(r, "Transaction handling issue while persisting config @ " + path);
+            self.runInNewTx(r);
 
     }
 
@@ -195,7 +199,7 @@ public class ConfigurationEJB extends DelegatingConfiguration {
         if (isBatchTx())
             runInOngoingTx(r);
         else
-            runInNewTx(r, "Transaction handling issue while removing node @ " + path);
+            self.runInNewTx(r);
 
     }
 
@@ -207,7 +211,7 @@ public class ConfigurationEJB extends DelegatingConfiguration {
         if (isBatchTx())
             runInOngoingTx(r);
         else
-            runInNewTx(r, "Transaction handling issue while refreshing node @ " + path);
+            self.runInNewTx(r);
     }
 
     @Override
@@ -218,13 +222,13 @@ public class ConfigurationEJB extends DelegatingConfiguration {
 
     @Override
     public void runBatch(Batch batch) {
-        runInNewTx(
+        self.runInNewTx(
                 () -> {
                     markBatchTx();
 
                     // run directly here - we are inside a tx for sure - no need to delegate
                     batch.run();
-                }, "Failed to run configuration batch");
+                });
     }
 
     /**
@@ -280,19 +284,12 @@ public class ConfigurationEJB extends DelegatingConfiguration {
         txSync.getSynchronizationRegistry().putResource(Batch.class, new Object());
     }
 
-    private void runInNewTx(Runnable r, String message) {
-        try {
-            utx.begin();
-            delegate.lock();
-            registerTxHooks();
+    @TransactionAttribute(TransactionAttributeType.REQUIRES_NEW)
+    public void runInNewTx(Runnable r) {
+        delegate.lock();
+        registerTxHooks();
 
-            r.run();
-            utx.commit();
-        } catch (RollbackException | HeuristicRollbackException | HeuristicMixedException e) {
-            throw new EJBException(message, e);
-        } catch (SystemException | NotSupportedException e) {
-            throw new RuntimeException(message, e);
-        }
+        r.run();
     }
 
     /**
