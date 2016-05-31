@@ -264,7 +264,7 @@ public class ConfigRESTServicesServlet {
     @Path("/importFullConfiguration")
     @Consumes(MediaType.APPLICATION_JSON)
     public void setFullConfig(Map<String, Object> config) throws ConfigurationException {
-        configurationManager.getConfigurationStorage().persistNode("/", config, CommonDicomConfiguration.DicomConfigurationRootNode.class);
+        configurationManager.getConfigurationStorage().persistNode("/", config, null);
         fireConfigUpdateNotificationIfNecessary();
     }
 
