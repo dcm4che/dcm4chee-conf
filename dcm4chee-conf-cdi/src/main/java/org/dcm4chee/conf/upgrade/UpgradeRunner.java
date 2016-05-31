@@ -43,11 +43,13 @@ package org.dcm4chee.conf.upgrade;
 
 import org.dcm4che3.conf.api.DicomConfiguration;
 import org.dcm4che3.conf.api.internal.DicomConfigurationManager;
+import org.dcm4che3.conf.api.upgrade.ConfigurationMetadata;
 import org.dcm4che3.conf.api.upgrade.ScriptVersion;
 import org.dcm4che3.conf.api.upgrade.UpgradeScript;
 import org.dcm4che3.conf.core.DefaultBeanVitalizer;
 import org.dcm4che3.conf.core.api.Configuration;
 import org.dcm4che3.conf.core.api.ConfigurationException;
+import org.dcm4che3.conf.core.api.ConfigurationUpgradeException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -212,44 +214,44 @@ public class UpgradeRunner {
                             // check if the script need to be executed
                             ScriptVersion currentScriptVersionAnno = script.getClass().getAnnotation(ScriptVersion.class);
 
-                            String currentscriptVersion;
+                            String currentScriptVersion;
                             if (currentScriptVersionAnno == null) {
-                                currentscriptVersion = UpgradeScript.NO_VERSION;
+                                currentScriptVersion = UpgradeScript.NO_VERSION;
                                 log.warn("Upgrade script '{}' does not have @ScriptVersion defined - using default '{}'",
                                         script.getClass().getName(),
-                                        currentscriptVersion);
+                                        currentScriptVersion);
                             } else {
-                                currentscriptVersion = currentScriptVersionAnno.value();
+                                currentScriptVersion = currentScriptVersionAnno.value();
                             }
 
                             if (upgradeScriptMetadata.getLastVersionExecuted() != null
-                                    && upgradeScriptMetadata.getLastVersionExecuted().compareTo(currentscriptVersion) >= 0) {
+                                    && upgradeScriptMetadata.getLastVersionExecuted().compareTo(currentScriptVersion) >= 0) {
                                 log.info("Upgrade script '{}' is skipped because current version '{}' is not newer than the last executed one ('{}')",
                                         script.getClass().getName(),
-                                        currentscriptVersion,
+                                        currentScriptVersion,
                                         upgradeScriptMetadata.getLastVersionExecuted());
                                 continue;
                             }
 
                             log.info("Executing upgrade script '{}' (this version '{}', last executed version '{}')",
                                     script.getClass().getName(),
-                                    currentscriptVersion,
+                                    currentScriptVersion,
                                     upgradeScriptMetadata.getLastVersionExecuted());
 
 
                             // collect pieces and prepare context
                             Map<String, Object> scriptConfig = (Map<String, Object>) upgradeSettings.getUpgradeConfig().get(upgradeScriptName);
                             UpgradeScript.UpgradeContext upgradeContext = new UpgradeScript.UpgradeContext(
-                                    fromVersion, toVersion, props, scriptConfig, configuration, dicomConfigurationManager, upgradeScriptMetadata);
+                                    fromVersion, toVersion, props, scriptConfig, configuration, dicomConfigurationManager, upgradeScriptMetadata, configMetadata);
 
                             try {
                                 script.upgrade(upgradeContext);
                             } catch (Exception e) {
-                                throw new ConfigurationException("Error while running upgrade script '" + script.getClass().getName() + "', version '" + currentscriptVersion + "'", e);
+                                throw new ConfigurationUpgradeException("Error while running upgrade script '" + script.getClass().getName() + "', version '" + currentScriptVersion + "'", e);
                             }
 
                             // set last executed version from the annotation of the upgrade script if present
-                            upgradeScriptMetadata.setLastVersionExecuted(currentscriptVersion);
+                            upgradeScriptMetadata.setLastVersionExecuted(currentScriptVersion);
 
                         }
                     }
@@ -258,7 +260,7 @@ public class UpgradeRunner {
                         if (upgradeSettings.isIgnoreMissingUpgradeScripts()) {
                             log.warn("Missing update script '" + upgradeScriptName + "' ignored! DISABLE 'IgnoreMissingUpgradeScripts' SETTING FOR PRODUCTION ENVIRONMENT.");
                         } else {
-                            throw new ConfigurationException("Upgrade script '" + upgradeScriptName + "' not found in the deployment");
+                            throw new ConfigurationUpgradeException("Upgrade script '" + upgradeScriptName + "' not found in the deployment");
                         }
                     }
                 }
@@ -269,7 +271,7 @@ public class UpgradeRunner {
                 // persist updated metadata
                 persistConfigurationMetadata(configMetadata);
             } catch (Exception e) {
-                throw new RuntimeException("Error while running the configuration upgrade", e);
+                throw new ConfigurationUpgradeException("Error while running the configuration upgrade", e);
             }
         });
 
