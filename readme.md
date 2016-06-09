@@ -1,17 +1,20 @@
-# Architecture
+## Architecture
 
+The architecture of configuration framework contains the following layers:
 
-    Upgrade engine
-    DicomConfiguration( conf.merge(device) )
+    Upgrade engine. Allows to peform configuration upgrades (e.g. when updating older site installations) that are executed on startup. 
+    
+    DicomConfiguration. Dicom configuration manipulation ( i.e. managing devices, transfer capabilities, ... )
         
-    Typesafe layer (Vitalizer, from/to configurable instance)
-    ConfigurationEJB
+    JSON conversion. Handles converting configuration nodes (i.e. json-like structures) to type-safe configurable instances and vice-versa (Vitalizer, json de/serialization adapters, ...)
+    
+    ConfigurationEJB - low-level access
             |
-      t     |    Defaults filter
+      t     |   Defaults filter 
       r     |   Hash-based optimistic locking 
-      a     |    ->ExtensionMergingConfiguration
+      a     |   Extension merging
       n     |   
-      s     |   Infinispan reference index
+      s     |   Reference index
       a     |   Infinispan cache
       c     |   
       t     |   Storage (DB, json file)
@@ -19,8 +22,8 @@
             \   (pre-commit)Integrity check
             \   (post-commit)Notifications
 
-
-# How to access (read/write) configuration / implement dedicated APIs
+ 
+## How to access (read/write) configuration / implement dedicated APIs
 
 To access the dicom configuration, inject a `DicomConfiguration` bean with CDI like
 
@@ -53,7 +56,7 @@ An attempt to change the injected device will result into an error log message l
 
  If you find such a message in the log related to your config manipulations - then you are doing it wrong.
 
-### Low-level configuration access
+## Low-level configuration access
 
 For special cases, one can inject `DicomConfigurationManager` and call `.getConfigurationStorage()` on it to obtain an instance of [Configuration](https://github.com/dcm4che/dcm4che/blob/master/dcm4che-conf/dcm4che-conf-core-api/src/main/java/org/dcm4che3/conf/core/api/Configuration.java).
 This will allow a not-so-safe low-level access to the configuration. Although the validation of changes will still be enforced, it is more probable to introduce inconsistencies while using this layer. The usage of [Configuration](https://github.com/dcm4che/dcm4che/blob/master/dcm4che-conf/dcm4che-conf-core-api/src/main/java/org/dcm4che3/conf/core/api/Configuration.java) interface for making configuration changes is therefore discouraged.
@@ -67,27 +70,37 @@ To use the database as configuration storage, deploy `org.dcm4che.dcm4chee-conf:
 
     org.dcm4che.conf.storage = db_blobs
 
-Alternatively, e.g. for development purposes, one can simple json file config storage (org.dcm4che.conf.storage = json_file)  
+Alternatively, e.g. for development/testing purposes, one can use simple json file config storage (org.dcm4che.conf.storage = json_file)  
 
-## Transactions and caching
+## Transactions
+All configuration modifying operations are transactional.
+Config modifications will NOT join any ongoing transaction. To perform multiple config-related operations in a single transaction, one has to use batching.
 
-Read access to configuration is always performed against the shared (non-blocking) reader cache.
-Writes to the configuration are done in an exclusive manner - one write at most is done at a time within the cluster. This greatly simplifies concurrency concerns and at the same time, 
-due to the not-so-volatile nature of configuration (rare updates), is not critical to the overall system performance.  
-If no batch is used (see Batching section), a standalone call to dicomConfiguration .persist/.merge is similar to a batch with one operation.
-Once a transaction succeeds, reader cache is updated. 
 On transaction commit, configuration integrity check is performed.
+After successful commit, all cluster nodes are notified (see Config change notifications) so they can perform some actions upon config updates.   
 
-In a cluster setup, each node maintains a separate cache. As already mentioned, writer cache is exclusive, and, additionally, modifying the config acquires a cluster-wide db-based 
-pessimistic lock. If the modification succeeds, the cache is synchronously updated on other nodes (max consistency), and the nodes are then notified with JMS (see Config change notifications) 
-so they can perform some actions upon config updates.   
+Both the cache and the DB participate in the 2-phase commit of the transaction. 
+
+## Locking
+Writes to the configuration are done in an exclusive manner - one write at most is done at a time within the cluster. This greatly simplifies concurrency concerns and at the same time, 
+due to the not-so-volatile nature of configuration (rare updates), is not critical to the overall system performance.
+  
+Every call to a method that modifies the configuration thus acquires a pessimistic lock on a certain db record (dcm4che_config table, path = "/misc/locking/dblock").
+
+Running a batch acquires the same exclusive lock.
+
+## Caching
+
+Access to the configuration is always performed against a replicated clustered Infinispan cache. This implies that if a modification succeeds, the cache is synchronously updated on other cluster nodes (max consistency).
+The cache contains the full configuration at all times. This simplification should not be a concern unless the configuration size exceeds e.g. 50 MB.
+The actual content of the cache is the low-level configuration representation, i.e. not typesafe configurable objects, but json-like primitives. 
+
+The cache uses READ-COMMITTED isolation. The updates are therefore only visible to other readers after the successful transaction commit.
 
 ## Batching
 
 To perform multiple changes as a single atomic operation, one should use `org.dcm4che3.conf.api.DicomConfiguration.runBatch` / `org.dcm4che3.conf.core.api.Configuration.runBatch` methods.
-The batch will be executed in a new transaction. It is guaranteed that at most one batch is executed at the same time (cluster-aware pessimistic locking is used).
-Accessing the configuration within a batch also gives an isolation guarantee - a batch is given an exclusive cache.
-The configuration will be fully reloaded from the backend into that cache, and all the reads/writes will be performed against it.
+The batch will be executed in a separate new transaction. It is guaranteed that at most one batch is executed at the same time, and also that no other config modifications will be done during the batch execution.
 
 ## Hash-based optimistic locking
 
@@ -150,19 +163,10 @@ Current implementation uses `topic/DicomConfigurationChangeTopic` JMS topic to d
     jms-topic add --topic-address=DicomConfigurationChangeTopic --entries=/topic/DicomConfigurationChangeTopic
 
   
-## Development
-Configuration components can be disabled for development purposes.
 
-- To disable referential integrity check performed before transaction commit, set
+## How to perform upgrade/migration
 
-        org.dcm4che.conf.disableIntegrityCheck = true
-
-- To disable JMS-based cluster config update notifications, set
-
-        org.dcm4che.conf.notifications = false
-# How to perform upgrade/migration
-
-Upgrade mechanism allows to use both high-level type-safe API ([DicomConfiguration](https://github.com/dcm4che/dcm4che/blob/master/dcm4che-conf/dcm4che-conf-api/src/main/java/org/dcm4che3/conf/api/DicomConfiguration.java)) and low-level unsafe API ([Configuration](https://github.com/dcm4che/dcm4che/blob/master/dcm4che-conf/dcm4che-conf-core-api/src/main/java/org/dcm4che3/conf/core/api/Configuration.java)).
+Upgrade mechanism allows to use both high-level type-safe API ([DicomConfiguration](https://github.com/dcm4che/dcm4che/blob/master/dcm4che-conf/dcm4che-conf-api/src/main/java/org/dcm4che3/conf/api/DicomConfiguration.java)) and low-level access API ([Configuration](https://github.com/dcm4che/dcm4che/blob/master/dcm4che-conf/dcm4che-conf-core-api/src/main/java/org/dcm4che3/conf/core/api/Configuration.java)).
 To create an upgrade routine one needs to
 
 1. crate a class that implements `org.dcm4che3.conf.api.upgrade.UpgradeScript` interface,
@@ -202,7 +206,19 @@ Other deployments will just wait for the current configuration version to become
 
 Example: [DefaultArchiveConfigInitScript](https://github.com/dcm4che/dcm4chee-arc-cdi/blob/master/dcm4chee-arc-conf-default/src/main/java/org/dcm4chee/archive/conf/defaults/DefaultArchiveConfigInitScript.java)
    
+   
+   
+## Development
+Configuration components can be disabled for development purposes.
 
-# Examples
+- To disable referential integrity check performed before transaction commit, set
+
+        org.dcm4che.conf.disableIntegrityCheck = true
+
+- To disable JMS-based cluster config update notifications, set
+
+        org.dcm4che.conf.notifications = false   
+
+## Examples
 
 - [How to create a custom AE extension and use it in a StoreService decorator ](https://github.com/dcm4che/dcm4chee-integration-examples/tree/master/config-extensions-example)
