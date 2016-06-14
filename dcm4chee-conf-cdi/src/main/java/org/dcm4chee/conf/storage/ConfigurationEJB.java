@@ -42,7 +42,6 @@ package org.dcm4chee.conf.storage;
 
 import org.dcm4che3.conf.ConfigurationSettingsLoader;
 import org.dcm4che3.conf.core.DelegatingConfiguration;
-import org.dcm4che3.conf.core.ExtensionMergingConfiguration;
 import org.dcm4che3.conf.core.api.Configuration;
 import org.dcm4che3.conf.core.api.ConfigurationException;
 import org.dcm4che3.conf.core.normalization.DefaultsAndNullFilterDecorator;
@@ -157,10 +156,9 @@ public class ConfigurationEJB extends DelegatingConfiguration {
         indexingDecorator.setDelegate(storage);
         storage = indexingDecorator;
 
-        List<Class> allExtensionClasses = extensionsProvider.resolveExtensionsList();
+        //// TODO: wrap into ExtensionMergingConfiguration
 
-        // ExtensionMergingConfiguration
-        storage = new ExtensionMergingConfiguration(storage, allExtensionClasses);
+        List<Class> allExtensionClasses = extensionsProvider.resolveExtensionsList();
 
         // olocking
         if (System.getProperty(DISABLE_OLOCK_PROP) == null) {
