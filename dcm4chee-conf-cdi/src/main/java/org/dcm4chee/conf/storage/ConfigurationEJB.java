@@ -42,6 +42,7 @@ package org.dcm4chee.conf.storage;
 
 import org.dcm4che3.conf.ConfigurationSettingsLoader;
 import org.dcm4che3.conf.core.DelegatingConfiguration;
+import org.dcm4che3.conf.core.ExtensionMergingConfiguration;
 import org.dcm4che3.conf.core.api.Configuration;
 import org.dcm4che3.conf.core.api.ConfigurationException;
 import org.dcm4che3.conf.core.normalization.DefaultsAndNullFilterDecorator;
@@ -93,6 +94,7 @@ public class ConfigurationEJB extends DelegatingConfiguration {
     public static final Logger log = LoggerFactory.getLogger(ConfigurationEJB.class);
 
     private static final String DISABLE_OLOCK_PROP = "org.dcm4che.conf.olock.disabled";
+    private static final String ENABLE_MERGE_CONFIG = "org.dcm4che.conf.merge.enabled";
 
     // components
 
@@ -156,9 +158,12 @@ public class ConfigurationEJB extends DelegatingConfiguration {
         indexingDecorator.setDelegate(storage);
         storage = indexingDecorator;
 
-        //// TODO: wrap into ExtensionMergingConfiguration
-
         List<Class> allExtensionClasses = extensionsProvider.resolveExtensionsList();
+
+        // ExtensionMergingConfiguration
+        if ((System.getProperty(ENABLE_MERGE_CONFIG) != null) && Boolean.valueOf(System.getProperty(ENABLE_MERGE_CONFIG))) {
+            storage = new ExtensionMergingConfiguration(storage, allExtensionClasses);
+        }
 
         // olocking
         if (System.getProperty(DISABLE_OLOCK_PROP) == null) {
