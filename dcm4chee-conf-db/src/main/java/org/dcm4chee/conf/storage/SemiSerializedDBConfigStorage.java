@@ -42,6 +42,7 @@ package org.dcm4chee.conf.storage;
 import org.dcm4che3.conf.core.api.Configuration;
 import org.dcm4che3.conf.core.api.ConfigurationException;
 import org.dcm4che3.conf.core.Nodes;
+import org.dcm4che3.conf.core.api.Path;
 import org.dcm4che3.conf.core.util.SplittedPath;
 import org.dcm4che3.conf.dicom.DicomPath;
 import org.slf4j.Logger;
@@ -173,6 +174,11 @@ public class SemiSerializedDBConfigStorage implements Configuration {
     public void removeNode(String path) throws ConfigurationException {
         SplittedPath splittedPath = new SplittedPath(path, level);
         db.removeNode(splittedPath.getOuterPathItems(), splittedPath.getInnerPathitems());
+    }
+
+    @Override
+    public Path getPathByUUID(String uuid) {
+        throw new ConfigurationException("Unexpected error - uuid index is missing");
     }
 
     @Override

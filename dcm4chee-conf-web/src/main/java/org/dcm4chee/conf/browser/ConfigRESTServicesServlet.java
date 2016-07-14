@@ -2,11 +2,11 @@ package org.dcm4chee.conf.browser;
 
 import org.dcm4che3.conf.api.TCConfiguration;
 import org.dcm4che3.conf.api.internal.DicomConfigurationManager;
+import org.dcm4che3.conf.core.Nodes;
 import org.dcm4che3.conf.core.api.*;
-import org.dcm4che3.conf.core.api.internal.AnnotatedConfigurableProperty;
-import org.dcm4che3.conf.core.api.internal.BeanVitalizer;
-import org.dcm4che3.conf.core.api.internal.ConfigTypeAdapter;
-import org.dcm4che3.conf.dicom.CommonDicomConfiguration;
+import org.dcm4che3.conf.core.api.internal.ConfigProperty;
+import org.dcm4che3.conf.core.util.PathFollower;
+import org.dcm4che3.conf.core.util.PathPattern;
 import org.dcm4che3.conf.dicom.DicomPath;
 import org.dcm4che3.net.*;
 import org.dcm4che3.net.hl7.HL7ApplicationExtension;
@@ -24,15 +24,13 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.*;
 
 @Path("/config")
 @Produces(MediaType.APPLICATION_JSON)
 public class ConfigRESTServicesServlet {
     public static final String NOTIFICATIONS_ENABLED_PROPERTY = "org.dcm4che.conf.notifications";
+    private static final PathPattern referencePattern = new PathPattern(Configuration.REFERENCE_BY_UUID_PATTERN);
 
     public static final Logger log = LoggerFactory.getLogger(ConfigRESTServicesServlet.class);
 
@@ -295,6 +293,44 @@ public class ConfigRESTServicesServlet {
     }
 
     @GET
+    @Path("/pathByUUID/{uuid}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public org.dcm4che3.conf.core.api.Path getPathByUUID(@PathParam(value = "uuid") String uuid) {
+        return configurationManager.getConfigurationStorage().getPathByUUID(uuid);
+    }
+
+    /**
+     * Returns a fully processed node, i.e. including defaults, hashes, etc
+     * @param pathStr
+     * @return
+     */
+    @GET
+    @Path("/node")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Object getConfigurationNode(@QueryParam(value = "path") String pathStr) {
+
+        org.dcm4che3.conf.core.api.Path path;
+        PathPattern.PathParser pathParser = referencePattern.parseIfMatches(pathStr);
+        if (pathParser != null) {
+            // it's uuid reference
+            String uuid = pathParser.getParam("uuid");
+            path = getPathByUUID(uuid);
+            if (path == null) return null;
+        } else {
+            // it's simple path (will throw exception if not)
+            path = org.dcm4che3.conf.core.api.Path.fromSimpleEscapedPath(pathStr);
+        }
+
+        ConfigProperty last = PathFollower.traceProperties(configurationManager.getTypeSafeConfiguration().getRootClass(), path).getLast();
+
+        if (!last.isConfObject())
+            throw new IllegalArgumentException("Path " + pathStr + " is not pointing to a configurable object");
+
+        return configurationManager.getConfigurationStorage().getConfigurationNode(pathStr, last.getRawClass());
+    }
+
+
+    @GET
     @Path("/schemas")
     @Produces(MediaType.APPLICATION_JSON)
     public SchemasJSON getSchema() throws ConfigurationException {
@@ -332,9 +368,9 @@ public class ConfigRESTServicesServlet {
     }
 
     private Map<String, Object> getSchemaForConfigurableClass(Class<?> clazz) throws ConfigurationException {
-        BeanVitalizer vitalizer = configurationManager.getVitalizer();
-        return vitalizer.lookupDefaultTypeAdapter(clazz).getSchema(new AnnotatedConfigurableProperty(clazz), vitalizer);
+        return configurationManager.getVitalizer().getSchemaForConfigurableClass(clazz);
     }
+
 
 
     /**
@@ -360,137 +396,4 @@ public class ConfigRESTServicesServlet {
     }
 
 
-    /***
-     * this method is just left for backwards-compatibility
-     *
-     * @param ctx
-     * @param extJson
-     * @throws ConfigurationException
-     */
-    @Deprecated
-    @SuppressWarnings("unchecked")
-    @POST
-    @Path("/save-extension")
-    @Produces(MediaType.APPLICATION_JSON)
-    @Consumes(MediaType.APPLICATION_JSON)
-    public void saveConfigForExtension(@Context UriInfo ctx, ExtensionJSON extJson) throws ConfigurationException {
-
-
-        Class<? extends DeviceExtension> extClass;
-        try {
-            extClass = (Class<? extends DeviceExtension>) Class.forName(extJson.extensionType);
-        } catch (ClassNotFoundException e) {
-            throw new ConfigurationException("Extension " + extJson.extensionType + " is not configured", e);
-        }
-
-        // check if the supplied classname is actually a configclass
-        if (extClass.getAnnotation(ConfigurableClass.class) == null)
-            throw new ConfigurationException("Extension " + extJson.extensionType + " is not configured");
-
-        // get current config
-        Device d = configurationManager.findDevice(extJson.deviceName);
-        DeviceExtension currentDeviceExt = d.getDeviceExtension(extClass);
-
-        ConfigTypeAdapter ad = configurationManager.getVitalizer().lookupDefaultTypeAdapter(extClass);
-
-        // serialize current
-        Map<String, Object> configmap = (Map<String, Object>) ad.toConfigNode(currentDeviceExt, null, configurationManager.getVitalizer());
-
-        // copy all the filled submitted fields
-        configmap.putAll(extJson.configuration.rootConfigNode);
-
-        // deserialize back
-
-        DeviceExtension de = (DeviceExtension) ad.fromConfigNode(configmap, new AnnotatedConfigurableProperty(extClass), configurationManager.getVitalizer(), null);
-
-        // merge config
-        d.removeDeviceExtension(de);
-        d.addDeviceExtension(de);
-
-        configurationManager.merge(d);
-
-        // also try to call reconfigure after saving
-        try {
-            Response response = reconfigureExtension(ctx, extJson.deviceName, extJson.extensionName);
-            if (response.getStatus() != 204)
-                throw new ConfigurationException("Reconfiguration unsuccessful (HTTP status " + response.getStatus() + ")");
-        } catch (ConfigurationException e) {
-            log.warn("Unable to reconfigure extension " + extJson.extensionName + " for device " + extJson.deviceName + " after saving", e);
-        }
-
-    }
-
-    @Deprecated
-    @GET
-    @Path("/reconfigure-all-extensions/{deviceName}")
-    public void reloadAllExtensionsOfDevice(@Context UriInfo ctx, @PathParam("deviceName") String deviceName) throws ConfigurationException {
-        Device device = configurationManager.findDevice(deviceName);
-
-        // xds
-        for (DeviceExtension deviceExtension : device.listDeviceExtensions()) {
-            String extensionName = deviceExtension.getClass().getSimpleName();
-            if (XDS_REST_PATH.get(extensionName) != null)
-                reconfigureExtension(ctx, deviceName, extensionName);
-        }
-
-        // for local Archive
-        Response response = reconfigureAtURL(ctx, "dcm4chee-arc", "/");
-        log.info("Archive reconfiguration response = {}", response.getStatus());
-
-    }
-
-    @Deprecated
-    @GET
-    @Path("/reconfigure-extension/{deviceName}/{extension}")
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response reconfigureExtension(@Context UriInfo ctx, @PathParam("deviceName") String deviceName, @PathParam("extension") String extension) throws ConfigurationException {
-
-        String connectedDeviceUrl = System.getProperty("org.dcm4chee.device." + deviceName);
-
-        if (connectedDeviceUrl == null)
-            throw new ConfigurationException("Device " + deviceName + " is not controlled (connected), please inspect the JBoss configuration");
-
-        // add prefix part if needed
-        String ext_prefix = "";
-        ext_prefix = XDS_REST_PATH.get(extension);
-        if (ext_prefix == null)
-            throw new ConfigurationException(String.format("Extension not recognized (%s)", ext_prefix));
-
-        return reconfigureAtURL(ctx, ext_prefix, connectedDeviceUrl);
-    }
-
-    private Response reconfigureAtURL(UriInfo ctx, String prefix, String connectedDeviceUrl) throws ConfigurationException {
-        if (!connectedDeviceUrl.startsWith("http")) {
-            URL url = null;
-            try {
-                url = ctx.getAbsolutePath().toURL();
-            } catch (MalformedURLException e1) {
-                throw new ConfigurationException("Unexpected exception - protocol must be http"); // should not happen
-            }
-
-            String formatStr;
-            if (connectedDeviceUrl.startsWith("/"))
-                formatStr = "%s://%s%s";
-            else
-                formatStr = "%s://%s/%s";
-
-            connectedDeviceUrl = String.format(formatStr, url.getProtocol(), url.getAuthority(), connectedDeviceUrl);
-        }
-
-
-        // // figure out the URL for reloading the config
-
-        String reconfUrl = connectedDeviceUrl + (connectedDeviceUrl.endsWith("/") ? "" : "/") + prefix + (prefix.equals("") ? "" : "/") + "ctrl/reload";
-
-        try {
-            URL obj = new URL(reconfUrl);
-            HttpURLConnection con = (HttpURLConnection) obj.openConnection();
-            con.setRequestMethod("GET");
-            log.info("Calling configuration reload @ {} ...", reconfUrl);
-            int responseCode = con.getResponseCode();
-            return Response.status(con.getResponseCode()).build();
-        } catch (java.io.IOException e1) {
-            throw new ConfigurationException(e1);
-        }
-    }
 }

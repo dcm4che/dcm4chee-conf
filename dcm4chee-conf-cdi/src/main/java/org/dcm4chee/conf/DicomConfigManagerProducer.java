@@ -40,10 +40,14 @@
 
 package org.dcm4chee.conf;
 
+import org.dcm4che3.conf.api.TCGroupsProvider;
 import org.dcm4che3.conf.api.internal.DicomConfigurationManager;
 import org.dcm4che3.conf.core.api.ConfigurableClassExtension;
 import org.dcm4che3.conf.core.api.Configuration;
+import org.dcm4che3.conf.core.api.internal.ConfigTypeAdapter;
+import org.dcm4che3.conf.dicom.AppEntityTCGroupHandlingTypeAdapter;
 import org.dcm4che3.conf.dicom.CommonDicomConfigurationWithHL7;
+import org.dcm4che3.net.ApplicationEntity;
 import org.dcm4chee.conf.storage.ConfigurationEJB;
 import org.dcm4chee.conf.upgrade.CdiUpgradeManager;
 import org.slf4j.Logger;
@@ -54,6 +58,8 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Instance;
 import javax.enterprise.inject.Produces;
 import javax.inject.Inject;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * @Roman K
@@ -68,14 +74,13 @@ public class DicomConfigManagerProducer {
     private ConfigurationEJB providedConfigStorage;
 
     @Inject
-    private Instance<ConfigurableClassExtension> allExtensions;
-
-    @Inject
     private Instance<CdiUpgradeManager> upgradeManagerInstance;
 
     @Inject
     ConfigurableExtensionsResolver extensionsProvider;
 
+    @Inject
+    TCGroupsProvider tcGroupsProvider;
 
     @Produces
     @ApplicationScoped
@@ -84,15 +89,15 @@ public class DicomConfigManagerProducer {
         log.info("Constructing DicomConfiguration ...");
 
 
-        Configuration storage = providedConfigStorage;
-
-        final Configuration finalStorage = storage;
+        Map<Class, ConfigTypeAdapter> customAdapters = new HashMap<>();
+        customAdapters.put(ApplicationEntity.class, new AppEntityTCGroupHandlingTypeAdapter(tcGroupsProvider));
 
         // the init might create a root node, but it will be done in separate tx, in this case the integrity check should succeed
         // if the config is not empty, there will be no modification, and therefore the integrity check will not happen at this point, but only after the upgrade
         CommonDicomConfigurationWithHL7 configurationWithHL7 = new CommonDicomConfigurationWithHL7(
-                finalStorage,
-                extensionsProvider.resolveExtensionsMap(true)
+                providedConfigStorage,
+                extensionsProvider.resolveExtensionsMap(true),
+                customAdapters
         );
 
         if (upgradeManagerInstance.isUnsatisfied()) {
