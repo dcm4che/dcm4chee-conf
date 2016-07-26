@@ -119,9 +119,6 @@ public class ConfigurationEJB extends DelegatingConfiguration {
 
     // util
 
-    @Resource
-    UserTransaction utx;
-
     @Inject
     TransactionSynchronization txSync;
 
