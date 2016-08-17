@@ -88,16 +88,12 @@ public class DicomConfigManagerProducer {
 
         log.info("Constructing DicomConfiguration ...");
 
-
-        Map<Class, ConfigTypeAdapter> customAdapters = new HashMap<>();
-        customAdapters.put(ApplicationEntity.class, new AppEntityTCGroupHandlingTypeAdapter(tcGroupsProvider));
-
         // the init might create a root node, but it will be done in separate tx, in this case the integrity check should succeed
         // if the config is not empty, there will be no modification, and therefore the integrity check will not happen at this point, but only after the upgrade
         CommonDicomConfigurationWithHL7 configurationWithHL7 = new CommonDicomConfigurationWithHL7(
                 providedConfigStorage,
                 extensionsProvider.resolveExtensionsMap(true),
-                customAdapters
+                true
         );
 
         if (upgradeManagerInstance.isUnsatisfied()) {

@@ -15,31 +15,15 @@ import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 
 @ApplicationScoped
-public class TCGroupsCachingProvider implements TCGroupsProvider {
+public class CachedTCGroupsManager {
 
     @Inject
     DicomConfigurationManager config;
 
-    TCConfiguration tcConfig;
-
-    @PostConstruct
-    public void init() {
-        tcConfig = loadTCs();
-    }
-
-    @Override
-    public TCConfiguration getTCGroups() throws ConfigurationException {
-        return tcConfig;
-    }
-
     public void onConfigChange(@Observes ConfigChangeEvent configChangeEvent) {
         if (tcsChanged(configChangeEvent)) {
-            tcConfig = loadTCs();
+            config.refreshTCGroups();
         }
-    }
-
-    private TCConfiguration loadTCs() {
-        return config.getTypeSafeConfiguration().load(DicomPath.TC_GROUPS_PATH, TCConfiguration.class);
     }
 
     private boolean tcsChanged(ConfigChangeEvent configChangeEvent) {
