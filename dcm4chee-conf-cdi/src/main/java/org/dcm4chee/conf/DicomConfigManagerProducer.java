@@ -68,8 +68,7 @@ import java.util.Map;
 public class DicomConfigManagerProducer {
 
     private final static Logger log = LoggerFactory.getLogger(DicomConfigManagerProducer.class);
-
-
+    
     @EJB
     private ConfigurationEJB providedConfigStorage;
 
@@ -78,9 +77,6 @@ public class DicomConfigManagerProducer {
 
     @Inject
     ConfigurableExtensionsResolver extensionsProvider;
-
-    @Inject
-    TCGroupsProvider tcGroupsProvider;
 
     @Produces
     @ApplicationScoped
