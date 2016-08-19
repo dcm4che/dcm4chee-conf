@@ -46,9 +46,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.Resource;
-import javax.decorator.Decorator;
-import javax.decorator.Delegate;
-import javax.enterprise.inject.Any;
 import javax.inject.Inject;
 import javax.transaction.Status;
 import javax.transaction.Synchronization;
@@ -61,6 +58,7 @@ import org.dcm4che3.conf.core.api.ConfigChangeEvent;
 import org.dcm4che3.conf.core.api.ConfigChangeEvent.CONTEXT;
 import org.dcm4che3.conf.core.api.Configuration;
 import org.dcm4che3.conf.core.api.ConfigurationException;
+import org.dcm4che3.conf.core.api.Path;
 
 /**
  * Decorator to add support for configuration change notifications to the configuration backend.
@@ -85,24 +83,24 @@ public class ConfigNotificationDecorator extends DelegatingConfiguration {
     }
 
     @Override
-    public void persistNode(String path, Map<String, Object> configNode, Class configurableClass) throws ConfigurationException {
+    public void persistNode(Path path, Map<String, Object> configNode, Class configurableClass) throws ConfigurationException {
         delegate.persistNode(path, configNode, configurableClass);
         recordConfigChange(path);
     }
 
     @Override
-    public void removeNode(String path) throws ConfigurationException {
+    public void removeNode(Path path) throws ConfigurationException {
         delegate.removeNode(path);
         recordConfigChange(path);
     }
 
-    private void recordConfigChange(String path) {
+    private void recordConfigChange(Path path) {
         JtaTransactionConfigChangeContainer container = getEventForActiveTransaction();
         if(container != null) {
-            container.addChangedPath(path);
+            container.addChangedPath(path.toSimpleEscapedPath());
         } else {
             if (Boolean.valueOf(System.getProperty(NOTIFICATIONS_ENABLED_PROPERTY, "true")))
-                configNotifService.sendClusterScopedConfigChangeNotification(new ConfigChangeEventImpl(path, CONTEXT.CONFIG_CHANGE));
+                configNotifService.sendClusterScopedConfigChangeNotification(new ConfigChangeEventImpl(path.toSimpleEscapedPath(), CONTEXT.CONFIG_CHANGE));
         }
     }
 

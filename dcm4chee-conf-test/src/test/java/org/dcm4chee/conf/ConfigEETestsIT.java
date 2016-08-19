@@ -45,6 +45,7 @@ import org.dcm4che3.conf.api.internal.DicomConfigurationManager;
 import org.dcm4che3.conf.core.api.BatchRunner.Batch;
 import org.dcm4che3.conf.core.api.Configuration;
 import org.dcm4che3.conf.core.api.ConfigurationException;
+import org.dcm4che3.conf.dicom.DicomPath;
 import org.dcm4che3.net.Device;
 import org.jboss.arquillian.container.test.api.Deployment;
 import org.jboss.arquillian.junit.Arquillian;
@@ -132,7 +133,7 @@ public class ConfigEETestsIT {
         final DicomConfigurationManager config = getConfig();
         final Configuration storage = config.getConfigurationStorage();
 
-        storage.persistNode("/dicomConfigurationRoot", new HashMap<String, Object>(), null);
+        storage.persistNode(DicomPath.CONFIG_ROOT_PATH, new HashMap<String, Object>(), null);
 
 
         storage.runBatch(new Batch() {
@@ -188,7 +189,7 @@ public class ConfigEETestsIT {
         final Semaphore masterSemaphore = new Semaphore(0);
         final Semaphore childSemaphore = new Semaphore(0);
 
-        storage.persistNode("/dicomConfigurationRoot", new HashMap<String, Object>(), null);
+        storage.persistNode(DicomPath.CONFIG_ROOT_PATH, new HashMap<String, Object>(), null);
 
         final AtomicInteger parallel = new AtomicInteger(0);
 
@@ -285,19 +286,19 @@ public class ConfigEETestsIT {
         final DicomConfigurationManager config = getConfig();
         final Configuration storage = config.getConfigurationStorage();
 
-        storage.persistNode("/dicomConfigurationRoot", new HashMap<String, Object>(), null);
+        storage.persistNode(DicomPath.CONFIG_ROOT_PATH, new HashMap<String, Object>(), null);
 
         config.persist(new Device("D1"));
         config.persist(new Device("D2"));
 
-        final Map<String, Object> configurationRoot = (Map<String, Object>) storage.getConfigurationNode("/dicomConfigurationRoot", null);
+        final Map<String, Object> configurationRoot = (Map<String, Object>) storage.getConfigurationNode(DicomPath.CONFIG_ROOT_PATH, null);
 
         myConfyEJB.execInTransaction(new Runnable() {
             @Override
             public void run() {
                 try {
-                    storage.removeNode("/dicomConfigurationRoot");
-                    storage.persistNode("/dicomConfigurationRoot", configurationRoot, null);
+                    storage.removeNode(DicomPath.CONFIG_ROOT_PATH);
+                    storage.persistNode(DicomPath.CONFIG_ROOT_PATH, configurationRoot, null);
                 } catch (ConfigurationException e) {
                     throw new RuntimeException(e);
                 }
@@ -311,12 +312,12 @@ public class ConfigEETestsIT {
             Assert.fail("Device should have been found");
         }
 
-        storage.persistNode("/dicomConfigurationRoot", new HashMap<String, Object>(), null);
+        storage.persistNode(DicomPath.CONFIG_ROOT_PATH, new HashMap<String, Object>(), null);
 
         config.persist(new Device("D3"));
         config.persist(new Device("D4"));
 
-        storage.persistNode("/dicomConfigurationRoot", configurationRoot, null);
+        storage.persistNode(DicomPath.CONFIG_ROOT_PATH, configurationRoot, null);
 
         try {
             config.findDevice("D1");
@@ -345,7 +346,7 @@ public class ConfigEETestsIT {
         final DicomConfigurationManager config = getConfig();
         final Configuration storage = config.getConfigurationStorage();
 
-        storage.persistNode("/dicomConfigurationRoot", new HashMap<String, Object>(), null);
+        storage.persistNode(DicomPath.CONFIG_ROOT_PATH, new HashMap<String, Object>(), null);
 
         config.persist(new Device("someDevice"));
         config.persist(new Device("someNotImportantDevice"));
@@ -438,7 +439,7 @@ public class ConfigEETestsIT {
         final DicomConfigurationManager config = getConfig();
         final Configuration storage = config.getConfigurationStorage();
 
-        storage.persistNode("/dicomConfigurationRoot", new HashMap<String, Object>(), null);
+        storage.persistNode(DicomPath.CONFIG_ROOT_PATH, new HashMap<String, Object>(), null);
 
         final Device a = new Device("a");
         final Device b = new Device("b");

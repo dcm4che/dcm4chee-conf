@@ -214,14 +214,14 @@ public class ConfigRESTServicesServlet {
     @Path("/device/{deviceName}")
     @Produces(MediaType.APPLICATION_JSON)
     public Map<String, Object> getDeviceConfig(@PathParam(value = "deviceName") String deviceName) throws ConfigurationException {
-        return (Map<String, Object>) configurationManager.getConfigurationStorage().getConfigurationNode(DicomPath.DeviceByNameForWrite.set("deviceName", deviceName).path(), Device.class);
+        return (Map<String, Object>) configurationManager.getConfigurationStorage().getConfigurationNode(DicomPath.devicePath(deviceName), Device.class);
     }
 
     @GET
     @Path("/transferCapabilities")
     @Produces(MediaType.APPLICATION_JSON)
     public Map<String, Object> getTransferCapabilitiesConfig() throws ConfigurationException {
-        return (Map<String, Object>) configurationManager.getConfigurationStorage().getConfigurationNode(DicomPath.TCGroups.path(), TCConfiguration.class);
+        return (Map<String, Object>) configurationManager.getConfigurationStorage().getConfigurationNode(DicomPath.TC_GROUPS_PATH, TCConfiguration.class);
     }
 
 
@@ -229,7 +229,7 @@ public class ConfigRESTServicesServlet {
     @Path("/transferCapabilities")
     @Produces(MediaType.APPLICATION_JSON)
     public void setTransferCapabilitiesConfig(Map<String, Object> config) throws ConfigurationException {
-        configurationManager.getConfigurationStorage().persistNode(DicomPath.TCGroups.path(), config, TCConfiguration.class);
+        configurationManager.getConfigurationStorage().persistNode(DicomPath.TC_GROUPS_PATH, config, TCConfiguration.class);
         fireConfigUpdateNotificationIfNecessary();
     }
 
@@ -262,7 +262,7 @@ public class ConfigRESTServicesServlet {
     @Path("/importFullConfiguration")
     @Consumes(MediaType.APPLICATION_JSON)
     public void setFullConfig(Map<String, Object> config) throws ConfigurationException {
-        configurationManager.getConfigurationStorage().persistNode("/", config, null);
+        configurationManager.getConfigurationStorage().persistNode(org.dcm4che3.conf.core.api.Path.ROOT, config, null);
         fireConfigUpdateNotificationIfNecessary();
     }
 
@@ -272,7 +272,7 @@ public class ConfigRESTServicesServlet {
     @Produces(MediaType.APPLICATION_JSON)
     public void deleteDevice(@PathParam(value = "deviceName") String deviceName) throws ConfigurationException {
         if (deviceName.isEmpty()) throw new ConfigurationException("Device name cannot be empty");
-        configurationManager.getConfigurationStorage().removeNode(DicomPath.DeviceByNameForWrite.set("deviceName", deviceName).path());
+        configurationManager.getConfigurationStorage().removeNode(DicomPath.devicePath(deviceName));
         fireConfigUpdateNotificationIfNecessary();
     }
 
@@ -285,7 +285,7 @@ public class ConfigRESTServicesServlet {
 
         if (deviceName.isEmpty()) throw new ConfigurationException("Device name cannot be empty");
 
-        configurationManager.getConfigurationStorage().persistNode(DicomPath.DeviceByNameForWrite.set("deviceName", deviceName).path(), config, Device.class);
+        configurationManager.getConfigurationStorage().persistNode(DicomPath.devicePath(deviceName), config, Device.class);
 
         fireConfigUpdateNotificationIfNecessary();
 
@@ -301,6 +301,7 @@ public class ConfigRESTServicesServlet {
 
     /**
      * Returns a fully processed node, i.e. including defaults, hashes, etc
+     *
      * @param pathStr
      * @return
      */
@@ -308,25 +309,9 @@ public class ConfigRESTServicesServlet {
     @Path("/node")
     @Produces(MediaType.APPLICATION_JSON)
     public Object getConfigurationNode(@QueryParam(value = "path") String pathStr) {
-
-        org.dcm4che3.conf.core.api.Path path;
-        PathPattern.PathParser pathParser = referencePattern.parseIfMatches(pathStr);
-        if (pathParser != null) {
-            // it's uuid reference
-            String uuid = pathParser.getParam("uuid");
-            path = getPathByUUID(uuid);
-            if (path == null) return null;
-        } else {
-            // it's simple path (will throw exception if not)
-            path = org.dcm4che3.conf.core.api.Path.fromSimpleEscapedPath(pathStr);
-        }
-
+        org.dcm4che3.conf.core.api.Path path = org.dcm4che3.conf.core.api.Path.fromSimpleEscapedPath(pathStr);
         ConfigProperty last = PathFollower.traceProperties(configurationManager.getTypeSafeConfiguration().getRootClass(), path).getLast();
-
-        if (!last.isConfObject())
-            throw new IllegalArgumentException("Path " + pathStr + " is not pointing to a configurable object");
-
-        return configurationManager.getConfigurationStorage().getConfigurationNode(pathStr, last.getRawClass());
+        return configurationManager.getConfigurationStorage().getConfigurationNode(path, last.isConfObject() ? last.getRawClass() : null);
     }
 
 
@@ -372,20 +357,19 @@ public class ConfigRESTServicesServlet {
     }
 
 
-
     /**
      * For troubleshooting purposes - returns all the versions of software components defined in the deployment
      */
     @GET
     @Path("/versions")
     @Produces(MediaType.APPLICATION_JSON)
-    public Map<String,String> getVersions() {
+    public Map<String, String> getVersions() {
 
         if (versionProviderInstance.isUnsatisfied()) {
             log.warn("No versions provider defined");
         }
 
-        Map<String,String> allVersions = new HashMap<>();
+        Map<String, String> allVersions = new HashMap<>();
 
         for (SoftwareVersionProvider softwareVersionProvider : versionProviderInstance) {
             allVersions.putAll(softwareVersionProvider.getAllVersions());

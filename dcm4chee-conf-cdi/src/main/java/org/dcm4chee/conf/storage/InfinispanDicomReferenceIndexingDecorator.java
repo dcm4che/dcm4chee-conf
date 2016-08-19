@@ -4,7 +4,7 @@ import org.dcm4che3.conf.core.api.Configuration;
 import org.dcm4che3.conf.core.api.ConfigurationException;
 import org.dcm4che3.conf.core.api.DuplicateUUIDException;
 import org.dcm4che3.conf.core.api.Path;
-import org.dcm4che3.conf.dicom.DicomReferenceIndexingDecorator;
+import org.dcm4che3.conf.core.index.ReferenceIndexingDecorator;
 import org.dcm4chee.cache.Cache;
 import org.dcm4chee.cache.CacheByName;
 import org.dcm4chee.util.TransactionSynchronization;
@@ -28,7 +28,7 @@ import java.util.List;
 
 @SuppressWarnings("unchecked")
 @ApplicationScoped
-public class InfinispanDicomReferenceIndexingDecorator extends DicomReferenceIndexingDecorator {
+public class InfinispanDicomReferenceIndexingDecorator extends ReferenceIndexingDecorator {
 
 
     @Inject
@@ -48,13 +48,13 @@ public class InfinispanDicomReferenceIndexingDecorator extends DicomReferenceInd
     }
 
     @Override
-    public void refreshNode(String path) throws ConfigurationException {
+    public void refreshNode(Path path) throws ConfigurationException {
 
-        Object oldRoot = delegate.getConfigurationNode("/", null);
+        Object oldRoot = delegate.getConfigurationNode(Path.ROOT, null);
         removeOldReferablesFromIndex(oldRoot);
 
         delegate.refreshNode(path);
-        Object root = delegate.getConfigurationNode("/", null);
+        Object root = delegate.getConfigurationNode(Path.ROOT, null);
 
         // Don't fail on initializing/refreshing the index - in this case the config already has duplicate UUIDs and we can do nothing about it
         super.addReferablesToIndex(new ArrayList<>(), root);
@@ -65,7 +65,7 @@ public class InfinispanDicomReferenceIndexingDecorator extends DicomReferenceInd
      * Make sure that we fail a transaction in case of finding duplicate references
      */
     @Override
-    protected List<DuplicateUUIDException> addReferablesToIndex(List<String> pathItems, Object configNode) {
+    protected List<DuplicateUUIDException> addReferablesToIndex(List<Object> pathItems, Object configNode) {
         List<DuplicateUUIDException> duplicateUUIDExceptions = super.addReferablesToIndex(pathItems, configNode);
 
         if (!duplicateUUIDExceptions.isEmpty()) {

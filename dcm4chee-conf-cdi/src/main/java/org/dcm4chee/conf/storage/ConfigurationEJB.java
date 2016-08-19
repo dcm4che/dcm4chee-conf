@@ -45,6 +45,7 @@ import org.dcm4che3.conf.core.DelegatingConfiguration;
 import org.dcm4che3.conf.core.ExtensionMergingConfiguration;
 import org.dcm4che3.conf.core.api.Configuration;
 import org.dcm4che3.conf.core.api.ConfigurationException;
+import org.dcm4che3.conf.core.api.Path;
 import org.dcm4che3.conf.core.normalization.DefaultsAndNullFilterDecorator;
 import org.dcm4che3.conf.core.olock.HashBasedOptimisticLockingConfiguration;
 import org.dcm4che3.conf.dicom.CommonDicomConfiguration;
@@ -56,7 +57,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.PostConstruct;
-import javax.annotation.Resource;
 import javax.ejb.*;
 import javax.enterprise.inject.Any;
 import javax.enterprise.inject.Instance;
@@ -176,13 +176,13 @@ public class ConfigurationEJB extends DelegatingConfiguration {
         delegate = storage;
 
         // bootstrap
-        delegate.refreshNode("/");
+        delegate.refreshNode(Path.ROOT);
 
         log.info("dcm4che configuration singleton EJB created");
     }
 
     @Override
-    public void persistNode(String path, Map<String, Object> configNode, Class configurableClass) throws ConfigurationException {
+    public void persistNode(Path path, Map<String, Object> configNode, Class configurableClass) throws ConfigurationException {
 
         Runnable r = () -> delegate.persistNode(path, configNode, configurableClass);
 
@@ -194,7 +194,7 @@ public class ConfigurationEJB extends DelegatingConfiguration {
     }
 
     @Override
-    public void removeNode(String path) throws ConfigurationException {
+    public void removeNode(Path path) throws ConfigurationException {
 
         Runnable r = () -> delegate.removeNode(path);
 
@@ -206,7 +206,7 @@ public class ConfigurationEJB extends DelegatingConfiguration {
     }
 
     @Override
-    public void refreshNode(String path) throws ConfigurationException {
+    public void refreshNode(Path path) throws ConfigurationException {
 
         Runnable r = () -> delegate.refreshNode(path);
 

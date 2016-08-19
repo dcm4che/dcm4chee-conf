@@ -51,10 +51,7 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.PostConstruct;
 import javax.ejb.EJB;
 import javax.enterprise.context.ApplicationScoped;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * @author Roman K
@@ -102,19 +99,19 @@ public class SemiSerializedDBConfigStorage implements Configuration {
 
 
     @Override
-    public Object getConfigurationNode(String path, Class configurableClass) throws ConfigurationException {
+    public Object getConfigurationNode(Path path, Class configurableClass) throws ConfigurationException {
 
         // since some paths are not trivial, e.g. references, just use the root because it will be cached
         // [speedup-spot] still could be optimized for many cases
-        return Nodes.getNode(getConfigurationRoot(), path);
+        return Nodes.getNode(getConfigurationRoot(), path.getPathItems());
     }
 
     @Override
-    public boolean nodeExists(String path) throws ConfigurationException {
+    public boolean nodeExists(Path path) throws ConfigurationException {
         if (path.equals(DicomPath.ConfigRoot.path()))
             return !db.isEmpty();
 
-        SplittedPath splittedPath = new SplittedPath(path, level);
+        SplittedPath splittedPath = new SplittedPath(path.getPathItems(), level);
 
         // no need to store those
         if (splittedPath.getTotalDepth() <= level) throw new RuntimeException("Unexpected path " + path);
@@ -124,12 +121,12 @@ public class SemiSerializedDBConfigStorage implements Configuration {
     }
 
     @Override
-    public void persistNode(String path, Map<String, Object> configNode, Class configurableClass) throws ConfigurationException {
+    public void persistNode(Path path, Map<String, Object> configNode, Class configurableClass) throws ConfigurationException {
 
-        SplittedPath splittedPath = new SplittedPath(path, level);
+        SplittedPath splittedPath = new SplittedPath(path.getPathItems(), level);
         int i = splittedPath.getTotalDepth();
-        List<String> pathItemsForDB = splittedPath.getOuterPathItems();
-        List<String> restPathItems = splittedPath.getInnerPathitems();
+        List<Object> pathItemsForDB = splittedPath.getOuterPathItems();
+        List<Object> restPathItems = splittedPath.getInnerPathitems();
 
         if (i <= level) {
             removeNode(path);
@@ -139,12 +136,12 @@ public class SemiSerializedDBConfigStorage implements Configuration {
 
     }
 
-    private void splitTreeAndPersist(List<String> dbPath, Map<String, Object> configNode) {
+    private void splitTreeAndPersist(List<Object> dbPath, Map<String, Object> configNode) {
 
         if (dbPath.size() == level) {
 
             // if reached the level, just modify node
-            db.modifyNode(dbPath, new ArrayList<String>(), configNode);
+            db.modifyNode(dbPath, Collections.emptyList(), configNode);
         } else if (dbPath.size() < level) {
 
             // if not yet reached the level, go deeper for each of this node's children
@@ -166,13 +163,13 @@ public class SemiSerializedDBConfigStorage implements Configuration {
     }
 
     @Override
-    public void refreshNode(String path) throws ConfigurationException {
+    public void refreshNode(Path path) throws ConfigurationException {
         //noop
     }
 
     @Override
-    public void removeNode(String path) throws ConfigurationException {
-        SplittedPath splittedPath = new SplittedPath(path, level);
+    public void removeNode(Path path) throws ConfigurationException {
+        SplittedPath splittedPath = new SplittedPath(path.getPathItems(), level);
         db.removeNode(splittedPath.getOuterPathItems(), splittedPath.getInnerPathitems());
     }
 
