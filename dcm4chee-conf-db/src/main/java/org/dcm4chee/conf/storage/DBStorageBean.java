@@ -200,8 +200,7 @@ public class DBStorageBean {
             // its ok, create new
             node = new ConfigNodeEntity();
             node.setPath(dbPath);
-            HashMap<String, Object> map = new HashMap<>();
-            Nodes.replaceNode(map, configNode, restPathItems);
+            Map<String, Object> map = Nodes.replaceNode(new HashMap<>(), configNode, restPathItems);
             node.setContent(toBytes(map));
             em.persist(node);
 
@@ -211,8 +210,7 @@ public class DBStorageBean {
         }
 
         // merge
-        Map<String, Object> map = fromBytes(node.getContent());
-        Nodes.replaceNode(map, configNode, restPathItems);
+        Map<String, Object> map = Nodes.replaceNode(fromBytes(node.getContent()), configNode, restPathItems);
         node.setContent(toBytes(map));
         em.merge(node);
     }

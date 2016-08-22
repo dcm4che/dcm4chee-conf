@@ -114,7 +114,7 @@ public class InfinispanCachingConfigurationDecorator extends DelegatingConfigura
         if (splittedPath.getInnerPathitems().size() == 0)
             return node;
         else
-            return Nodes.getNode(node, Nodes.toSimpleEscapedPath(splittedPath.getInnerPathitems()));
+            return Nodes.getNode(node, splittedPath.getInnerPathitems());
     }
 
     @Override

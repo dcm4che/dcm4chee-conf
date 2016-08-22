@@ -128,7 +128,7 @@ public class SemiSerializedDBConfigStorage implements Configuration {
         List<Object> pathItemsForDB = splittedPath.getOuterPathItems();
         List<Object> restPathItems = splittedPath.getInnerPathitems();
 
-        if (i <= level) {
+        if (i < level) {
             removeNode(path);
             splitTreeAndPersist(pathItemsForDB, configNode);
         } else
