@@ -21,7 +21,7 @@ public class ConfigurableExtensionsResolver {
     private final static Logger log = LoggerFactory.getLogger(ConfigurableExtensionsResolver.class);
 
     @Inject
-    private Instance<ConfigurableClassExtension> allExtensions;
+    private Instance<ConfigurableClassExtension<?>> allExtensions;
 
     /**
      * To avoid logging warning multiple times

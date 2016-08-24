@@ -61,7 +61,7 @@ public class HooksProducer {
     private HooksManager hooksManager;
     
     @Produces
-    public Hooks resolveHooks(InjectionPoint injectionPoint, BeanManager beanManager) {
+    public <T> Hooks<T> resolveHooks(InjectionPoint injectionPoint, BeanManager beanManager) {
         final Collection<Object> activeOrderedHooks = hooksManager.getOrderedActiveHooks(injectionPoint, beanManager);
         
         Limit hookMultiplicity = injectionPoint.getAnnotated().getAnnotation(Limit.class);
