@@ -77,8 +77,9 @@ public class CacheProducer {
             try {
                 Context ic = new InitialContext();
                 EmbeddedCacheManager defaultCacheManager = (EmbeddedCacheManager) ic.lookup("java:jboss/infinispan/container/" + container);
-                cache = defaultCacheManager.getCache(cacheName, false);
+                cache = defaultCacheManager.getCache(cacheName);
                 if (cache != null) {
+                    cache.start();
                     return new InfinispanWrapper(cache);
                 }
             } catch (Exception e) {
