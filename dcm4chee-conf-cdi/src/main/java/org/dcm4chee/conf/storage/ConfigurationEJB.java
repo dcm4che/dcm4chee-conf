@@ -126,7 +126,7 @@ public class ConfigurationEJB extends DelegatingConfiguration {
     ConfigurableExtensionsResolver extensionsProvider;
 
     @PostConstruct
-    @TransactionAttribute(TransactionAttributeType.REQUIRED)
+    @TransactionAttribute(TransactionAttributeType.REQUIRES_NEW)
     public void init() {
         // detect user setting (system property) for config backend type
         String storageType = ConfigurationSettingsLoader.getPropertyWithNotice(
@@ -176,6 +176,7 @@ public class ConfigurationEJB extends DelegatingConfiguration {
         delegate = storage;
 
         // bootstrap
+        delegate.lock();
         delegate.refreshNode(Path.ROOT);
 
         log.info("dcm4che configuration singleton EJB created");
