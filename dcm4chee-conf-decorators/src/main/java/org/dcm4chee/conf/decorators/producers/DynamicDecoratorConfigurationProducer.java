@@ -3,6 +3,7 @@ package org.dcm4chee.conf.decorators.producers;
 import org.dcm4che3.conf.ConfigurationSettingsLoader;
 import org.dcm4che3.conf.core.DefaultBeanVitalizer;
 import org.dcm4che3.conf.core.api.ConfigurationException;
+import org.dcm4che3.conf.core.api.Path;
 import org.dcm4che3.conf.core.storage.SingleJsonFileConfigurationStorage;
 import org.dcm4che3.util.StringUtils;
 import org.dcm4chee.conf.decorators.ConfiguredDynamicDecorators;
@@ -29,7 +30,7 @@ public class DynamicDecoratorConfigurationProducer {
         SingleJsonFileConfigurationStorage storage = new SingleJsonFileConfigurationStorage(path);
 
         DynamicDecoratorsConfig dynamicDecorators = new DefaultBeanVitalizer().newConfiguredInstance((Map<String, Object>) storage
-                .getConfigurationNode("/", null), DynamicDecoratorsConfig.class);
+                .getConfigurationNode(Path.ROOT, null), DynamicDecoratorsConfig.class);
 
 
         String decoratorsLog = "";

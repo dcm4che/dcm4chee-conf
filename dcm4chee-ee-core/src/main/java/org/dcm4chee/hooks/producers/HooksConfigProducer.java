@@ -3,6 +3,7 @@ package org.dcm4chee.hooks.producers;
 import org.dcm4che3.conf.ConfigurationSettingsLoader;
 import org.dcm4che3.conf.core.DefaultBeanVitalizer;
 import org.dcm4che3.conf.core.api.ConfigurationException;
+import org.dcm4che3.conf.core.api.Path;
 import org.dcm4che3.conf.core.storage.SingleJsonFileConfigurationStorage;
 import org.dcm4che3.util.StringUtils;
 import org.dcm4chee.hooks.HooksConfig;
@@ -27,7 +28,7 @@ public class HooksConfigProducer {
         SingleJsonFileConfigurationStorage storage = new SingleJsonFileConfigurationStorage(path);
 
         HooksConfig hooksConfig = new DefaultBeanVitalizer().newConfiguredInstance((Map<String, Object>) storage
-                .getConfigurationNode("/", null), HooksConfig.class);
+                .getConfigurationNode(Path.ROOT, null), HooksConfig.class);
 
         for (Map.Entry<String, HooksConfig.HookTypeConfig> entry : hooksConfig.getHooks().entrySet()) {
             LOG.info("Hooks for interface {}:", entry.getKey());

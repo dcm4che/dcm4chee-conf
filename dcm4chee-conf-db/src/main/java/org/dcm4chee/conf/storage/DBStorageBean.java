@@ -40,8 +40,9 @@
 package org.dcm4chee.conf.storage;
 
 import org.codehaus.jackson.map.ObjectMapper;
-import org.dcm4che3.conf.core.api.BatchRunner.Batch;
 import org.dcm4che3.conf.core.Nodes;
+import org.dcm4che3.conf.core.api.BatchRunner.Batch;
+import org.dcm4che3.conf.core.api.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -84,7 +85,7 @@ public class DBStorageBean {
                     new HashMap() :
                     fromBytes(configNodeEntity.getContent());
             String path = configNodeEntity.getPath();
-            map = Nodes.replaceNode(map, loadedNode, Nodes.fromSimpleEscapedPath(path));
+            Nodes.replaceNode(map, loadedNode, Path.fromSimpleEscapedPath(path).getPathItems());
         }
 
         return map;
@@ -149,7 +150,7 @@ public class DBStorageBean {
     }
 
 
-    public Object getNode(List<String> pathItemsForDB) {
+    public Object getNode(List<Object> pathItemsForDB) {
         ConfigNodeEntity node = getConfigNodeEntityForDBPath(pathItemsForDB);
         Object loadedNode = node.getContent() == null ?
                 new HashMap() :
@@ -159,7 +160,7 @@ public class DBStorageBean {
     }
 
 
-    public void removeNode(List<String> pathItemsForDB, List<String> restPathItems) {
+    public void removeNode(List<Object> pathItemsForDB, List<Object> restPathItems) {
 
         if (restPathItems.size() == 0) {
 
@@ -188,7 +189,7 @@ public class DBStorageBean {
             }
     }
 
-    public void modifyNode(List<String> pathItemsForDB, List<String> restPathItems, Map<String, Object> configNode) {
+    public void modifyNode(List<Object> pathItemsForDB, List<Object> restPathItems, Map<String, Object> configNode) {
         String dbPath = Nodes.toSimpleEscapedPath(pathItemsForDB);
 
         ConfigNodeEntity node;
@@ -199,7 +200,7 @@ public class DBStorageBean {
             // its ok, create new
             node = new ConfigNodeEntity();
             node.setPath(dbPath);
-            Map<String, Object> map = Nodes.replaceNode(new HashMap<String, Object>(), configNode, restPathItems);
+            Map<String, Object> map = Nodes.replaceNode(new HashMap<>(), configNode, restPathItems);
             node.setContent(toBytes(map));
             em.persist(node);
 
@@ -209,13 +210,12 @@ public class DBStorageBean {
         }
 
         // merge
-        Map<String, Object> map = fromBytes(node.getContent());
-        map = Nodes.replaceNode(map, configNode, restPathItems);
+        Map<String, Object> map = Nodes.replaceNode(fromBytes(node.getContent()), configNode, restPathItems);
         node.setContent(toBytes(map));
         em.merge(node);
     }
 
-    public boolean nodeExists(List<String> pathItemsForDB, List<String> restPathItems) {
+    public boolean nodeExists(List<Object> pathItemsForDB, List<Object> restPathItems) {
         try {
             ConfigNodeEntity node = getConfigNodeEntityForDBPath(pathItemsForDB);
             return Nodes.nodeExists(fromBytes(node.getContent()), restPathItems);
@@ -240,7 +240,7 @@ public class DBStorageBean {
         }
     }
 
-    private ConfigNodeEntity getConfigNodeEntityForDBPath(List<String> pathItemsForDB) {
+    private ConfigNodeEntity getConfigNodeEntityForDBPath(List<Object> pathItemsForDB) {
         String dbPath = Nodes.toSimpleEscapedPath(pathItemsForDB);
 
         Query query = em.createQuery("SELECT n FROM ConfigNodeEntity n WHERE n.path=?1");

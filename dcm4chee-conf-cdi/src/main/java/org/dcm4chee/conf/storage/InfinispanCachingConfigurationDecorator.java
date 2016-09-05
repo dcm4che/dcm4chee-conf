@@ -4,6 +4,7 @@ import org.dcm4che3.conf.core.DelegatingConfiguration;
 import org.dcm4che3.conf.core.Nodes;
 import org.dcm4che3.conf.core.api.Configuration;
 import org.dcm4che3.conf.core.api.ConfigurationException;
+import org.dcm4che3.conf.core.api.Path;
 import org.dcm4che3.conf.core.util.SplittedPath;
 import org.dcm4chee.cache.Cache;
 import org.dcm4chee.cache.CacheByName;
@@ -16,7 +17,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * To workaround the limitation of infinispan (at least 5.x) we maintain the keyset inside a special entry {@link KEYSET_KEY}
+ * To workaround the limitation of infinispan (at least 5.x) we maintain the keyset inside a special entry {@link InfinispanCachingConfigurationDecorator#KEYSET_KEY}
  */
 @SuppressWarnings("unchecked")
 @ApplicationScoped
@@ -25,7 +26,7 @@ public class InfinispanCachingConfigurationDecorator extends DelegatingConfigura
     private static final Logger log = LoggerFactory.getLogger(DelegatingConfiguration.class);
 
     private static final int level = 3;
-    public static final String KEYSET_KEY = "#keySet";
+    private static final String KEYSET_KEY = "#keySet";
 
     @Inject
     @CacheByName("configuration")
@@ -39,7 +40,7 @@ public class InfinispanCachingConfigurationDecorator extends DelegatingConfigura
     }
 
     @Override
-    public void refreshNode(String path) throws ConfigurationException {
+    public void refreshNode(Path path) throws ConfigurationException {
 
         lock();
         super.refreshNode(path);
@@ -52,7 +53,7 @@ public class InfinispanCachingConfigurationDecorator extends DelegatingConfigura
     }
 
 
-    private void persistTopLayerToCache(Map<String, Object> m, List<String> pathItems) {
+    private void persistTopLayerToCache(Map<String, Object> m, List<Object> pathItems) {
 
         if (pathItems.size() == level) {
             putIntoCache(Nodes.toSimpleEscapedPath(pathItems), m);
@@ -81,7 +82,7 @@ public class InfinispanCachingConfigurationDecorator extends DelegatingConfigura
         // for now it's not so critical since most conf calls will go directly to certain entries
 
         for (String path : getCacheKeySet()) {
-            Nodes.replaceNode(root, cache.get(path), Nodes.fromSimpleEscapedPath(path));
+            Nodes.replaceNode(root, cache.get(path), Path.fromSimpleEscapedPath(path).getPathItems());
         }
 
         return root;
@@ -94,25 +95,18 @@ public class InfinispanCachingConfigurationDecorator extends DelegatingConfigura
     }
 
     @Override
-    public Object getConfigurationNode(String path, Class configurableClass) throws ConfigurationException {
+    public Object getConfigurationNode(Path path, Class configurableClass) throws ConfigurationException {
         return Nodes.deepCloneNode(getConfigurationNodeFromCache(path));
     }
 
-    private Object getConfigurationNodeFromCache(String path) {
-        SplittedPath splittedPath = getSplittedPath(path);
+    private Object getConfigurationNodeFromCache(Path path) {
 
-        // fallback if not simple/persistable path
-        if (splittedPath == null) {
-            try {
-                return Nodes.getNode(getWrappedRoot(), path);
-            } catch (Exception e) {
-                throw new ConfigurationException("Unable to get node under path '" + path + "'", e);
-            }
-        }
+        SplittedPath splittedPath = getSplittedPath(path);
+        if (splittedPath==null) return null;
 
         // fallback if requested one of top levels
         if (splittedPath.getOuterPathItems().size() < level) {
-            return Nodes.getNode(getWrappedRoot(), path);
+            return Nodes.getNode(getWrappedRoot(), path.getPathItems());
         }
 
         Map<String, Object> node = getFromCache(Nodes.toSimpleEscapedPath(splittedPath.getOuterPathItems()));
@@ -120,11 +114,11 @@ public class InfinispanCachingConfigurationDecorator extends DelegatingConfigura
         if (splittedPath.getInnerPathitems().size() == 0)
             return node;
         else
-            return Nodes.getNode(node, Nodes.toSimpleEscapedPath(splittedPath.getInnerPathitems()));
+            return Nodes.getNode(node, splittedPath.getInnerPathitems());
     }
 
     @Override
-    public void persistNode(String path, Map<String, Object> configNode, Class configurableClass) throws ConfigurationException {
+    public void persistNode(Path path, Map<String, Object> configNode, Class configurableClass) throws ConfigurationException {
 
         SplittedPath splittedPath = getSplittedPath(path);
 
@@ -144,7 +138,7 @@ public class InfinispanCachingConfigurationDecorator extends DelegatingConfigura
         } else if (splittedPath.getOuterPathItems().size() > level) {
 
             Map<String, Object> levelRootNode = (Map<String, Object>) Nodes.deepCloneNode(getFromCache(levelKey));
-            Nodes.replaceNode(levelRootNode, Nodes.toSimpleEscapedPath(splittedPath.getInnerPathitems()), clonedNode);
+            Nodes.replaceNode(levelRootNode, clonedNode, splittedPath.getInnerPathitems());
             putIntoCache(levelKey, levelRootNode);
 
         } else {
@@ -160,9 +154,10 @@ public class InfinispanCachingConfigurationDecorator extends DelegatingConfigura
 
     /**
      * This should be executed with global lock
+     * @param path
      */
     @Override
-    public void removeNode(String path) throws ConfigurationException {
+    public void removeNode(Path path) throws ConfigurationException {
 
         removeNodeFromCache(path);
 
@@ -172,25 +167,8 @@ public class InfinispanCachingConfigurationDecorator extends DelegatingConfigura
     }
 
 
-    private void removeNodeFromCache(String path) {
+    private void removeNodeFromCache(Path path) {
         SplittedPath splittedPath = getSplittedPath(path);
-
-        if (splittedPath == null) {
-            Map<String, Object> clonedRoot = (Map<String, Object>) Nodes.deepCloneNode(getWrappedRoot());
-
-            if (clonedRoot == null) return;
-
-            try {
-                Nodes.removeNodes(clonedRoot, path);
-            } catch (Exception e) {
-                throw new ConfigurationException("Unable to remove nodes under path '" + path + "'", e);
-            }
-
-            log.warn("Complex xpath expression (" + path + ") used to remove nodes from configuration, this should only be used for exceptional cases as it uses a lot of resources");
-            persistTopLayerToCache(clonedRoot, new ArrayList<>());
-
-            return;
-        }
 
         String outerPath = Nodes.toSimpleEscapedPath(splittedPath.getOuterPathItems());
 
@@ -218,15 +196,14 @@ public class InfinispanCachingConfigurationDecorator extends DelegatingConfigura
         }
     }
 
-    private SplittedPath getSplittedPath(String path) {
-
-        List<String> pathItems = Nodes.simpleOrPersistablePathToPathItemsOrNull(path);
+    private SplittedPath getSplittedPath(Path path) {
+        List<Object> pathItems = path.getPathItems();
         if (pathItems == null) return null;
         return new SplittedPath(pathItems, level);
     }
 
     @Override
-    public boolean nodeExists(String path) throws ConfigurationException {
+    public boolean nodeExists(Path path) throws ConfigurationException {
 
         SplittedPath splittedPath = getSplittedPath(path);
 

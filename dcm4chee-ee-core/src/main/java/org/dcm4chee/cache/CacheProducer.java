@@ -62,23 +62,24 @@ public class CacheProducer {
     private static final int maxRetries = Integer.parseInt(System.getProperty("org.dcm4chee.cache.maxRetries", "10"));
 
     private static final Logger LOG = LoggerFactory.getLogger(CacheProducer.class);
-    
+
     @SuppressWarnings("unchecked")
     @Produces
     @CacheByName
-    Cache getCache(InjectionPoint point) {
+    public <T, S> Cache<T, S> getCache(InjectionPoint point) {
 
         String cacheName = point.getAnnotated().getAnnotation(CacheByName.class).value();
 
         org.infinispan.Cache<Object, Object> cache;
         RuntimeException exception = null;
-        for (int i=0 ; i < maxRetries ; ) {
+        for (int i = 0; i < maxRetries; ) {
             exception = null;
             try {
                 Context ic = new InitialContext();
                 EmbeddedCacheManager defaultCacheManager = (EmbeddedCacheManager) ic.lookup("java:jboss/infinispan/container/" + container);
-                cache = defaultCacheManager.getCache(cacheName, false);
+                cache = defaultCacheManager.getCache(cacheName);
                 if (cache != null) {
+                    cache.start();
                     return new InfinispanWrapper(cache);
                 }
             } catch (Exception e) {
@@ -86,8 +87,9 @@ public class CacheProducer {
             }
             LOG.info("Infinispan cache '{}' not ready! Retry [{}/{}] in 500ms", new Object[]{cacheName, ++i, maxRetries});
             try {
-                Thread.currentThread().sleep(500);
-            } catch (InterruptedException ie) {}
+                Thread.sleep(500);
+            } catch (InterruptedException ignored) {
+            }
         }
         if (exception != null)
             throw exception;

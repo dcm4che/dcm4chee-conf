@@ -43,12 +43,12 @@ package org.dcm4chee.conf.storage;
 import org.dcm4che3.conf.core.api.Configuration;
 import org.dcm4che3.conf.core.api.ConfigurationException;
 import org.dcm4che3.conf.core.api.DuplicateUUIDException;
+import org.dcm4che3.conf.core.index.ReferenceIndexingDecorator;
 import org.dcm4che3.conf.core.normalization.DefaultsAndNullFilterDecorator;
 import org.dcm4che3.conf.core.storage.InMemoryReadOnlyConfiguration;
 import org.dcm4che3.conf.dicom.CommonDicomConfiguration;
 import org.dcm4che3.conf.dicom.CommonDicomConfigurationWithHL7;
 import org.dcm4che3.conf.dicom.DicomPath;
-import org.dcm4che3.conf.dicom.DicomReferenceIndexingDecorator;
 import org.dcm4chee.conf.ConfigurableExtensionsResolver;
 import org.dcm4chee.conf.DicomConfigManagerProducer;
 
@@ -106,7 +106,7 @@ public class ConfigurationIntegrityCheck {
 
     }
 
-    private static class IndexingDecoratorWithInit extends DicomReferenceIndexingDecorator {
+    private static class IndexingDecoratorWithInit extends ReferenceIndexingDecorator {
         public IndexingDecoratorWithInit(Configuration storage, Map<String, Object> configurationRootToIndex) {
             super(storage, new HashMap<>());
             List<DuplicateUUIDException> duplicateUUIDExceptions = addReferablesToIndex(new ArrayList<>(), configurationRootToIndex);
