@@ -77,7 +77,7 @@ public class SemiSerializedDBConfigStorage implements Configuration {
             log.debug("Initializing the locking row ...");
             db.createLockingRowIfnotExists();
             log.debug("Successfully initialized the locking row");
-        } catch (DBStorageBean.UnableToPersistLockingRowException e) {
+        } catch (Exception e) {
             if (!db.isLockingRowExists())
                 log.error("Unable to init the locking row in the configuration table. ", e);
             else
