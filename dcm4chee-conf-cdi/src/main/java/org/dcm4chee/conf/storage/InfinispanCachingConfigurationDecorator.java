@@ -27,6 +27,8 @@ public class InfinispanCachingConfigurationDecorator extends DelegatingConfigura
 
     private static final int level = 3;
     private static final String KEYSET_KEY = "#keySet";
+    private static final String LOCK_PATH = "/misc/locking/dblock";
+
 
     @Inject
     @CacheByName("configuration")
@@ -241,7 +243,13 @@ public class InfinispanCachingConfigurationDecorator extends DelegatingConfigura
         return objects.iterator();
     }
 
-
+    @Override
+    public void lock() {
+        super.lock();
+        long time = System.currentTimeMillis();
+        cache.lock(LOCK_PATH);
+        log.debug("Acquiring cache lock took {}", System.currentTimeMillis() - time);
+    }
 
     ////////////////////////////////////////////////////////////////////////////
     // Util to work with cache - including handling keyset and isolation issues
