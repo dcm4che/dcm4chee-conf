@@ -28,6 +28,7 @@ public class InfinispanCachingConfigurationDecorator extends DelegatingConfigura
     private static final int level = 3;
     private static final String KEYSET_KEY = "#keySet";
 
+
     @Inject
     @CacheByName("configuration")
     private Cache<String, Map<String, Object>> cache;
@@ -241,7 +242,13 @@ public class InfinispanCachingConfigurationDecorator extends DelegatingConfigura
         return objects.iterator();
     }
 
-
+    @Override
+    public void lock() {
+        super.lock();
+        long time = System.currentTimeMillis();
+        cache.lock(KEYSET_KEY);
+        log.debug("Acquiring cache lock took {}", System.currentTimeMillis() - time);
+    }
 
     ////////////////////////////////////////////////////////////////////////////
     // Util to work with cache - including handling keyset and isolation issues

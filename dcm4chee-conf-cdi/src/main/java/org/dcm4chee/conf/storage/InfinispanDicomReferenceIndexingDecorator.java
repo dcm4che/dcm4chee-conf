@@ -31,6 +31,7 @@ import java.util.List;
 public class InfinispanDicomReferenceIndexingDecorator extends ReferenceIndexingDecorator {
 
 
+    public static final String LOCK_HOLDER = "=LOCK=HOLDER=";
     @Inject
     @CacheByName("configuration-uuid-index")
     private Cache<String, Path> uuidIndex;
@@ -75,6 +76,12 @@ public class InfinispanDicomReferenceIndexingDecorator extends ReferenceIndexing
         return duplicateUUIDExceptions;
     }
 
+
+    @Override
+    public void lock() {
+        super.lock();
+        uuidIndex.lock(LOCK_HOLDER);
+    }
 
     @Override
     protected void removeFromCache(String uuid) {
