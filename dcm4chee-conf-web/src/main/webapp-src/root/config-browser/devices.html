@@ -26,24 +26,26 @@
     <div class="col-sm-12">
 
         <h2>Device
-            <button type="button" class="btn btn-default"
-                    ng-model="selectedDeviceName"
-                    data-html="1"
-                    ng-options="device.deviceName
-                             as (((device.deviceDescription==null)?'':(' <big><span class=\'label label-default\'>'+device.deviceDescription+'</span></big> '))+device.deviceName)
-                             for device
-                             in devices"
-                    data-placeholder="Select device ..."
-                    bs-select>
-                Device <span class="caret"></span>
-            </button>
-            <a href="" class="btn btn-default" ng-click="deviceManagerSpan = !deviceManagerSpan">Device
+            <span ng-show="!appConfiguration.xdsBrowser">
+                <button type="button" class="btn btn-default"
+                        ng-model="selectedDeviceName"
+                        data-html="1"
+                        ng-options="device.deviceName
+                                 as (((device.deviceDescription==null)?'':(' <big><span class=\'label label-default\'>'+device.deviceDescription+'</span></big> '))+device.deviceName)
+                                 for device
+                                 in devices"
+                        data-placeholder="Select device ..."
+                        bs-select>
+                    Device <span class="caret"></span>
+                </button>
+
+                <a href="" class="btn btn-default" ng-click="deviceManagerSpan = !deviceManagerSpan">Device
                 add/delete...</a>
+
+            </span>
+
+            <span ng-show="appConfiguration.xdsBrowser">{{selectedDeviceName}}</span>
             <span>
-                <a href=""
-                   ng-click="reconfigureDevice()"
-                   title="Trigger a reload of configuration in the backend"
-                   class="btn btn-info ">Force reload</a>
                 <a ng-show="selectedDevice.isModified" href=""
                    ng-click="saveDeviceConfig()"
                    class="btn btn-success ">Save</a>

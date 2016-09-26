@@ -8,7 +8,7 @@ xdsREST.factory('xdsConfig', [ 'appNotifications', 'appHttp', 'appConfiguration'
     var patientIds = [];
 
 	var config = {
-        xdsRestPath: appConfiguration.xdsRestPath ? appConfiguration.xdsRestPath : 'data/',
+        xdsRestPath: 'rs/',
         xdsAccessibleRepos : function() { return xdsAccessibleRepos },
         patientIds: function() { return patientIds }
 	};

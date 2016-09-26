@@ -1,5 +1,5 @@
 angular.module('dcm4che.config.manager', ['dcm4che.appCommon', 'dcm4che.config.core']
-).controller('ServiceManagerCtrl', function ($scope, $confirm, appHttp, appNotifications, ConfigEditorService) {
+).controller('ServiceManagerCtrl', function ($scope, $confirm, appHttp, appNotifications, ConfigEditorService, customizations) {
 
         $scope.switchToAdvancedView = function () {
             $scope.advancedView = true;
@@ -132,13 +132,19 @@ angular.module('dcm4che.config.manager', ['dcm4che.appCommon', 'dcm4che.config.c
             );
         };
 
-        // load devicelist
+        // bootstrap devicelist @ start
         ConfigEditorService.load(function () {
             $scope.devices = ConfigEditorService.devices;
             $scope.deviceNames = _.pluck($scope.devices, 'deviceName');
 
-            if (_.contains($scope.deviceNames, "dcm4chee-arc"))
-                $scope.selectedDeviceName = "dcm4chee-arc";
+
+            var defaultDeviceName = "dcm4chee-arc";
+            if (customizations.xdsDeviceName) {
+                defaultDeviceName = customizations.xdsDeviceName;
+            }
+
+            if (_.contains($scope.deviceNames, defaultDeviceName))
+                $scope.selectedDeviceName = defaultDeviceName;
 
             if ($scope.selectedDeviceName == null && $scope.devices.length > 0)
                 $scope.selectedDeviceName = $scope.devices[0].deviceName;

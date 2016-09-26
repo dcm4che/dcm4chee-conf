@@ -6,7 +6,7 @@
     color: #9C0000;
 }
 
-.navbar.navbar-primary {
+.navbar.navbar-primary.dcm4chee-nav{
 
     /* Permalink - use to edit and share this gradient: http://colorzilla.com/gradient-editor/#ffffff+0,f8f8f8+35,ebebeb+100 */
     background: rgb(255,255,255); /* Old browsers */

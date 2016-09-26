@@ -6,8 +6,12 @@ appCommon.factory('appConfiguration', function (customizations) {
 	return customizations;
 });
 appCommon.controller('NavbarController', function($scope, appHttp, $http, appNotifications, appConfiguration, appLoadingIndicator) {
+
 	$scope.logoutEnabled = appConfiguration.logoutEnabled;
 	$scope.useNICETheme = appConfiguration.useNICETheme;
+
+	$scope.appConfiguration = appConfiguration;
+
 	$scope.appLoadingIndicator = appLoadingIndicator;
 	$scope.logout = function () {
 		$http({method:"POST", url:"data/logout"}).success(function(response, status) {
