@@ -59,7 +59,7 @@ import javax.naming.NamingException;
 public class CacheProducer {
 
     private static final String container = System.getProperty("org.dcm4che.infinispan.container", "dcm4chee");
-    private static final int maxRetries = Integer.parseInt(System.getProperty("org.dcm4chee.cache.maxRetries", "10"));
+    private static final int maxRetries = Integer.parseInt(System.getProperty("org.dcm4chee.cache.maxRetries", "60"));
 
     private static final Logger LOG = LoggerFactory.getLogger(CacheProducer.class);
 
@@ -85,9 +85,9 @@ public class CacheProducer {
             } catch (Exception e) {
                 exception = new RuntimeException("Error while looking up cache '" + cacheName + "' in '" + container + "' container", e);
             }
-            LOG.info("Infinispan cache '{}' not ready! Retry [{}/{}] in 500ms", new Object[]{cacheName, ++i, maxRetries});
+            LOG.info("Infinispan cache '{}' not ready! Retry [{}/{}] in 1000ms", new Object[]{cacheName, ++i, maxRetries});
             try {
-                Thread.sleep(500);
+                Thread.sleep(1000);
             } catch (InterruptedException ignored) {
             }
         }
