@@ -151,6 +151,20 @@ public class UpgradeRunner {
                 if (configurationMetadata != null && configurationMetadata.getVersion() != null && 
                         configurationMetadata.getVersion().equals(upgradeSettings.getUpgradeToVersion())) {
                     success = true;
+
+                    /*
+                     * From infinispan wiki:
+                     * Infinispan does not support Snapshot isolation or Read Atomic isolation :
+                     * if a transaction T1 writes K1 and K2, an overlapping transaction T2 may see both K1 and K2, only K1, only K2, or neither.
+                     *
+                     * => we need to avoid hitting a gap in visibility of different cache entries in infinispan,
+                     * i.e. when metadata is already updated but some devices are not yet visible
+                     *
+                     * Reproduced with tests including cluster, observed gap 10-50ms
+                     * Workaround until a better solution found, 5 sec to be on the safe side
+                     */
+                    Thread.sleep(5000);
+
                     break;
                 }
 
