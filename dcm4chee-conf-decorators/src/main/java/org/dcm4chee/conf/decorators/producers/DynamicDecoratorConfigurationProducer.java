@@ -1,10 +1,10 @@
 package org.dcm4chee.conf.decorators.producers;
 
-import org.dcm4che3.conf.ConfigurationSettingsLoader;
-import org.dcm4che3.conf.core.DefaultBeanVitalizer;
-import org.dcm4che3.conf.core.api.ConfigurationException;
-import org.dcm4che3.conf.core.api.Path;
-import org.dcm4che3.conf.core.storage.SingleJsonFileConfigurationStorage;
+import org.dcm4che.kiwiyard.ConfigurationSettingsLoader;
+import org.dcm4che.kiwiyard.core.DefaultBeanVitalizer;
+import org.dcm4che.kiwiyard.core.api.ConfigurationException;
+import org.dcm4che.kiwiyard.core.api.Path;
+import org.dcm4che.kiwiyard.core.storage.SingleJsonFileConfigurationStorage;
 import org.dcm4che3.util.StringUtils;
 import org.dcm4chee.conf.decorators.ConfiguredDynamicDecorators;
 import org.dcm4chee.conf.decorators.DynamicDecoratorsConfig;

@@ -1,7 +1,7 @@
 package org.dcm4chee.conf.browser;
 
 import org.dcm4che3.conf.api.internal.DicomConfigurationManager;
-import org.dcm4che3.conf.core.api.ConfigurationException;
+import org.dcm4che.kiwiyard.core.api.ConfigurationException;
 
 
 import javax.enterprise.context.ApplicationScoped;

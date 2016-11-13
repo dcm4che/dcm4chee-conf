@@ -42,12 +42,11 @@ package org.dcm4chee.conf.upgrade;
 
 import org.dcm4che3.conf.api.internal.DicomConfigurationManager;
 import org.dcm4che3.conf.api.upgrade.UpgradeScript;
-import org.dcm4che3.conf.core.DefaultBeanVitalizer;
-import org.dcm4che3.conf.core.api.Configuration;
-import org.dcm4che3.conf.core.api.ConfigurationException;
-import org.dcm4che3.conf.core.normalization.DefaultsAndNullFilterDecorator;
-import org.dcm4che3.conf.core.storage.SingleJsonFileConfigurationStorage;
-import org.dcm4che3.conf.dicom.CommonDicomConfiguration;
+import org.dcm4che.kiwiyard.core.DefaultBeanVitalizer;
+import org.dcm4che.kiwiyard.core.api.Configuration;
+import org.dcm4che.kiwiyard.core.api.ConfigurationException;
+import org.dcm4che.kiwiyard.core.normalization.DefaultsAndNullFilterDecorator;
+import org.dcm4che.kiwiyard.core.storage.SingleJsonFileConfigurationStorage;
 import org.dcm4che3.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -92,7 +91,7 @@ public class CdiUpgradeManager {
             // load upgrade settings
             String filename = StringUtils.replaceSystemProperties(property);
             Configuration singleJsonFileConfigurationStorage =
-                    new DefaultsAndNullFilterDecorator(new SingleJsonFileConfigurationStorage(filename), new ArrayList<Class>(), CommonDicomConfiguration.createDefaultDicomVitalizer());
+                    new DefaultsAndNullFilterDecorator(new SingleJsonFileConfigurationStorage(filename), new ArrayList<Class>());
             Map<String, Object> configMap = singleJsonFileConfigurationStorage.getConfigurationRoot();
             UpgradeSettings upgradeSettings = new DefaultBeanVitalizer().newConfiguredInstance(configMap, UpgradeSettings.class);
             upgradeSettings.setUpgradeConfig(configMap);

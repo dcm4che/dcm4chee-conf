@@ -63,19 +63,13 @@
         </dependency>
         <dependency>
             <groupId>org.dcm4che</groupId>
-            <artifactId>dcm4che-conf-api</artifactId>
+            <artifactId>dcm4che-net</artifactId>
             <version>${dcm4che.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.dcm4che</groupId>
-            <artifactId>dcm4che-conf-core</artifactId>
-            <version>${dcm4che.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.dcm4che</groupId>
-            <artifactId>dcm4che-conf-dicom</artifactId>
+            <artifactId>dcm4che-net-hl7</artifactId>
             <version>${dcm4che.version}</version>
             <scope>provided</scope>
         </dependency>
@@ -90,6 +84,12 @@
             <artifactId>dcm4chee-conf-cdi</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.dcm4che.kiwiyard</groupId>
+            <artifactId>kiwiyard-ee</artifactId>
+            <scope>provided</scope>
+            <version>gamma-SNAPSHOT</version>
         </dependency>
 
         <dependency>

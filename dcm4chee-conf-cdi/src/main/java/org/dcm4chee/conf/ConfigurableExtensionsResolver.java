@@ -1,8 +1,11 @@
 package org.dcm4chee.conf;
 
-import org.dcm4che3.conf.core.api.ConfigurableClass;
-import org.dcm4che3.conf.core.api.ConfigurableClassExtension;
-import org.dcm4che3.conf.core.util.Extensions;
+import org.dcm4che.kiwiyard.core.api.ConfigurableClass;
+import org.dcm4che.kiwiyard.ee.ConfigurableExtensionsProvider;
+import org.dcm4che3.net.AEExtension;
+import org.dcm4che3.net.ConnectionExtension;
+import org.dcm4che3.net.DeviceExtension;
+import org.dcm4che3.net.hl7.HL7ApplicationExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -10,18 +13,34 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
 @ApplicationScoped
-public class ConfigurableExtensionsResolver {
+public class ConfigurableExtensionsResolver implements ConfigurableExtensionsProvider
+{
 
     private final static Logger log = LoggerFactory.getLogger(ConfigurableExtensionsResolver.class);
 
+
+    // TODO: make as before, inject AEs, Device, HL7 exts..
+
     @Inject
-    private Instance<ConfigurableClassExtension<?>> allExtensions;
+    private Instance<AEExtension> aeExtensions;
+
+    @Inject
+    private Instance<DeviceExtension> deviceExtensions;
+
+    @Inject
+    private Instance<HL7ApplicationExtension> hl7ApplicationExtensions;
+
+    @Inject
+    private Instance<ConnectionExtension> connectionExtensions;
+
 
     /**
      * To avoid logging warning multiple times
@@ -29,19 +48,41 @@ public class ConfigurableExtensionsResolver {
     private boolean loggedWarnings = false;
 
 
+    @Override
     public List<Class> resolveExtensionsList() {
-        List<Class> list = new ArrayList<>();
-        for (ConfigurableClassExtension extension : getAllConfigurableExtensions())
-            if (!list.contains(extension.getClass()))
-                list.add(extension.getClass());
-
-        return list;
+        return resolveExtensionsMap( false )
+                .entrySet()
+                .stream()
+                .flatMap( ( e ) -> e.getValue().stream() )
+                .distinct()
+                .collect( Collectors.toList() );
     }
 
-    public Map<Class, List<Class>> resolveExtensionsMap(boolean doLog) {
+    @Override
+    public Map<Class, List<Class>> resolveExtensionsMap( boolean doLog ) {
 
-        Map<Class, List<Class>> extByBaseExtMap = Extensions.getAMapOfExtensionsByBaseExtension(getAllConfigurableExtensions());
+        List<Class> extList = new ArrayList<>();
+        Map<Class, List<Class>> extByBaseExtMap = new HashMap<>();
 
+        // Workaround to avoid putting kiwi dependencies in dcm4che for now
+
+        BiConsumer<Class,Iterable> extCollector = (extClazz, exts) ->{
+            List<Class> extensionClasses = new ArrayList<>(  );
+            for ( Object ext : exts )
+            {
+                if (ext.getClass().getAnnotation(ConfigurableClass.class) != null)
+                {
+                    extensionClasses.add( ext.getClass() );
+                    extList.add( ext.getClass() );
+                }
+            }
+            extByBaseExtMap.put( extClazz, extensionClasses );
+        };
+
+        extCollector.accept( AEExtension.class, aeExtensions);
+        extCollector.accept( DeviceExtension.class, deviceExtensions);
+        extCollector.accept( HL7ApplicationExtension.class, hl7ApplicationExtensions);
+        extCollector.accept( ConnectionExtension.class, connectionExtensions);
 
         if (doLog) {
 
@@ -58,23 +99,11 @@ public class ConfigurableExtensionsResolver {
             log.info(extensionsLog);
         }
 
-        return extByBaseExtMap;
-    }
 
-    /**
-     * @return all extension classes that have a ConfigurableClass annotation
-     */
-    private List<ConfigurableClassExtension> getAllConfigurableExtensions() {
-        List<ConfigurableClassExtension> configurableExtensions = new ArrayList<>();
-        for (ConfigurableClassExtension extension : allExtensions) {
-            if (extension.getClass().getAnnotation(ConfigurableClass.class) != null)
-                configurableExtensions.add(extension);
-        }
-
-        // make sure simple class names are unique
+        // validate simple name uniqueness
         HashSet<String> simpleNames = new HashSet<>();
         HashSet<String> fullNames = new HashSet<>();
-        for (ConfigurableClassExtension configurableExtension : configurableExtensions) {
+        for (Class configurableExtension : extList) {
 
             String simpleName = configurableExtension.getClass().getSimpleName();
             String fullName = configurableExtension.getClass().getName();
@@ -84,7 +113,7 @@ public class ConfigurableExtensionsResolver {
 
             if (simpleNameExisted && !fullNameExisted) {
                 // we have a duplicate, let's find out all occurrences
-                List<ConfigurableClassExtension> conflicting = configurableExtensions.stream()
+                List<Class> conflicting = extList.stream()
                         .filter((ext) -> ext.getClass().getSimpleName().equals(simpleName))
                         .collect(Collectors.toList());
 
@@ -100,7 +129,7 @@ public class ConfigurableExtensionsResolver {
 
         loggedWarnings = true;
 
-        return configurableExtensions;
+        return extByBaseExtMap;
     }
 
 }

@@ -39,11 +39,11 @@
  */
 package org.dcm4chee.conf.storage;
 
-import org.dcm4che3.conf.core.api.Configuration;
-import org.dcm4che3.conf.core.api.ConfigurationException;
-import org.dcm4che3.conf.core.Nodes;
-import org.dcm4che3.conf.core.api.Path;
-import org.dcm4che3.conf.core.util.SplittedPath;
+import org.dcm4che.kiwiyard.core.api.Configuration;
+import org.dcm4che.kiwiyard.core.api.ConfigurationException;
+import org.dcm4che.kiwiyard.core.Nodes;
+import org.dcm4che.kiwiyard.core.api.Path;
+import org.dcm4che.kiwiyard.core.util.SplittedPath;
 import org.dcm4che3.conf.dicom.DicomPath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

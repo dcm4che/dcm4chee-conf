@@ -1,4 +1,3 @@
-//
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -36,57 +35,25 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
+package org.dcm4che3.conf.api;
 
-package org.dcm4chee.conf.notif;
-
-import org.dcm4che3.conf.core.api.ConfigChangeEvent;
+import org.dcm4che3.conf.core.api.ConfigurableClass;
+import org.dcm4che3.conf.core.api.ConfigurableProperty;
 import org.dcm4che3.conf.core.api.ConfigurationException;
-import org.dcm4che3.conf.core.api.InternalConfigChangeEvent;
-import org.dcm4chee.conf.storage.ConfigurationEJB;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.dcm4che3.net.TransferCapability;
 
-import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.event.Event;
-import javax.inject.Inject;
+import java.util.ArrayList;
+import java.util.Collection;
 
 /**
- * @author Alexander Hoermandinger <alexander.hoermandinger@agfa.com>
+ * An optional configuration extension that contains the information of which TCs are supported for each TC group.
+ * Used in combination with TCGroupConfigAEExtension
+ *
+ * @author Roman K
  */
-@ApplicationScoped
-public class ConfigNotificationService {
-    private static final Logger LOGGER = LoggerFactory.getLogger(ConfigNotificationService.class);
+public interface TransferCapabilityConfigExtension {
 
-    @Inject
-    private Event<InternalConfigChangeEvent> internalEvent;
-
-    @Inject
-    private Event<ConfigChangeEvent> event;
-
-    @Inject
-    private ConfigChangeTopicBroker clusterBroker;
-    
-    /**
-     * Send config change event to all listeners registered within the cluster
-     * @param changeEvent
-     */
-    public void sendClusterScopedConfigChangeNotification(ConfigChangeEvent changeEvent) {
-        clusterBroker.forwardToClusterNodes(changeEvent);
-    }
-    
-    /**
-     * Send config change event to all listeners registered within the node
-     *
-     * @param changeEvent
-     */
-    public void sendLocalScopedConfigChangeNotification(ConfigChangeEvent changeEvent) {
-        LOGGER.debug("Sending config changed notification CDI event");
-
-        // first fire the internal event that should only be handled by the (archive/ARR) Device itself
-        internalEvent.fire(new InternalConfigChangeEvent());
-
-        // then everybody else gets notified
-        event.fire(changeEvent);
-    }
+    void persistTransferCapabilityConfig(TCConfiguration tcConfig) throws ConfigurationException;
+    TCConfiguration getTransferCapabilityConfig() throws ConfigurationException;
 
 }

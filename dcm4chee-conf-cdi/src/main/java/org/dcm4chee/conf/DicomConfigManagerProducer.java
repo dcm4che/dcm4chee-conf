@@ -40,15 +40,10 @@
 
 package org.dcm4chee.conf;
 
-import org.dcm4che3.conf.api.TCGroupsProvider;
+import org.dcm4che.kiwiyard.ee.ConfigurableExtensionsProvider;
 import org.dcm4che3.conf.api.internal.DicomConfigurationManager;
-import org.dcm4che3.conf.core.api.ConfigurableClassExtension;
-import org.dcm4che3.conf.core.api.Configuration;
-import org.dcm4che3.conf.core.api.internal.ConfigTypeAdapter;
-import org.dcm4che3.conf.dicom.AppEntityTCGroupHandlingTypeAdapter;
 import org.dcm4che3.conf.dicom.CommonDicomConfigurationWithHL7;
-import org.dcm4che3.net.ApplicationEntity;
-import org.dcm4chee.conf.storage.ConfigurationEJB;
+import org.dcm4che.kiwiyard.ee.storage.ConfigurationEJB;
 import org.dcm4chee.conf.upgrade.CdiUpgradeManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,12 +53,7 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Instance;
 import javax.enterprise.inject.Produces;
 import javax.inject.Inject;
-import java.util.HashMap;
-import java.util.Map;
 
-/**
- * @Roman K
- */
 @ApplicationScoped
 public class DicomConfigManagerProducer {
 
@@ -76,7 +66,7 @@ public class DicomConfigManagerProducer {
     private Instance<CdiUpgradeManager> upgradeManagerInstance;
 
     @Inject
-    ConfigurableExtensionsResolver extensionsProvider;
+    ConfigurableExtensionsProvider extensionsProvider;
 
     @Produces
     @ApplicationScoped

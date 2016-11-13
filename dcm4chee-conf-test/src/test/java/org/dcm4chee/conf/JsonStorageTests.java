@@ -1,8 +1,8 @@
 package org.dcm4chee.conf;
 
 import org.dcm4che3.conf.api.internal.DicomConfigurationManager;
-import org.dcm4che3.conf.core.api.Configuration;
-import org.dcm4che3.conf.core.api.ConfigurationException;
+import org.dcm4che.kiwiyard.core.api.Configuration;
+import org.dcm4che.kiwiyard.core.api.ConfigurationException;
 import org.dcm4che3.conf.dicom.CommonDicomConfigurationWithHL7;
 import org.dcm4chee.conf.storage.ConfigurationStorage;
 import org.jboss.arquillian.container.test.api.Deployment;

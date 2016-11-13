@@ -38,27 +38,19 @@
  *  ***** END LICENSE BLOCK *****
  */
 
-package org.dcm4chee.conf.storage;
+package org.dcm4che3.conf.api.upgrade;
 
-import org.dcm4che3.conf.core.storage.SingleJsonFileConfigurationStorage;
-
-import javax.annotation.PostConstruct;
-import javax.enterprise.context.ApplicationScoped;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
+ * Allows to specify an upgrade script version, when a script is executed, this value will be persisted in the config metadata
  * @author Roman K
  */
-public class CdiDefaultConfigStorageWrappers {
-
-    @ApplicationScoped
-    @ConfigurationStorage("json_file")
-    public static class CdiSingleJsonFileConfigurationStorage extends SingleJsonFileConfigurationStorage {
-
-        @PostConstruct
-        public void init() {
-            configure(System.getProperties());
-        }
-
-    }
-
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+public @interface ScriptVersion {
+    String value();
 }

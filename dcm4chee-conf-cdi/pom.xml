@@ -100,6 +100,16 @@
             <version>5.2.1.Final</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.dcm4che.kiwiyard</groupId>
+            <artifactId>kiwiyard-core</artifactId>
+            <version>gamma-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>org.dcm4che.kiwiyard</groupId>
+            <artifactId>kiwiyard-ee</artifactId>
+            <version>gamma-SNAPSHOT</version>
+        </dependency>
     </dependencies>
     <profiles>
       <profile>

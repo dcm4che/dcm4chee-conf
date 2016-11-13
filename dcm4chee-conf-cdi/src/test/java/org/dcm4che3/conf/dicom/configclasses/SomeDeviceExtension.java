@@ -38,31 +38,27 @@
  *  ***** END LICENSE BLOCK *****
  */
 
-package org.dcm4chee.conf.storage;
+package org.dcm4che3.conf.dicom.configclasses;
 
-import javax.enterprise.util.AnnotationLiteral;
-import javax.enterprise.util.Nonbinding;
-import javax.inject.Qualifier;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
+import org.dcm4che.kiwiyard.core.api.ConfigurableClass;
+import org.dcm4che.kiwiyard.core.api.ConfigurableProperty;
+import org.dcm4che3.net.ApplicationEntity;
+import org.dcm4che3.net.DeviceExtension;
 
-@Retention(RetentionPolicy.RUNTIME)
-@Qualifier
-public @interface ConfigurationStorage {
-    String value() default "";
+/**
+ * @author Roman K
+ */
+@ConfigurableClass
+public class SomeDeviceExtension extends DeviceExtension{
 
-    class ConfigStorageAnno extends AnnotationLiteral<ConfigurationStorage> implements ConfigurationStorage {
+    @ConfigurableProperty(isReference = true)
+    private ApplicationEntity referencedEntity;
 
-        private static final long serialVersionUID = -142091870920142805L;
-        private String value;
+    public ApplicationEntity getReferencedEntity() {
+        return referencedEntity;
+    }
 
-        public ConfigStorageAnno(String value) {
-            this.value = value;
-        }
-
-        @Override
-        public String value() {
-            return value;
-        }
+    public void setReferencedEntity(ApplicationEntity referencedEntity) {
+        this.referencedEntity = referencedEntity;
     }
 }

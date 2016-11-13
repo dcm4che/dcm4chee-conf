@@ -1,7 +1,7 @@
 package org.dcm4chee.conf.decorators;
 
-import org.dcm4che3.conf.core.api.ConfigurableClass;
-import org.dcm4che3.conf.core.api.ConfigurableProperty;
+import org.dcm4che.kiwiyard.core.api.ConfigurableClass;
+import org.dcm4che.kiwiyard.core.api.ConfigurableProperty;
 
 import java.util.ArrayList;
 import java.util.List;

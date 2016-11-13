@@ -41,15 +41,14 @@
 package org.dcm4chee.conf.upgrade;
 
 
-import org.dcm4che3.conf.api.DicomConfiguration;
 import org.dcm4che3.conf.api.internal.DicomConfigurationManager;
 import org.dcm4che3.conf.api.upgrade.ConfigurationMetadata;
 import org.dcm4che3.conf.api.upgrade.ScriptVersion;
 import org.dcm4che3.conf.api.upgrade.UpgradeScript;
-import org.dcm4che3.conf.core.DefaultBeanVitalizer;
-import org.dcm4che3.conf.core.api.Configuration;
-import org.dcm4che3.conf.core.api.ConfigurationException;
-import org.dcm4che3.conf.core.api.ConfigurationUpgradeException;
+import org.dcm4che.kiwiyard.core.DefaultBeanVitalizer;
+import org.dcm4che.kiwiyard.core.api.Configuration;
+import org.dcm4che.kiwiyard.core.api.ConfigurationException;
+import org.dcm4che.kiwiyard.core.api.ConfigurationUpgradeException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -48,6 +48,7 @@ import javax.annotation.Resource;
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Produces;
 import javax.enterprise.inject.spi.InjectionPoint;
+import javax.inject.Named;
 import javax.naming.Context;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
@@ -69,7 +70,11 @@ public class CacheProducer {
     public <T, S> Cache<T, S> getCache(InjectionPoint point) {
 
         String cacheName = point.getAnnotated().getAnnotation(CacheByName.class).value();
+        return resolveCache( cacheName );
+    }
 
+    private <T, S> Cache<T, S> resolveCache( String cacheName )
+    {
         org.infinispan.Cache<Object, Object> cache;
         RuntimeException exception = null;
         for (int i = 0; i < maxRetries; ) {
@@ -96,4 +101,17 @@ public class CacheProducer {
         throw new IllegalArgumentException("Infinispan cache '" + cacheName + "' not found in '" + container + "' cache container");
     }
 
+    // temporary to minimize conf refactoring impact
+    @Produces
+    @Named("configuration")
+    public org.infinispan.Cache getConfCache() {
+        return resolveCache( "configuration" ).getInfinispanCache();
+    }
+
+    // temporary to minimize conf refactoring impact
+    @Produces
+    @Named("configuration-uuid-index")
+    public org.infinispan.Cache getConfIndCache() {
+        return resolveCache( "configuration-uuid-index" ).getInfinispanCache();
+    }
 }

@@ -1,12 +1,14 @@
 package org.dcm4chee.conf.browser;
 
+import org.dcm4che.kiwiyard.core.api.ConfigChangeEvent;
+import org.dcm4che.kiwiyard.core.api.Configuration;
+import org.dcm4che.kiwiyard.core.api.ConfigurationException;
+import org.dcm4che.kiwiyard.core.api.InternalConfigChangeEvent;
 import org.dcm4che3.conf.api.TCConfiguration;
 import org.dcm4che3.conf.api.internal.DicomConfigurationManager;
-import org.dcm4che3.conf.core.Nodes;
-import org.dcm4che3.conf.core.api.*;
-import org.dcm4che3.conf.core.api.internal.ConfigProperty;
-import org.dcm4che3.conf.core.util.PathFollower;
-import org.dcm4che3.conf.core.util.PathPattern;
+import org.dcm4che.kiwiyard.core.api.internal.ConfigProperty;
+import org.dcm4che.kiwiyard.core.util.PathFollower;
+import org.dcm4che.kiwiyard.core.util.PathPattern;
 import org.dcm4che3.conf.dicom.DicomPath;
 import org.dcm4che3.net.*;
 import org.dcm4che3.net.hl7.HL7ApplicationExtension;
@@ -30,7 +32,7 @@ import java.util.*;
 @Produces(MediaType.APPLICATION_JSON)
 public class ConfigRESTServicesServlet {
     public static final String NOTIFICATIONS_ENABLED_PROPERTY = "org.dcm4che.conf.notifications";
-    private static final PathPattern referencePattern = new PathPattern(Configuration.REFERENCE_BY_UUID_PATTERN);
+    private static final PathPattern referencePattern = new PathPattern( Configuration.REFERENCE_BY_UUID_PATTERN);
 
     public static final Logger log = LoggerFactory.getLogger(ConfigRESTServicesServlet.class);
 
@@ -59,7 +61,8 @@ public class ConfigRESTServicesServlet {
         XDS_REST_PATH.put("XCARespondingGWCfg", "xca-rs");
     }
 
-    private static class SimpleConfigChangeEvent implements ConfigChangeEvent {
+    private static class SimpleConfigChangeEvent implements ConfigChangeEvent
+    {
 
         private static final long serialVersionUID = 1338043186323821619L;
 
@@ -163,7 +166,8 @@ public class ConfigRESTServicesServlet {
     @Inject
     Instance<SoftwareVersionProvider> versionProviderInstance;
 
-    private void fireConfigUpdateNotificationIfNecessary() throws ConfigurationException {
+    private void fireConfigUpdateNotificationIfNecessary() throws ConfigurationException
+    {
         // fire only if notifications are disabled by a property. Normally they should not be, except special cases like IT testing
         if (!Boolean.valueOf(System.getProperty(NOTIFICATIONS_ENABLED_PROPERTY, "true"))) {
 
@@ -179,7 +183,8 @@ public class ConfigRESTServicesServlet {
     @GET
     @Path("/devices")
     @Produces(MediaType.APPLICATION_JSON)
-    public List<DeviceJSON> listDevices() throws ConfigurationException {
+    public List<DeviceJSON> listDevices() throws ConfigurationException
+    {
 
         List<DeviceJSON> list = new ArrayList<DeviceJSON>();
         for (String deviceName : configurationManager.listDeviceNames()) {
@@ -213,14 +218,16 @@ public class ConfigRESTServicesServlet {
     @GET
     @Path("/device/{deviceName}")
     @Produces(MediaType.APPLICATION_JSON)
-    public Map<String, Object> getDeviceConfig(@PathParam(value = "deviceName") String deviceName) throws ConfigurationException {
+    public Map<String, Object> getDeviceConfig(@PathParam(value = "deviceName") String deviceName) throws ConfigurationException
+    {
         return (Map<String, Object>) configurationManager.getConfigurationStorage().getConfigurationNode(DicomPath.devicePath(deviceName), Device.class);
     }
 
     @GET
     @Path("/transferCapabilities")
     @Produces(MediaType.APPLICATION_JSON)
-    public Map<String, Object> getTransferCapabilitiesConfig() throws ConfigurationException {
+    public Map<String, Object> getTransferCapabilitiesConfig() throws ConfigurationException
+    {
         return (Map<String, Object>) configurationManager.getConfigurationStorage().getConfigurationNode(DicomPath.TC_GROUPS_PATH, TCConfiguration.class);
     }
 
@@ -228,7 +235,8 @@ public class ConfigRESTServicesServlet {
     @POST
     @Path("/transferCapabilities")
     @Produces(MediaType.APPLICATION_JSON)
-    public void setTransferCapabilitiesConfig(Map<String, Object> config) throws ConfigurationException {
+    public void setTransferCapabilitiesConfig(Map<String, Object> config) throws ConfigurationException
+    {
         configurationManager.getConfigurationStorage().persistNode(DicomPath.TC_GROUPS_PATH, config, TCConfiguration.class);
         fireConfigUpdateNotificationIfNecessary();
     }
@@ -237,7 +245,8 @@ public class ConfigRESTServicesServlet {
     @GET
     @Path("/metadata")
     @Produces(MediaType.APPLICATION_JSON)
-    public Map<String, Object> getMetadata() throws ConfigurationException {
+    public Map<String, Object> getMetadata() throws ConfigurationException
+    {
         return (Map<String, Object>) configurationManager.getConfigurationStorage().getConfigurationNode(DicomConfigurationManager.METADATA_ROOT_PATH, ConfigurationMetadata.class);
     }
 
@@ -245,7 +254,8 @@ public class ConfigRESTServicesServlet {
     @POST
     @Path("/metadata")
     @Produces(MediaType.APPLICATION_JSON)
-    public void setMetadata(Map<String, Object> config) throws ConfigurationException {
+    public void setMetadata(Map<String, Object> config) throws ConfigurationException
+    {
         configurationManager.getConfigurationStorage().persistNode(DicomConfigurationManager.METADATA_ROOT_PATH, config, ConfigurationMetadata.class);
         fireConfigUpdateNotificationIfNecessary();
     }
@@ -254,15 +264,17 @@ public class ConfigRESTServicesServlet {
     @GET
     @Path("/exportFullConfiguration")
     @Produces(MediaType.APPLICATION_JSON)
-    public Map<String, Object> getFullConfig() throws ConfigurationException {
+    public Map<String, Object> getFullConfig() throws ConfigurationException
+    {
         return configurationManager.getConfigurationStorage().getConfigurationRoot();
     }
 
     @POST
     @Path("/importFullConfiguration")
     @Consumes(MediaType.APPLICATION_JSON)
-    public void setFullConfig(Map<String, Object> config) throws ConfigurationException {
-        configurationManager.getConfigurationStorage().persistNode(org.dcm4che3.conf.core.api.Path.ROOT, config, null);
+    public void setFullConfig(Map<String, Object> config) throws ConfigurationException
+    {
+        configurationManager.getConfigurationStorage().persistNode( org.dcm4che.kiwiyard.core.api.Path.ROOT, config, null);
         fireConfigUpdateNotificationIfNecessary();
     }
 
@@ -270,7 +282,8 @@ public class ConfigRESTServicesServlet {
     @DELETE
     @Path("/device/{deviceName}")
     @Produces(MediaType.APPLICATION_JSON)
-    public void deleteDevice(@PathParam(value = "deviceName") String deviceName) throws ConfigurationException {
+    public void deleteDevice(@PathParam(value = "deviceName") String deviceName) throws ConfigurationException
+    {
         if (deviceName.isEmpty()) throw new ConfigurationException("Device name cannot be empty");
         configurationManager.getConfigurationStorage().removeNode(DicomPath.devicePath(deviceName));
         fireConfigUpdateNotificationIfNecessary();
@@ -281,7 +294,8 @@ public class ConfigRESTServicesServlet {
     @Path("/device/{deviceName}")
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response modifyDeviceConfig(@Context UriInfo ctx, @PathParam(value = "deviceName") String deviceName, Map<String, Object> config) throws ConfigurationException {
+    public Response modifyDeviceConfig(@Context UriInfo ctx, @PathParam(value = "deviceName") String deviceName, Map<String, Object> config) throws ConfigurationException
+    {
 
         if (deviceName.isEmpty()) throw new ConfigurationException("Device name cannot be empty");
 
@@ -295,7 +309,7 @@ public class ConfigRESTServicesServlet {
     @GET
     @Path("/pathByUUID/{uuid}")
     @Produces(MediaType.APPLICATION_JSON)
-    public org.dcm4che3.conf.core.api.Path getPathByUUID(@PathParam(value = "uuid") String uuid) {
+    public org.dcm4che.kiwiyard.core.api.Path getPathByUUID(@PathParam(value = "uuid") String uuid) {
         return configurationManager.getConfigurationStorage().getPathByUUID(uuid);
     }
 
@@ -309,7 +323,7 @@ public class ConfigRESTServicesServlet {
     @Path("/node")
     @Produces(MediaType.APPLICATION_JSON)
     public Object getConfigurationNode(@QueryParam(value = "path") String pathStr) {
-        org.dcm4che3.conf.core.api.Path path = org.dcm4che3.conf.core.api.Path.fromSimpleEscapedPath(pathStr);
+        org.dcm4che.kiwiyard.core.api.Path path = org.dcm4che.kiwiyard.core.api.Path.fromSimpleEscapedPath(pathStr);
         ConfigProperty last = PathFollower.traceProperties(configurationManager.getTypeSafeConfiguration().getRootClass(), path).getLast();
         return configurationManager.getConfigurationStorage().getConfigurationNode(path, last.isConfObject() ? last.getRawClass() : null);
     }
@@ -318,7 +332,8 @@ public class ConfigRESTServicesServlet {
     @GET
     @Path("/schemas")
     @Produces(MediaType.APPLICATION_JSON)
-    public SchemasJSON getSchema() throws ConfigurationException {
+    public SchemasJSON getSchema() throws ConfigurationException
+    {
 
 
         SchemasJSON schemas = new SchemasJSON();
@@ -336,6 +351,7 @@ public class ConfigRESTServicesServlet {
         HashMap<String, Map> connectionExtensions = new HashMap<String, Map>();
         schemas.extensions.put("Connection", connectionExtensions);
 
+
         for (Class<? extends DeviceExtension> deviceExt : configurationManager.getExtensionClassesByBaseClass(DeviceExtension.class))
             deviceExtensions.put(deviceExt.getSimpleName(), getSchemaForConfigurableClass(deviceExt));
 
@@ -352,7 +368,8 @@ public class ConfigRESTServicesServlet {
         return schemas;
     }
 
-    private Map<String, Object> getSchemaForConfigurableClass(Class<?> clazz) throws ConfigurationException {
+    private Map<String, Object> getSchemaForConfigurableClass(Class<?> clazz) throws ConfigurationException
+    {
         return configurationManager.getVitalizer().getSchemaForConfigurableClass(clazz);
     }
 

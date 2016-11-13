@@ -41,10 +41,9 @@
 package org.dcm4chee.conf;
 
 import org.dcm4che3.conf.api.extensions.CommonDeviceExtension;
-import org.dcm4che3.conf.core.api.ConfigurableClass;
-import org.dcm4che3.conf.core.api.ConfigurableProperty;
+import org.dcm4che.kiwiyard.core.api.ConfigurableClass;
+import org.dcm4che.kiwiyard.core.api.ConfigurableProperty;
 import org.dcm4che3.net.Device;
-import org.dcm4che3.net.DeviceExtension;
 
 /**
  * Created by aprvf on 05.10.2015.

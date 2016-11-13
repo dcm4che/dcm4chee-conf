@@ -66,6 +66,12 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
+            <groupId>org.dcm4che.kiwiyard</groupId>
+            <artifactId>kiwiyard-core</artifactId>
+            <version>gamma-SNAPSHOT</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
             <groupId>javax</groupId>
             <artifactId>javaee-api</artifactId>
         </dependency>

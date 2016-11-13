@@ -39,7 +39,6 @@
  */
 package org.dcm4chee.conf.browser;
 
-import org.dcm4che3.conf.core.api.ConfigurationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

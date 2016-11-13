@@ -38,27 +38,29 @@
  *  ***** END LICENSE BLOCK *****
  */
 
-package org.dcm4chee.conf.storage;
+package org.dcm4chee.conf;
 
-import org.dcm4che3.conf.core.api.Configuration;
-import org.dcm4che3.conf.core.api.ConfigurationException;
-import org.dcm4che3.conf.core.api.DuplicateUUIDException;
-import org.dcm4che3.conf.core.index.ReferenceIndexingDecorator;
-import org.dcm4che3.conf.core.normalization.DefaultsAndNullFilterDecorator;
-import org.dcm4che3.conf.core.storage.InMemoryReadOnlyConfiguration;
-import org.dcm4che3.conf.dicom.CommonDicomConfiguration;
+import org.dcm4che.kiwiyard.core.api.Configuration;
+import org.dcm4che.kiwiyard.core.api.ConfigurationException;
+import org.dcm4che.kiwiyard.core.api.DuplicateUUIDException;
+import org.dcm4che.kiwiyard.core.api.internal.ConfigurationManager;
+import org.dcm4che.kiwiyard.core.index.ReferenceIndexingDecorator;
+import org.dcm4che.kiwiyard.core.normalization.DefaultsAndNullFilterDecorator;
+import org.dcm4che.kiwiyard.core.storage.InMemoryReadOnlyConfiguration;
+import org.dcm4che.kiwiyard.ee.ConfigurableExtensionsProvider;
 import org.dcm4che3.conf.dicom.CommonDicomConfigurationWithHL7;
 import org.dcm4che3.conf.dicom.DicomPath;
-import org.dcm4chee.conf.ConfigurableExtensionsResolver;
-import org.dcm4chee.conf.DicomConfigManagerProducer;
 
 import javax.inject.Inject;
+import javax.inject.Named;
 import java.util.*;
+import java.util.function.Consumer;
 
 /**
  * @author Roman K
  */
-public class ConfigurationIntegrityCheck {
+@Named( ConfigurationManager.CONFIGURATION_INTEGRITY_CHECK_BEAN_NAME )
+public class ConfigurationIntegrityCheck implements Consumer<Map<String,Object>>{
 
     private static final String DISABLE_INTEGRITY_CHECK_PROPERTY = "org.dcm4che.conf.disableIntegrityCheck";
 
@@ -67,9 +69,10 @@ public class ConfigurationIntegrityCheck {
     DicomConfigManagerProducer dicomConfigManagerProducer;
 
     @Inject
-    ConfigurableExtensionsResolver extensionsResolver;
+    ConfigurableExtensionsProvider extensionsResolver;
 
-    public void performCheck(Map<String, Object> configurationRoot) throws ConfigurationException {
+    @Override
+    public void accept( Map<String, Object> configurationRoot ) {
 
         // check if the check is not disabled
         if (System.getProperty(DISABLE_INTEGRITY_CHECK_PROPERTY) != null)
@@ -94,7 +97,7 @@ public class ConfigurationIntegrityCheck {
         // TODO later will be replaced with proper referential consistency analysis
         // TODO: maybe we should re-use existing infinispan index not to stress the heap too much
         storage = new IndexingDecoratorWithInit(storage, configurationRoot);
-        storage = new DefaultsAndNullFilterDecorator(storage, extensionsResolver.resolveExtensionsList(), CommonDicomConfiguration.createDefaultDicomVitalizer());
+        storage = new DefaultsAndNullFilterDecorator(storage, extensionsResolver.resolveExtensionsList());
 
         CommonDicomConfigurationWithHL7 dicomConfiguration = new CommonDicomConfigurationWithHL7(
                 storage,
@@ -105,6 +108,7 @@ public class ConfigurationIntegrityCheck {
             dicomConfiguration.findDevice(deviceName);
 
     }
+
 
     private static class IndexingDecoratorWithInit extends ReferenceIndexingDecorator {
         public IndexingDecoratorWithInit(Configuration storage, Map<String, Object> configurationRootToIndex) {
