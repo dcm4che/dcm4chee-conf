@@ -43,6 +43,8 @@ package org.dcm4chee.conf.upgrade;
 import org.dcm4che3.conf.core.api.ConfigurableClass;
 import org.dcm4che3.conf.core.api.ConfigurableProperty;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -60,7 +62,7 @@ public class UpgradeSettings {
 
     @ConfigurableProperty(
             description = "List of classes that implement UpgradeScript. Defines which scripts should be run and in which sequence")
-    List<String> upgradeScriptsToRun;
+    List<String> upgradeScriptsToRun = new ArrayList<>();
 
     @ConfigurableProperty(
             description = "If set to true, any missing script referenced in #upgradeScriptsToRun will be ignored, otherwise an error will be reported.",
@@ -75,7 +77,22 @@ public class UpgradeSettings {
     @ConfigurableProperty(
             description = "These key/value properties are available to upgrade scripts"
     )
-    Map<String, String> properties;
+    Map<String, String> properties = new HashMap<>();
+
+    @ConfigurableProperty(
+            description = "Mapping of old script version to new major-minor-patch format"
+    )
+    Map<String, String> deprecatedVersionsMapping = new HashMap<>();
+
+    public Map<String, String> getDeprecatedVersionsMapping()
+    {
+        return deprecatedVersionsMapping;
+    }
+
+    public void setDeprecatedVersionsMapping( Map<String, String> deprecatedVersionsMapping )
+    {
+        this.deprecatedVersionsMapping = deprecatedVersionsMapping;
+    }
 
     public boolean isIgnoreMissingUpgradeScripts() {
         return ignoreMissingUpgradeScripts;

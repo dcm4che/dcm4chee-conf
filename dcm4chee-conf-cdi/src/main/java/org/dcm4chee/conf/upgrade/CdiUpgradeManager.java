@@ -67,9 +67,9 @@ import java.util.Map;
 @ApplicationScoped
 public class CdiUpgradeManager {
 
-    private static Logger LOG = LoggerFactory.getLogger(CdiUpgradeManager.class);
+    private static Logger log = LoggerFactory.getLogger(CdiUpgradeManager.class);
 
-    public static final String UPGRADE_SETTINGS_PROP = "org.dcm4che.conf.upgrade.settingsFile";
+    private static final String UPGRADE_SETTINGS_PROP = "org.dcm4che.conf.upgrade.settingsFile";
 
     @Inject
     private Instance<UpgradeScript> upgradeScripts;
@@ -87,23 +87,49 @@ public class CdiUpgradeManager {
         for (UpgradeScript upgradeScript : upgradeScripts) scripts.add(upgradeScript);
 
         // perform upgrade
-        String property = System.getProperty(UPGRADE_SETTINGS_PROP);
-        if (property != null) {
-            // load upgrade settings
-            String filename = StringUtils.replaceSystemProperties(property);
-            Configuration singleJsonFileConfigurationStorage =
-                    new DefaultsAndNullFilterDecorator(new SingleJsonFileConfigurationStorage(filename), new ArrayList<Class>(), CommonDicomConfiguration.createDefaultDicomVitalizer());
-            Map<String, Object> configMap = singleJsonFileConfigurationStorage.getConfigurationRoot();
-            UpgradeSettings upgradeSettings = new DefaultBeanVitalizer().newConfiguredInstance(configMap, UpgradeSettings.class);
-            upgradeSettings.setUpgradeConfig(configMap);
+        String upgradeSettingsFileName = System.getProperty(UPGRADE_SETTINGS_PROP);
+        if (upgradeSettingsFileName != null) {
+
+            UpgradeSettings upgradeSettings = loadUpgradeSettings( upgradeSettingsFileName );
 
             if (appName == null) throw new RuntimeException("Cannot detect deployment name");
 
-            UpgradeRunner upgradeRunner = new UpgradeRunner(scripts, manager, upgradeSettings, appName);
-            upgradeRunner.upgrade();
+            String toVersion = upgradeSettings.getUpgradeToVersion();
 
+            if (toVersion == null) {
+                log.warn("Dcm4che configuration init: target upgrade version is null. Upgrade will not be performed. Set the target config version in upgrade settings first.'");
+                return;
+            }
+
+            if (upgradeSettings.getActiveUpgradeRunnerDeployment() == null) {
+                // if ActiveUpgradeRunnerDeployment not set, just run the upgrade no matter in which deployment we are
+                UpgradeRunner upgradeRunner = new UpgradeRunner(scripts, manager, upgradeSettings );
+                upgradeRunner.upgrade();
+
+            } else {
+                if (appName.startsWith(upgradeSettings.getActiveUpgradeRunnerDeployment())) {
+                    // if deployment name matches - go ahead with the upgrade
+                    UpgradeRunner upgradeRunner = new UpgradeRunner(scripts, manager, upgradeSettings );
+                    upgradeRunner.upgrade();
+                } else {
+                    PassiveUpgrade passiveUpgrade = new PassiveUpgrade( manager, upgradeSettings, appName );
+                    passiveUpgrade.waitUntilOtherRunnerUpdatesToTargetConfigurationVersion();
+                }
+            }
         } else {
-            LOG.info("Dcm4che configuration init: {} property not set, no config upgrade will be performed", UPGRADE_SETTINGS_PROP);
+            log.info("Dcm4che configuration init: {} property not set, no config upgrade will be performed", UPGRADE_SETTINGS_PROP);
         }
     }
+
+    private UpgradeSettings loadUpgradeSettings( String property )
+    {
+        String filename = StringUtils.replaceSystemProperties(property);
+        Configuration singleJsonFileConfigurationStorage =
+                new DefaultsAndNullFilterDecorator(new SingleJsonFileConfigurationStorage(filename), new ArrayList<Class>(), CommonDicomConfiguration.createDefaultDicomVitalizer());
+        Map<String, Object> configMap = singleJsonFileConfigurationStorage.getConfigurationRoot();
+        UpgradeSettings upgradeSettings = new DefaultBeanVitalizer().newConfiguredInstance(configMap, UpgradeSettings.class);
+        upgradeSettings.setUpgradeConfig(configMap);
+        return upgradeSettings;
+    }
+
 }
