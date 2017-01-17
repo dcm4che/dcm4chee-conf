@@ -152,7 +152,7 @@
         <configuration>
           <archive>
             <manifestEntries>
-              <Dependencies>org.infinispan</Dependencies>
+              <Dependencies>org.infinispan, org.dcm4che.conf.core </Dependencies>
             </manifestEntries>
           </archive>
         </configuration>
