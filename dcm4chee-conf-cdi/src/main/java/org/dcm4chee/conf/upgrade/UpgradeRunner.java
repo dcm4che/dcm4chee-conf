@@ -41,7 +41,6 @@
 package org.dcm4chee.conf.upgrade;
 
 
-import org.dcm4che3.conf.api.DicomConfiguration;
 import org.dcm4che3.conf.api.internal.DicomConfigurationManager;
 import org.dcm4che3.conf.api.upgrade.ConfigurationMetadata;
 import org.dcm4che3.conf.api.upgrade.ScriptVersion;
@@ -55,6 +54,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Properties;
 
 /**
@@ -148,7 +148,7 @@ public class UpgradeRunner {
             try {
                 ConfigurationMetadata configurationMetadata = loadConfigurationMetadata();
 
-                if (configurationMetadata != null && configurationMetadata.getVersion() != null && 
+                if (configurationMetadata != null && configurationMetadata.getVersion() != null &&
                         configurationMetadata.getVersion().equals(upgradeSettings.getUpgradeToVersion())) {
                     success = true;
 
@@ -183,7 +183,12 @@ public class UpgradeRunner {
             log.info("Detected the expected configuration version ('{}'), proceeding", upgradeSettings.getUpgradeToVersion());
     }
 
+
     protected void upgradeToVersion(final String toVersion) {
+
+        // extra safeguard - avoid a batch if nothing is pending - in case the config is locked or inconsistent (should not happen though)
+        if (!isUpgradePending(toVersion)) return;
+
         dicomConfigurationManager.runBatch(() -> {
             try {
 
@@ -195,7 +200,7 @@ public class UpgradeRunner {
                     configMetadata = new ConfigurationMetadata();
                 }
 
-                if (configMetadata.getVersion()==null)
+                if (configMetadata.getVersion() == null)
                     configMetadata.setVersion(UpgradeScript.NO_VERSION);
 
                 String fromVersion = configMetadata.getVersion();
@@ -290,6 +295,59 @@ public class UpgradeRunner {
         });
 
         log.info("Configuration upgrade completed successfully");
+    }
+
+
+    /**
+     * Check if upgrade needed at all, without starting a transaction
+     * @param toVersion
+     * @return
+     */
+    private boolean isUpgradePending(String toVersion) {
+        ConfigurationMetadata configMetadata = loadConfigurationMetadata();
+
+        if (configMetadata == null) return true;
+
+        if (!Objects.equals(configMetadata.getVersion(), toVersion)) return true;
+
+
+        for (String upgradeScriptName : upgradeSettings.getUpgradeScriptsToRun()) {
+
+            boolean found = false;
+
+            for (UpgradeScript script : availableUpgradeScripts) {
+                if (script.getClass().getName().startsWith(upgradeScriptName)) {
+                    found = true;
+
+                    // fetch upgradescript metadata
+                    UpgradeScript.UpgradeScriptMetadata upgradeScriptMetadata = configMetadata.getMetadataOfUpgradeScripts().get(upgradeScriptName);
+                    if (upgradeScriptMetadata == null) return true;
+
+                    // check if the script need to be executed
+                    ScriptVersion currentScriptVersionAnno = script.getClass().getAnnotation(ScriptVersion.class);
+
+                    String currentScriptVersion;
+                    if (currentScriptVersionAnno == null) {
+                        currentScriptVersion = UpgradeScript.NO_VERSION;
+                        log.warn("Upgrade script '{}' does not have @ScriptVersion defined - using default '{}'",
+                                script.getClass().getName(),
+                                currentScriptVersion);
+                    } else {
+                        currentScriptVersion = currentScriptVersionAnno.value();
+                    }
+
+                    if (upgradeScriptMetadata.getLastVersionExecuted() != null
+                            && upgradeScriptMetadata.getLastVersionExecuted().compareTo(currentScriptVersion) >= 0) {
+                        break;
+                    }
+
+                    return true;
+                }
+            }
+            if (!found) return true;
+        }
+
+        return false;
     }
 
 
