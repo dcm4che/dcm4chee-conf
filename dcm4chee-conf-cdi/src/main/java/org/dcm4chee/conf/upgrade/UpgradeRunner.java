@@ -187,7 +187,10 @@ public class UpgradeRunner {
     protected void upgradeToVersion(final String toVersion) {
 
         // extra safeguard - avoid a batch if nothing is pending - in case the config is locked or inconsistent (should not happen though)
-        if (!isUpgradePending(toVersion)) return;
+        if (!isUpgradePending(toVersion)) {
+            log.info("No pending configuration upgrades detected - skipping the upgrade procedure");
+            return;
+        }
 
         dicomConfigurationManager.runBatch(() -> {
             try {
