@@ -137,7 +137,7 @@
                     </webResources>
                     <archive>
                         <manifestEntries>
-                            <Dependencies>org.dcm4che.conf.core, org.dcm4che.conf.dicom, org.dcm4che.conf.api-hl7, org.dcm4che.net-audit, org.dcm4che.net-imageio, org.dcm4che.net-hl7, org.codehaus.jackson.jackson-mapper-asl, org.codehaus.jackson.jackson-jaxrs</Dependencies>
+                            <Dependencies>org.dcm4che.conf.core, org.dcm4che.conf.dicom, org.dcm4che.conf.api-hl7, org.dcm4che.net-audit, org.dcm4che.net-hl7, org.codehaus.jackson.jackson-mapper-asl, org.codehaus.jackson.jackson-jaxrs</Dependencies>
                         </manifestEntries>
                     </archive>
                 </configuration>
