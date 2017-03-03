@@ -325,6 +325,72 @@ angular.module('dcm4che.config.manager', ['dcm4che.appCommon', 'dcm4che.config.c
 
     })
 
+
+    .controller('MMAEditor', function ($scope, appHttp, appNotifications, ConfigEditorService) {
+
+        $scope.ConfigEditorService = ConfigEditorService;
+        $scope.editor = {
+            options: null
+        };
+
+        ConfigEditorService.load(function () {
+
+        });
+
+        appHttp.get("data/config/node?path=/dicomConfigurationRoot/globalConfiguration/multiMediaArchive&class=com.agfa.mma.config.MMAConfigurationRoot", null, function (data, status) {
+
+            $scope.mmaConfig = data;
+            $scope.lastMMAConfig = angular.copy(data);
+
+        }, function (data, status) {
+            appNotifications.showNotification({
+                level: "danger",
+                text: "Could not load MMA config",
+                details: [data, status]
+            })
+        });
+
+        $scope.saveMMAConfig = function () {
+
+            var mmaconfig2Persist = angular.copy($scope.mmaConfig);
+
+            appHttp.post("data/config/node?path=/dicomConfigurationRoot/globalConfiguration/multiMediaArchive&class=com.agfa.mma.config.MMAConfigurationRoot", mmaconfig2Persist, function (data, status) {
+
+                $scope.lastMMAConfig = mmaconfig2Persist;
+
+                checkModified();
+
+                appNotifications.showNotification({
+                    level: "success",
+                    text: "MMA config saved",
+                    details: [data, status]
+                })
+
+
+            }, function (data, status) {
+                appNotifications.showNotification({
+                    level: "danger",
+                    text: "Could not save MMA config",
+                    details: [data, status]
+                })
+            });
+
+        };
+
+        $scope.cancelChangesMMAConfig = function() {
+            $scope.mmaConfig = angular.copy($scope.lastMMAConfig);
+            checkModified();
+        };
+
+        var checkModified = function() {
+            $scope.isMMAConfigModified = !angular.equals($scope.mmaConfig, $scope.lastMMAConfig);
+        };
+
+        $scope.$on('configurationChanged', checkModified);
+
+    })
+
+
     .controller('MetadataEditor', function ($scope, appHttp, appNotifications, ConfigEditorService) {
 
         $scope.ConfigEditorService = ConfigEditorService;
@@ -485,7 +551,7 @@ angular.module('dcm4che.config.manager', ['dcm4che.appCommon', 'dcm4che.config.c
                         })
                         .value();
 
-                    appHttp.get("data/config/schemas", null, function (data) {
+                    appHttp.get("data/config/schemas?class=com.agfa.mma.config.MMAConfigurationRoot", null, function (data) {
                         conf.schemas = data;
                         callback();
                     }, function (data, status) {

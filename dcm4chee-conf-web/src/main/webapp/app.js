@@ -46,6 +46,9 @@ dcm4cheApp.config(
             }).when('/metadata', {
                 templateUrl: 'config-browser/metadata.html',
                 controller: 'MetadataEditor'
+            }).when('/mma', {
+                templateUrl: 'config-browser/mma.html',
+                controller: 'MMAEditor'
             }).when('/versions', {
                 templateUrl: 'dcm4che-web-common/versions.html',
                 controller: 'VersionsController'

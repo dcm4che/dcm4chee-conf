@@ -10,7 +10,7 @@
                     <legend ng-show="groups.length>1 && !options.legend">{{group}}</legend>
                     <legend ng-show="groups.length==1 && !options.legend">{{schema.class}}<span ng-show="index!=null">({{index}})</span>
                     </legend>
-                    <div ng-repeat="propertySchema in schema.properties | toArray | primaryPropsOnly:doShowAllProps | filterProperties:options | filter:{uiGroup:group} | orderBy:['uiOrder','title']">
+                    <div ng-repeat="propertySchema in schema.properties | toArray | primaryPropsOnly:doShowAllProps | filterProperties:options | filter:{uiGroup:group} | propsSorter">
                         <div confignode="confignode[propertySchema.$key]"
                              schema="propertySchema"
                              parentnode="confignode"
@@ -82,7 +82,7 @@
 
         <!-- Primitives -->
         <div ng-if="((schema.type === 'string' || schema.type === 'integer') && schema.class!=='Reference')">
-            <input class="form-control" ng-model="parentnode[index]" ng-change="ConfigEditorService.checkModified()">
+            <input class="form-control" ng-model="parentnode[index]" ng-change="ConfigEditorService.checkModified()" ng-disabled="index=='_.uuid' || index=='_.hash' ">
         </div>
 
 
@@ -237,7 +237,7 @@
                                     <input ng-model="newkey"
                                            focus-on="{{key}}"
                                            ng-keydown="$event.keyCode == 13 ? saveMapKey(key,newkey) : null"
-                                            />
+                                    />
                                 </td>
 
                                 <td ng-show="modificationMode">

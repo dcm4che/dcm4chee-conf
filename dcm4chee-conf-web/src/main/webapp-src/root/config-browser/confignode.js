@@ -21,6 +21,12 @@ angular.module('dcm4che.config.core', [])
 
                     if (schema.properties.cn != null)
                         return node.cn;
+                    else if (schema.properties.systemName != null)
+                        return node.systemName;
+                    else if (schema.properties.affinityDomainName != null)
+                        return node.affinityDomainName;
+                    else if (schema.properties.homeCommunityID != null)
+                        return node.homeCommunityID;
                     else
                         return $filter('limitTo')(angular.toJson(node), 20);
                 };
@@ -60,7 +66,7 @@ angular.module('dcm4che.config.core', [])
                         $scope.enums = _.map($scope.schema.enum, function (val, ind) {
                             return {
                                 value: val,
-                                label: $scope.schema.enumRepresentation=='ORDINAL' ? $scope.schema.enumStrValues[ind] : val
+                                label: $scope.schema.enumRepresentation == 'ORDINAL' ? $scope.schema.enumStrValues[ind] : val
                             };
                         });
 
@@ -257,19 +263,46 @@ angular.module('dcm4che.config.core', [])
             return map;
         }
     }).filter('groupSorter', function (ConfigEditorService) {
-        return function (groups, options) {
-            // force order provided by groupOrder
+    return function (groups, options) {
+        // force order provided by groupOrder
 
-            var val = _.chain(ConfigEditorService.groupOrder).intersection(groups).union(groups).value();
+        var val = _.chain(ConfigEditorService.groupOrder).intersection(groups).union(groups).value();
 
-            if (options && options.showGroups)
-                val = _.intersection(val, options.showGroups);
+        if (options && options.showGroups)
+            val = _.intersection(val, options.showGroups);
 
-            if (options && options.hideGroups)
-                val = _.difference(val, options.hideGroups);
+        if (options && options.hideGroups)
+            val = _.difference(val, options.hideGroups);
 
-            return val;
+        return val;
 
-        };
+    };
 
-    });
+}).filter('propsSorter', function (ConfigEditorService) {
+    return function (props, options) {
+
+        // TODO: make compatible, filter system _hash things to top etc
+
+        return _.sortBy(props,
+            function (prop) {
+                if (prop.class == 'Map' && prop.properties['*'].type != 'object') {
+                    return "2" + prop['$key'];
+                } else if (prop.type == 'object' && prop.class == 'Map') {
+                    return "5" + prop['$key'];
+                } else if (prop.type == 'object') {
+                    return "3" + prop['$key'];
+                } else if (prop.type == 'array' && prop.items.type == 'object') {
+                    return "4" + prop['$key'];
+                } else if (prop.type == 'array') {
+                    return "2" + prop['$key'];
+                } else if (prop['$key'] == '_.uuid' || prop['$key'] == '_.hash') {
+                    return "1" + prop['$key'];
+                } else
+                    return "2" + prop['$key'];
+
+            });
+
+    };
+
+});
+

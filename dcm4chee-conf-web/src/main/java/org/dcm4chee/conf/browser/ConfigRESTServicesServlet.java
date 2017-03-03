@@ -26,6 +26,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 import java.util.*;
 
+@SuppressWarnings( "unchecked" )
 @Path("/config")
 @Produces(MediaType.APPLICATION_JSON)
 public class ConfigRESTServicesServlet {
@@ -106,6 +107,8 @@ public class ConfigRESTServicesServlet {
          * Parent class name to map - simple class name to schema
          */
         public Map<String, Map<String, Map>> extensions;
+
+        public Map<String, Object> schemaForClassName = new HashMap<>();
 
     }
 
@@ -233,7 +236,6 @@ public class ConfigRESTServicesServlet {
         fireConfigUpdateNotificationIfNecessary();
     }
 
-
     @GET
     @Path("/metadata")
     @Produces(MediaType.APPLICATION_JSON)
@@ -308,17 +310,50 @@ public class ConfigRESTServicesServlet {
     @GET
     @Path("/node")
     @Produces(MediaType.APPLICATION_JSON)
-    public Object getConfigurationNode(@QueryParam(value = "path") String pathStr) {
+    public Object getConfigurationNode(
+            @QueryParam(value = "path") String pathStr,
+            @QueryParam( value = "class") String className
+    ) throws ClassNotFoundException
+    {
         org.dcm4che3.conf.core.api.Path path = org.dcm4che3.conf.core.api.Path.fromSimpleEscapedPath(pathStr);
-        ConfigProperty last = PathFollower.traceProperties(configurationManager.getTypeSafeConfiguration().getRootClass(), path).getLast();
-        return configurationManager.getConfigurationStorage().getConfigurationNode(path, last.isConfObject() ? last.getRawClass() : null);
+
+        Class configurableClass;
+        if (className != null) {
+            configurableClass = Class.forName( className );
+        } else {
+            ConfigProperty last = PathFollower.traceProperties(configurationManager.getTypeSafeConfiguration().getRootClass(), path).getLast();
+            configurableClass = last.isConfObject() ? last.getRawClass() : null;
+        }
+
+        return configurationManager.getConfigurationStorage().getConfigurationNode(path, configurableClass );
     }
 
+    @POST
+    @Path("/node")
+    @Produces(MediaType.APPLICATION_JSON)
+    public void persistConfigurationNode(
+            @QueryParam(value = "path") String pathStr,
+            @QueryParam( value = "class") String className,
+            Map<String, Object> config) throws ClassNotFoundException
+    {
+        org.dcm4che3.conf.core.api.Path path = org.dcm4che3.conf.core.api.Path.fromSimpleEscapedPath(pathStr);
+
+        Class configurableClass;
+        if (className != null) {
+            configurableClass = Class.forName( className );
+        } else {
+            ConfigProperty last = PathFollower.traceProperties(configurationManager.getTypeSafeConfiguration().getRootClass(), path).getLast();
+            configurableClass = last.isConfObject() ? last.getRawClass() : null;
+        }
+
+        configurationManager.getConfigurationStorage().persistNode(path, config, configurableClass);
+    }
 
     @GET
     @Path("/schemas")
     @Produces(MediaType.APPLICATION_JSON)
-    public SchemasJSON getSchema() throws ConfigurationException {
+    public SchemasJSON getSchema(@QueryParam(value = "class") List<String> classNames) throws ConfigurationException, ClassNotFoundException
+    {
 
 
         SchemasJSON schemas = new SchemasJSON();
@@ -347,6 +382,12 @@ public class ConfigRESTServicesServlet {
 
         for (Class<? extends ConnectionExtension> connExt : configurationManager.getExtensionClassesByBaseClass(ConnectionExtension.class)) {
             connectionExtensions.put(connExt.getSimpleName(), getSchemaForConfigurableClass(connExt));
+        }
+
+        // generic schemas
+        for ( String className : classNames )
+        {
+            schemas.schemaForClassName.put( className, getSchemaForConfigurableClass(Class.forName( className )));
         }
 
         return schemas;
