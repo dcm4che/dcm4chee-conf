@@ -40,17 +40,18 @@
 
 package org.dcm4chee.cache;
 
-import org.infinispan.manager.EmbeddedCacheManager;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.annotation.Resource;
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Produces;
 import javax.enterprise.inject.spi.InjectionPoint;
 import javax.naming.Context;
 import javax.naming.InitialContext;
-import javax.naming.NamingException;
+
+import org.infinispan.configuration.cache.ConfigurationBuilder;
+import org.infinispan.manager.EmbeddedCacheManager;
+import org.infinispan.transaction.LockingMode;
+import org.infinispan.transaction.TransactionMode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author Roman K
@@ -58,6 +59,17 @@ import javax.naming.NamingException;
 @ApplicationScoped
 public class CacheProducer {
 
+	/**
+	 * True, if the infinispan caches shall be programmatically configured by 
+	 * using it's <code>ConfigurationBuilder</code>. Introduced as a workaround
+	 * for a bug in Wildfly 10/EAP7.0, which prevent declarative infinispan cache
+	 * configurations (i.e standalone.xml) to be picked up and applied 
+	 * (see https://issues.jboss.org/browse/WFLY-6674)</br>
+	 * False, if the infinispan caches are declaratively configured as usual.</br>
+	 * Default is false. 
+	 */
+	private static final boolean programmaticCacheConfiguration = Boolean.getBoolean("org.dcm4che.infinispan.programmaticConfig");
+	
     private static final String container = System.getProperty("org.dcm4che.infinispan.container", "dcm4chee");
     private static final int maxRetries = Integer.parseInt(System.getProperty("org.dcm4chee.cache.maxRetries", "60"));
 
@@ -77,6 +89,15 @@ public class CacheProducer {
             try {
                 Context ic = new InitialContext();
                 EmbeddedCacheManager defaultCacheManager = (EmbeddedCacheManager) ic.lookup("java:jboss/infinispan/container/" + container);
+                
+                if ( programmaticCacheConfiguration ) {
+	                defaultCacheManager.defineConfiguration(cacheName, new ConfigurationBuilder()
+	                		.read( defaultCacheManager.getDefaultCacheConfiguration() )
+	                		.transaction().lockingMode(LockingMode.PESSIMISTIC)
+	                		.transactionMode(TransactionMode.TRANSACTIONAL)
+	                		.build());
+                }
+                
                 cache = defaultCacheManager.getCache(cacheName);
                 if (cache != null) {
                     cache.start();
