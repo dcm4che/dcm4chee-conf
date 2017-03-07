@@ -92,7 +92,6 @@ public class CacheProducer {
                 
                 if ( programmaticCacheConfiguration ) {
 	                defaultCacheManager.defineConfiguration(cacheName, new ConfigurationBuilder()
-	                		.read( defaultCacheManager.getDefaultCacheConfiguration() )
 	                		.transaction().lockingMode(LockingMode.PESSIMISTIC)
 	                		.transactionMode(TransactionMode.TRANSACTIONAL)
 	                		.build());
