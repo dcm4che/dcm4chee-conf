@@ -347,6 +347,8 @@ public class ConfigRESTServicesServlet {
         }
 
         configurationManager.getConfigurationStorage().persistNode(path, config, configurableClass);
+
+        fireConfigUpdateNotificationIfNecessary();
     }
 
     @GET
