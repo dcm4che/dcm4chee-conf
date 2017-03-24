@@ -111,9 +111,23 @@ angular.module('dcm4che.config.core', [])
 
         });
 
+        $scope.resetItem = function(item) {
+            $scope.selectedItemConfig = item;
+        }
+
+
+
 
     })
     .controller("CollectionController", function ($rootScope, $scope, $timeout, ConfigEditorService, appNotifications) {
+
+        $scope.resetRepos = function () {
+            $scope.parentnode[$scope.index] = angular.copy(ConfigEditorService.repos);
+        };
+        $scope.resetRGWs = function () {
+            $scope.parentnode[$scope.index] = angular.copy(ConfigEditorService.respGWs);
+        };
+
 
         $scope.$watch('confignode', function () {
             $scope.selectedItemConfig = null;

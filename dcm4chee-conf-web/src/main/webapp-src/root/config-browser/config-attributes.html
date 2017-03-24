@@ -10,6 +10,21 @@
                     <legend ng-show="groups.length>1 && !options.legend">{{group}}</legend>
                     <legend ng-show="groups.length==1 && !options.legend">{{schema.class}}<span ng-show="index!=null">({{index}})</span>
                     </legend>
+
+                    <div ng-if="schema.class=='XDSRegistryConfig'" class="row">
+                        <div class="col-lg-4 col-lg-offset-8">
+
+                            Use connectathon system
+
+                                <select ng-model="parentnode[index]" class="form-control"
+                                        ng-options="reg as reg.systemName for reg in ConfigEditorService.registries"
+                                        ng-change="ConfigEditorService.checkModified()">
+                                </select>
+
+                        </div>
+                    </div>
+
+
                     <div ng-repeat="propertySchema in schema.properties | toArray | primaryPropsOnly:doShowAllProps | filterProperties:options | filter:{uiGroup:group} | propsSorter">
                         <div confignode="confignode[propertySchema.$key]"
                              schema="propertySchema"
@@ -18,6 +33,8 @@
                              editor="editor">
                         </div>
                     </div>
+
+
 
                     <!-- extensions -->
                     <div ng-if="ConfigEditorService.classHasExtensions(schema)">
@@ -111,7 +128,7 @@
                     ng-if="schema.referencedClass=='Connection'"
                     ng-model="parentnode[index]['_.ref']"
                     ng-options="option.ref as option.name for option in editor.connectionRefs"
-                    ng-change="ConfigEditorService.checkModified()">
+                    ng-change="ConfigEditorService.checkModified();">
             </select>
             <select class="form-control"
                     ng-if="schema.referencedClass=='ApplicationEntity'"
@@ -195,6 +212,22 @@
     <div class="panel panel-default">
         <div class="panel-heading">
             <h3 class="panel-title">{{schema.title ? schema.title : index}}</h3>
+            <div ng-if="schema.items.class=='XDSRepositoryConfig'" class="row">
+
+                <div  class="col-lg-4 col-lg-offset-8">
+                    <button class="btn btn-danger" ng-click="resetRepos()">
+                        Reset to all connectathon repos
+                    </button>
+                </div>
+            </div>
+            <div ng-if="schema.items.class=='XCARespondingGatewayConfig'" class="row">
+
+                <div  class="col-lg-4 col-lg-offset-8">
+                    <button class="btn btn-danger" ng-click="resetRGWs()">
+                        Reset to all connectathon resp GWs
+                    </button>
+                </div>
+            </div>
         </div>
         <div class="panel-body">
 
@@ -262,6 +295,35 @@
                     </a>
                 </div>
                 <div class="col-sm-9" ng-if="selectedItemConfig">
+
+
+                    <div ng-if="schema.items.class=='XDSRepositoryConfig'" class="row">
+
+                        <div class="col-lg-4 col-lg-offset-8">
+
+                            Use connectathon system
+
+                            <select ng-model="confignode[selectedItemIndex]" class="form-control"
+                                    ng-options="rep as rep.systemName for rep in ConfigEditorService.repos"
+                                    ng-change="ConfigEditorService.checkModified(); selectItem(selectedItemIndex, confignode[selectedItemIndex])">
+                            </select>
+
+                        </div>
+                    </div>
+                    <div ng-if="schema.items.class=='XCARespondingGatewayConfig'" class="row">
+                        <div class="col-lg-4 col-lg-offset-8">
+
+                            Use connectathon system
+
+                            <select ng-model="confignode[selectedItemIndex]" class="form-control"
+                                    ng-options="rgw as rgw.systemName for rgw in ConfigEditorService.respGWs"
+                                    ng-change="ConfigEditorService.checkModified(); selectItem(selectedItemIndex, confignode[selectedItemIndex])">
+                            </select>
+
+                        </div>
+                    </div>
+
+
                     <div ng-if="schema.type === 'array'"
                          confignode="selectedItemConfig"
                          schema="schema.items"
