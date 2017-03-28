@@ -123,9 +123,19 @@ angular.module('dcm4che.config.core', [])
 
         $scope.resetRepos = function () {
             $scope.parentnode[$scope.index] = angular.copy(ConfigEditorService.repos);
+            ConfigEditorService.checkModified();
         };
         $scope.resetRGWs = function () {
             $scope.parentnode[$scope.index] = angular.copy(ConfigEditorService.respGWs);
+            ConfigEditorService.checkModified();
+        };
+        $scope.resetXcaiRGWs = function () {
+            $scope.parentnode[$scope.index] = angular.copy(ConfigEditorService.xcaiRGWs);
+            ConfigEditorService.checkModified();
+        };
+        $scope.resetXdsiSources = function () {
+            $scope.parentnode[$scope.index] = angular.copy(ConfigEditorService.xdsiSources);
+            ConfigEditorService.checkModified();
         };
 
 

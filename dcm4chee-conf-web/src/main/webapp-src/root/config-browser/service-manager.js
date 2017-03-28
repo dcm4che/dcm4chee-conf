@@ -499,6 +499,8 @@ angular.module('dcm4che.config.manager', ['dcm4che.appCommon', 'dcm4che.config.c
             registries: [],
             repos:[],
             respGWs: [],
+            xdsiSources: [],
+            xcaiRGWs: [],
 
             // endof connectathon ///////////////////
 
@@ -598,6 +600,26 @@ angular.module('dcm4che.config.manager', ['dcm4che.appCommon', 'dcm4che.config.c
                         appNotifications.showNotification({
                             level: "danger",
                             text: "Could not load registries connectathon config",
+                            details: [data, status]
+                        });
+                    });
+
+                    appHttp.get("/xdsi/connectathon/xcaiRGWs", null, function (data) {
+                        conf.xcaiRGWs = data;
+                    }, function (data, status) {
+                        appNotifications.showNotification({
+                            level: "danger",
+                            text: "Could not load xcaiRGWs connectathon config",
+                            details: [data, status]
+                        });
+                    });
+
+                    appHttp.get("/xdsi/connectathon/xdsiSources", null, function (data) {
+                        conf.xdsiSources = data;
+                    }, function (data, status) {
+                        appNotifications.showNotification({
+                            level: "danger",
+                            text: "Could not load xdsiSources connectathon config",
                             details: [data, status]
                         });
                     });

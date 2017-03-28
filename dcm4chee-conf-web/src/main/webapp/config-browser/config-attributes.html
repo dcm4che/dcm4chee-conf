@@ -228,11 +228,29 @@
                     </button>
                 </div>
             </div>
+            <div ng-if="schema.items.class=='XCAIRespondingImagingGatewayConfig'" class="row">
+
+                <div  class="col-lg-4 col-lg-offset-8">
+                    <button class="btn btn-danger" ng-click="resetXcaiRGWs()">
+                        Reset to all connectathon xcai resp GWs
+                    </button>
+                </div>
+            </div>
+            <div ng-if="schema.items.class=='XDSIImagingDocumentSourceConfig'" class="row">
+
+                <div  class="col-lg-4 col-lg-offset-8">
+                    <button class="btn btn-danger" ng-click="resetXdsiSources()">
+                        Reset to all connectathon xcai resp GWs
+                    </button>
+                </div>
+            </div>
+
+
         </div>
         <div class="panel-body">
 
             <div class="row">
-                <div class="nice-pane-padding nice-solid-regular col-sm-3">
+                <div class="nice-pane-padding nice-solid-regular " ng-class="modificationMode?'col-sm-6':'col-sm-3'">
                     <p ng-show="isCollectionEmpty()">No items.</p>
 
                     <div class="pre-scrollable">
@@ -294,7 +312,7 @@
                        href="">{{modificationMode ? "Done deleting" : "Delete ..."}}
                     </a>
                 </div>
-                <div class="col-sm-9" ng-if="selectedItemConfig">
+                <div ng-class="modificationMode?'col-sm-6':'col-sm-9'" ng-if="selectedItemConfig">
 
 
                     <div ng-if="schema.items.class=='XDSRepositoryConfig'" class="row">
@@ -322,6 +340,33 @@
 
                         </div>
                     </div>
+
+                    <div ng-if="schema.items.class=='XCAIRespondingImagingGatewayConfig'" class="row">
+                        <div class="col-lg-4 col-lg-offset-8">
+
+                            Use connectathon system
+
+                            <select ng-model="confignode[selectedItemIndex]" class="form-control"
+                                    ng-options="rgw as rgw.systemName for rgw in ConfigEditorService.xcaiRGWs"
+                                    ng-change="ConfigEditorService.checkModified(); selectItem(selectedItemIndex, confignode[selectedItemIndex])">
+                            </select>
+
+                        </div>
+                    </div>
+
+                    <div ng-if="schema.items.class=='XDSIImagingDocumentSourceConfig'" class="row">
+                        <div class="col-lg-4 col-lg-offset-8">
+
+                            Use connectathon system
+
+                            <select ng-model="confignode[selectedItemIndex]" class="form-control"
+                                    ng-options="s as s.systemName for s in ConfigEditorService.xdsiSources"
+                                    ng-change="ConfigEditorService.checkModified(); selectItem(selectedItemIndex, confignode[selectedItemIndex])">
+                            </select>
+
+                        </div>
+                    </div>
+
 
 
                     <div ng-if="schema.type === 'array'"
