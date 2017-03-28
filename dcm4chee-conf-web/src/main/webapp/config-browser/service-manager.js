@@ -494,6 +494,15 @@ angular.module('dcm4che.config.manager', ['dcm4che.appCommon', 'dcm4che.config.c
 
             schemas: {},
 
+            //connectathon//    /////// ////////        ////////
+
+            registries: [],
+            repos:[],
+            respGWs: [],
+
+            // endof connectathon ///////////////////
+
+
             makeAddExtensionDropDown: function (nodestr, nodeClass) {
                 var map = _.map(conf.schemas.extensions[nodeClass], function (value, key) {
                     return {
@@ -562,6 +571,37 @@ angular.module('dcm4che.config.manager', ['dcm4che.appCommon', 'dcm4che.config.c
                         });
                         callback();
                     });
+
+                    appHttp.get("/xdsi/connectathon/respGWs", null, function (data) {
+                        conf.respGWs = data;
+                    }, function (data, status) {
+                        appNotifications.showNotification({
+                            level: "danger",
+                            text: "Could not load resp gws connectathon config",
+                            details: [data, status]
+                        });
+                    });
+
+                    appHttp.get("/xdsi/connectathon/repos", null, function (data) {
+                        conf.repos = data;
+                    }, function (data, status) {
+                        appNotifications.showNotification({
+                            level: "danger",
+                            text: "Could not load repo connectathon config",
+                            details: [data, status]
+                        });
+                    });
+
+                    appHttp.get("/xdsi/connectathon/registries", null, function (data) {
+                        conf.registries = data;
+                    }, function (data, status) {
+                        appNotifications.showNotification({
+                            level: "danger",
+                            text: "Could not load registries connectathon config",
+                            details: [data, status]
+                        });
+                    });
+
 
 
                 }, function (data, status) {
