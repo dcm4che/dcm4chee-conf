@@ -351,6 +351,15 @@ public class ConfigRESTServicesServlet {
         fireConfigUpdateNotificationIfNecessary();
     }
 
+
+    @DELETE
+    @Path( "/node" )
+    public void removeConfigurationNode(
+            @QueryParam( value = "path" ) String pathStr
+    ) {
+        configurationManager.getConfigurationStorage().removeNode( org.dcm4che3.conf.core.api.Path.fromSimpleEscapedPath( pathStr ) );
+    }
+
     @GET
     @Path("/schemas")
     @Produces(MediaType.APPLICATION_JSON)
