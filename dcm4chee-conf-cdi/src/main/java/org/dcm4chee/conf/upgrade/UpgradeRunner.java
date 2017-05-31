@@ -70,10 +70,18 @@ public class UpgradeRunner {
     }
 
     public void upgrade() {
+
+        final String toVersion = upgradeSettings.getUpgradeToVersion();
+
+        // extra safeguard - avoid a batch if nothing is pending - in case the config is locked or inconsistent (should not happen though)
+        if (!isUpgradePending(toVersion)) {
+            log.info("No pending configuration upgrades detected - skipping the upgrade procedure");
+            return;
+        }
+
         dicomConfigurationManager.runBatch(() -> {
             try {
-                final String toVersion = upgradeSettings.getUpgradeToVersion();
-
+                
                 ConfigurationMetadata configMetadata = loadOrInitConfigMetadata();
 
                 if (configMetadata.getVersion() == null)
@@ -163,8 +171,8 @@ public class UpgradeRunner {
             UpgradeScript.UpgradeScriptMetadata upgradeScriptMetadata = getUpgradeScriptMetadata(configMetadata, getScriptName(script));
 
             // check if the script need to be executed
-            MMPVersion currentScriptVersion = getScriptVersion(script);
-            Optional<MMPVersion> lastExecutedVersion = Optional.ofNullable(upgradeScriptMetadata.getLastVersionExecuted())
+            NumericVersion currentScriptVersion = getScriptVersion(script);
+            Optional<NumericVersion> lastExecutedVersion = Optional.ofNullable(upgradeScriptMetadata.getLastVersionExecuted())
                     .map((currVer)->{
                         // conditionally map deprecated non-conforming versions...
                         String mappedVersion = upgradeSettings.getDeprecatedVersionsMapping().get(currVer);
@@ -173,7 +181,7 @@ public class UpgradeRunner {
                         } else
                             return currVer;
                     })
-                    .map(MMPVersion::fromStringVersion);
+                    .map( NumericVersion::fromStringVersion);
 
             if (lastExecutedVersion.isPresent() && lastExecutedVersion.get().compareTo(currentScriptVersion) == 0) {
                 log.info("Skipping upgrade script '{}' because current version '{}' is not newer than the last executed one ('{}')",
@@ -266,7 +274,7 @@ public class UpgradeRunner {
         return configMetadata;
     }
 
-    private MMPVersion getScriptVersion(UpgradeScript script) {
+    private NumericVersion getScriptVersion(UpgradeScript script) {
         try {
 
             ScriptVersion scriptVersion = script.getClass().getAnnotation(ScriptVersion.class);
@@ -276,11 +284,11 @@ public class UpgradeRunner {
             if (!strValue.isEmpty()) {
                 String mappedVersion = upgradeSettings.getDeprecatedVersionsMapping().get(strValue);
                 if (mappedVersion!=null) {
-                    return MMPVersion.fromStringVersion(mappedVersion);
+                    return NumericVersion.fromStringVersion(mappedVersion);
                 }
             }
 
-            return MMPVersion.fromScriptVersionAnno(scriptVersion);
+            return NumericVersion.fromScriptVersionAnno(scriptVersion);
         } catch (IllegalArgumentException e ) {
             throw new RuntimeException("Upgrade script " + script.getClass().getName() + " has an invalid version", e);
         }
@@ -301,6 +309,18 @@ public class UpgradeRunner {
         } catch (Exception e) {
             throw new RuntimeException("Cannot invoke a method of an upgrade script " + upgScr.getClass().getName() + " . " + m.getName(), e);
         }
+    }
+
+    private boolean isUpgradePending(String toVersion)
+    {
+        ConfigurationMetadata configMetadata = loadOrInitConfigMetadata();
+
+        if ( !Objects.equals( configMetadata.getVersion(), toVersion ) )
+            return true;
+
+        SortedSet<UpgradeStep> upgradeSteps = collectUpgradeSteps(configMetadata);
+
+        return !upgradeSteps.isEmpty();
     }
 
 }
