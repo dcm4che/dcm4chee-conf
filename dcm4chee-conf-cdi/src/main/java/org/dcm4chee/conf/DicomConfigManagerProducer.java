@@ -69,7 +69,7 @@ public class DicomConfigManagerProducer {
 
     private final static Logger log = LoggerFactory.getLogger(DicomConfigManagerProducer.class);
     
-    @EJB
+    @Inject
     private ConfigurationEJB providedConfigStorage;
 
     @Inject

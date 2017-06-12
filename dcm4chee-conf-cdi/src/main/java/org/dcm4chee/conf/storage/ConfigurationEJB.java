@@ -43,6 +43,8 @@ package org.dcm4chee.conf.storage;
 import org.dcm4che3.conf.ConfigurationSettingsLoader;
 import org.dcm4che3.conf.core.DelegatingConfiguration;
 import org.dcm4che3.conf.core.ExtensionMergingConfiguration;
+import org.dcm4che3.conf.core.api.BatchRunner;
+import org.dcm4che3.conf.core.api.BatchRunner.Batch;
 import org.dcm4che3.conf.core.api.Configuration;
 import org.dcm4che3.conf.core.api.ConfigurationException;
 import org.dcm4che3.conf.core.api.Path;
@@ -62,6 +64,7 @@ import javax.enterprise.inject.Any;
 import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 import javax.transaction.*;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -85,107 +88,49 @@ import java.util.Map;
  * </p>
  */
 @SuppressWarnings("unchecked")
-@Singleton
 @ConcurrencyManagement(ConcurrencyManagementType.BEAN)
 @Local(ConfigurationEJB.class)
 @TransactionAttribute(TransactionAttributeType.SUPPORTS)
-public class ConfigurationEJB extends DelegatingConfiguration {
+public class ConfigurationEJB implements Configuration{
 
     public static final Logger log = LoggerFactory.getLogger(ConfigurationEJB.class);
 
-    private static final String DISABLE_OLOCK_PROP = "org.dcm4che.conf.olock.disabled";
-    private static final String ENABLE_MERGE_CONFIG = "org.dcm4che.conf.merge.enabled";
+    @Inject
+    ConfigurationKeeper keeper;
 
-    // components
+    @EJB(lookup=" java:comp/env/org.dcm4chee.conf.storage.ConfigurationEJB")
+    ConfigurationEJB self;
 
     @Inject
-    InfinispanCachingConfigurationDecorator infinispanCachingConfigurationDecorator;
+    private ConfigurationIntegrityCheck integrityCheck;
 
     @Inject
     InfinispanDicomReferenceIndexingDecorator indexingDecorator;
 
     @Inject
-    @Any
-    private Instance<Configuration> availableConfigStorage;
-
-    @Inject
-    ConfigNotificationDecorator configNotificationDecorator;
-
-    @Inject
-    private ConfigurationIntegrityCheck integrityCheck;
-
-    @EJB
-    ConfigurationEJB self;
-
-    // util
-
-    @Inject
     TransactionSynchronization txSync;
 
-    @Inject
-    ConfigurableExtensionsResolver extensionsProvider;
-
-    @PostConstruct
-    @TransactionAttribute(TransactionAttributeType.REQUIRES_NEW)
-    public void init() {
-        // detect user setting (system property) for config backend type
-        String storageType = ConfigurationSettingsLoader.getPropertyWithNotice(
-                System.getProperties(),
-                Configuration.CONF_STORAGE_SYSTEM_PROP, ConfigStorageType.JSON_FILE.name().toLowerCase()
-        );
-        log.info("Creating dcm4che configuration Singleton EJB. Resolving underlying configuration storage '{}' ...", storageType);
-
-        // resolve the corresponding implementation
-        Configuration storage;
-        try {
-            storage = availableConfigStorage.select(new ConfigStorageAnno(storageType)).get();
-        } catch (Exception e) {
-            throw new IllegalArgumentException("Unable to initialize dcm4che configuration storage '" + storageType + "'", e);
-        }
-
-        // decorate with config notifications
-        configNotificationDecorator.setDelegate(storage);
-        storage = configNotificationDecorator;
-
-        // decorate with cache
-        infinispanCachingConfigurationDecorator.setDelegate(storage);
-        storage = infinispanCachingConfigurationDecorator;
-
-        // decorate with reference indexing/resolution
-        indexingDecorator.setDelegate(storage);
-        storage = indexingDecorator;
-
-        List<Class> allExtensionClasses = extensionsProvider.resolveExtensionsList();
-
-        // ExtensionMergingConfiguration
-        if ((System.getProperty(ENABLE_MERGE_CONFIG) != null) && Boolean.valueOf(System.getProperty(ENABLE_MERGE_CONFIG))) {
-            storage = new ExtensionMergingConfiguration(storage, allExtensionClasses);
-        }
-
-        // olocking
-        if (System.getProperty(DISABLE_OLOCK_PROP) == null) {
-            storage = new HashBasedOptimisticLockingConfiguration(
-                    storage,
-                    allExtensionClasses);
-        }
-
-        // defaults filtering
-        storage = new DefaultsAndNullFilterDecorator(storage, allExtensionClasses, CommonDicomConfiguration.createDefaultDicomVitalizer());
-
-
-        delegate = storage;
-
-        // bootstrap
-        delegate.lock();
-        delegate.refreshNode(Path.ROOT);
-
-        log.info("dcm4che configuration singleton EJB created");
+    @Override
+    public Map<String, Object> getConfigurationRoot() throws ConfigurationException
+    {
+        return config().getConfigurationRoot();
     }
 
     @Override
+    public Object getConfigurationNode( Path path, Class configurableClass ) throws ConfigurationException
+    {
+        return config().getConfigurationNode( path, configurableClass );
+    }
+
+    @Override
+    public boolean nodeExists( Path path ) throws ConfigurationException
+    {
+        return config().nodeExists( path );
+    }
+
     public void persistNode(Path path, Map<String, Object> configNode, Class configurableClass) throws ConfigurationException {
 
-        Runnable r = () -> delegate.persistNode(path, configNode, configurableClass);
+        Runnable r = () -> config().persistNode(path, configNode, configurableClass);
 
         if (isBatchTx())
             runInOngoingTx(r);
@@ -194,10 +139,14 @@ public class ConfigurationEJB extends DelegatingConfiguration {
 
     }
 
-    @Override
+    private Configuration config()
+    {
+        return keeper.getConfiguration();
+    }
+
     public void removeNode(Path path) throws ConfigurationException {
 
-        Runnable r = () -> delegate.removeNode(path);
+        Runnable r = () -> config().removeNode(path);
 
         if (isBatchTx())
             runInOngoingTx(r);
@@ -207,9 +156,20 @@ public class ConfigurationEJB extends DelegatingConfiguration {
     }
 
     @Override
+    public Path getPathByUUID( String uuid )
+    {
+        return config().getPathByUUID( uuid );
+    }
+
+    @Override
+    public Iterator search( String liteXPathExpression ) throws IllegalArgumentException, ConfigurationException
+    {
+        return config().search( liteXPathExpression );
+    }
+
     public void refreshNode(Path path) throws ConfigurationException {
 
-        Runnable r = () -> delegate.refreshNode(path);
+        Runnable r = () -> config().refreshNode(path);
 
         if (isBatchTx())
             runInOngoingTx(r);
@@ -217,13 +177,12 @@ public class ConfigurationEJB extends DelegatingConfiguration {
             self.runInNewTx(r);
     }
 
-    @Override
+
     public void lock() {
         log.warn("Unexpected call to lock(). Locking is handled automatically on a lower layer and should not be called explicitly", new IllegalStateException());
-        delegate.lock();
+        config().lock();
     }
 
-    @Override
     public void runBatch(Batch batch) {
         self.runInNewTx(
                 () -> {
@@ -268,7 +227,7 @@ public class ConfigurationEJB extends DelegatingConfiguration {
 
         try {
             // perform referential integrity check
-            integrityCheck.performCheck(super.getConfigurationRoot());
+            integrityCheck.performCheck(config().getConfigurationRoot());
 
         } catch (ConfigurationException e) {
             throw new IllegalArgumentException("Configuration integrity violated", e);
@@ -289,7 +248,7 @@ public class ConfigurationEJB extends DelegatingConfiguration {
 
     @TransactionAttribute(TransactionAttributeType.REQUIRES_NEW)
     public void runInNewTx(Runnable r) {
-        delegate.lock();
+        config().lock();
         registerTxHooks();
 
         r.run();
