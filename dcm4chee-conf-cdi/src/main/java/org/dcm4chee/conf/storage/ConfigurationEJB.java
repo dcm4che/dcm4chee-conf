@@ -270,8 +270,11 @@ public class ConfigurationEJB extends DelegatingConfiguration {
             // perform referential integrity check
             integrityCheck.performCheck(super.getConfigurationRoot());
 
-        } catch (ConfigurationException e) {
-            throw new IllegalArgumentException("Configuration integrity violated", e);
+        } catch (ConfigurationIntegrityCheckException e) {
+            throw new ConfigurationIntegrityCheckException("Configuration integrity violated. ", e);
+
+        } catch ( ConfigurationException e ){
+            throw e;
         }
 
         indexingDecorator.beforeCommit();

@@ -69,7 +69,8 @@ public class ConfigurationIntegrityCheck {
     @Inject
     ConfigurableExtensionsResolver extensionsResolver;
 
-    public void performCheck(Map<String, Object> configurationRoot) throws ConfigurationException {
+    @SuppressWarnings( "unchecked" )
+    public void performCheck(Map<String, Object> configurationRoot) throws ConfigurationException, ConfigurationIntegrityCheckException {
 
         // check if the check is not disabled
         if (System.getProperty(DISABLE_INTEGRITY_CHECK_PROPERTY) != null)
@@ -83,10 +84,11 @@ public class ConfigurationIntegrityCheck {
         storage.search(DicomPath.AllAETitles.path()).forEachRemaining((ae) -> {
 
             if (!(ae instanceof String))
-                throw new IllegalArgumentException("AE titles must be string");
+                throw new ConfigurationIntegrityCheckException("AE titles must be string.");
 
             if (!aes.add((String) ae)) {
-                throw new ConfigurationException("Found duplicate AE title: " + ae);
+                throw new ConfigurationIntegrityCheckException( "Found duplicate AE" +
+                        " title: " + ae );
             }
         });
 
@@ -103,6 +105,7 @@ public class ConfigurationIntegrityCheck {
 
         for (String deviceName : dicomConfiguration.listDeviceNames())
             dicomConfiguration.findDevice(deviceName);
+        
 
     }
 
